@@ -18,12 +18,12 @@ All architectural decisions and service integrations use verified free tools:
 | Domain | Free Service / Tool | Tier Allowance / Details |
 | :--- | :--- | :--- |
 | **Frontend Framework** | **Flutter SDK (Dart)** & **Vanilla PWA** | Open source, multiplatform native compilation for Android, iOS, Windows, macOS, Web. |
-| **Backend & Database** | **Supabase Free Tier** | 500 MB PostgreSQL, 50,000 MAU Auth, Realtime WebSocket feeds, Edge Functions.<br>• **Project ID:** `lbtuikgpgcgrizijfiyl`<br>• **URL:** `https://lbtuikgpgcgrizijfiyl.supabase.co`<br>• **Tables:** `profiles`, `user_watchlists`, `vibe_ratings`, `battle_votes`<br>• **Test User:** `vibe_tester@watchvibe.app` / `WatchVibe2026!` (Verified Live) |
+| **Backend & Database** | **Supabase Free Tier** | 500 MB PostgreSQL, 50,000 MAU Auth, Realtime WebSocket feeds, Edge Functions.<br>• **Project ID:** `lbtuikgpgcgrizijfiyl`<br>• **URL:** `https://lbtuikgpgcgrizijfiyl.supabase.co`<br>• **Tables:** `profiles`, `user_watchlists`, `vibe_ratings`, `battle_votes` (schema + RLS in `supabase/schema.sql`)<br>• **Auth:** real Supabase Auth only (magic link, password, Google/Discord OAuth). Never store test credentials in this repo. |
 | **Movie & TV Metadata** | **TMDB API** | Free unlimited non-commercial API: plots, high-res posters/backdrops, release dates, genres. |
 | **Streaming Availability** | **JustWatch (via TMDB API)** | Free global streaming data: Netflix, Prime, Disney+, JioCinema, Hotstar, SonyLIV, ZEE5 across 50+ countries. |
 | **Soundtrack Audio Previews**| **Apple / iTunes Search API** | **100% Free with zero API keys or authentication needed**. 30-second `.m4a` music previews & album art. |
 | **Actor & Box Office Data** | **TMDB + Wikidata SPARQL** | 100% Free public domain API for cumulative box office totals & filmography credits. |
-| **Web Hosting** | **Netlify Drop / Vercel** | Free static & PWA deployment. |
+| **Web Hosting** | **Cloudflare Pages** (`https://watchvibe-b92.pages.dev/`) | Free static & PWA deployment via `python deploy.py`. Netlify/Vercel were earlier targets and are no longer used. |
 | **Edge & CDN** | **Cloudflare Free Plan** | Global DNS, DDoS protection, free SSL. |
 
 ---
@@ -76,15 +76,14 @@ $$\text{Vibe Percentage} = \left( \frac{\text{Votes for this Vibe}}{\text{Total 
 ---
 
 ## 5. Live Production URL & Artifacts
-* **Official Live Production URL:** **`https://watchvibe-app.netlify.app/`**
-* **Local Development Daemon:** `http://localhost:8080/`
-* **Bundle Directory:** `C:\Users\USER\.gemini\antigravity\scratch\watchvibe\web_live_build`
-* **Interactive Single-File Prototype:** `C:\Users\USER\.gemini\antigravity\brain\f6611d7b-a8f1-4c12-911c-f70a1960332b\watchvibe_interactive.html`
+* **Official Live Production URL:** **`https://watchvibe-b92.pages.dev/`** (Cloudflare Pages)
+* **Local Development Daemon:** `cd web_live_build; python -m http.server 8080` → `http://localhost:8080/`
+* **Bundle Directory:** `D:\watchvibe\web_live_build`
 
 ---
 
 ## 6. Commitments & Constraints
-* **$0 Rule:** Maintain 100% free-tier architecture (Netlify, TMDB Free v3, Supabase Free Tier, Apple iTunes zero-auth API).
+* **$0 Rule:** Maintain 100% free-tier architecture (Cloudflare Pages, TMDB Free v3, Supabase Free Tier, Apple iTunes zero-auth API).
 * **Cinematic Dark Theme:** Keep `#101014` dark background, `#1D1D25` cards, and vibrant vibe tag colors.
 * **No Native Installers:** Maintain user directive dropping Phase 4.
 * **Persistent Memory:** Always update `memory/HANDOFF.md` upon completing modifications.
@@ -93,9 +92,8 @@ $$\text{Vibe Percentage} = \left( \frac{\text{Votes for this Vibe}}{\text{Total 
 ---
 
 ## Production Deployment & Verification Milestone
-- **Live URL:** https://watchvibe-app.netlify.app/
-- **Netlify Deploy ID:** 6afa18909138a5f3b9d22906 (Published)
-- **Status:** 100% Passed End-to-End Browser Automation & Verification
+- **Live URL:** https://watchvibe-b92.pages.dev/ (Cloudflare Pages; the older Netlify site is retired)
+- **Status (as of the earlier Netlify release; re-verify after the auth rewrite):** 100% Passed End-to-End Browser Automation & Verification
 - **Audit Verification Report:** watchvibe_feature_testing_and_bugfix_report.md
 - **Asset Integrity:** 71 of 71 TMDB Image URLs Verified HTTP 200 OK (0 broken)
 - **Active Features:**

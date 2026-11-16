@@ -7,19 +7,24 @@ def deploy():
     repo_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.join(repo_dir, 'web_live_build')
     
-    # Candidate locations for wrangler / nodejs
+    # Locate wrangler: env override, a portable install, or whatever is on PATH.
+    import shutil
     candidate_tools = [
-        r'C:\Users\USER\.gemini\antigravity\scratch\tools\nodejs',
+        os.environ.get('WATCHVIBE_NODE_DIR', ''),
         os.path.join(repo_dir, 'tools', 'nodejs'),
-        r'D:\tools\nodejs'
+        r'D:\tools\nodejs',
+        r'C:\Users\USER\.gemini\antigravity\scratch\tools\nodejs',
     ]
-    tools_dir = next((d for d in candidate_tools if os.path.exists(os.path.join(d, 'wrangler.cmd'))), candidate_tools[0])
-    wrangler_cmd = os.path.join(tools_dir, 'wrangler.cmd')
+    tools_dir = next((d for d in candidate_tools if d and os.path.exists(os.path.join(d, 'wrangler.cmd'))), None)
+    wrangler_cmd = os.path.join(tools_dir, 'wrangler.cmd') if tools_dir else (shutil.which('wrangler') or shutil.which('wrangler.cmd'))
+    if not wrangler_cmd:
+        print("[ERROR] wrangler not found. Install it (npm i -g wrangler) or set WATCHVIBE_NODE_DIR.")
+        sys.exit(1)
     env_file = os.path.join(repo_dir, '.env')
 
     # Load from .env if present
     api_token = os.environ.get('CLOUDFLARE_API_TOKEN')
-    account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '1e1e9dd88e0400bb9afff0d37c72717d')
+    account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
 
     if not api_token and os.path.exists(env_file):
         with open(env_file, 'r', encoding='utf-8') as f:
@@ -37,9 +42,11 @@ def deploy():
         sys.exit(1)
 
     env = os.environ.copy()
-    env['PATH'] = tools_dir + ';' + env.get('PATH', '')
+    if tools_dir:
+        env['PATH'] = tools_dir + ';' + env.get('PATH', '')
     env['CLOUDFLARE_API_TOKEN'] = api_token
-    env['CLOUDFLARE_ACCOUNT_ID'] = account_id
+    if account_id:
+        env['CLOUDFLARE_ACCOUNT_ID'] = account_id
 
     cmd = [
         wrangler_cmd,

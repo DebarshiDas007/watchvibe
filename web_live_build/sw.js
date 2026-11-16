@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watchvibe-cache-v9';
+const CACHE_NAME = 'watchvibe-cache-v10';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event) => {
 
   // Ignore non-GET requests or chrome-extension requests
   if (req.method !== 'GET' || !url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Never cache API/auth traffic (TMDB calls carry an api_key in the URL; Supabase carries auth tokens).
+  if (/(^|\.)(themoviedb\.org|supabase\.co|ipapi\.co|country\.is)$/.test(url.hostname)) {
     return;
   }
 

@@ -157,13 +157,19 @@
   </style>
   <script>
     // --- USER PROFILE & GOOGLE / EMAIL AUTH HANDLERS ---
-    let currentUserSession = (function() {
-      try {
-        const stored = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-        if (stored) return JSON.parse(stored);
-      } catch(e) {}
-      return null;
-    })();
+    // Sessions come ONLY from a verified Supabase Auth session (see setLoggedInUser).
+    // Purge any legacy client-side "profile" sessions: they were unauthenticated and forgeable.
+    let currentUserSession = null;
+    try {
+      ['watchvibe_user_profile', 'watchvibe_saved_accounts', 'watchvibe_last_used_google_email',
+       'watchvibe_device_google_email', 'watchvibe_last_used_user_name', 'watchvibe_last_used_email']
+        .forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+    } catch(e) {}
+
+    // Escape untrusted text (user names, TMDB strings) before putting it into innerHTML templates.
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
     window.currentFeedLimit = 36;
     window.loadMoreFeed = function() {
@@ -202,148 +208,21 @@
       return 'Guest';
     }
 
-    function getLastUsedLoginInfo() {
-      try {
-        const savedEmail = localStorage.getItem('watchvibe_last_used_google_email') || localStorage.getItem('watchvibe_device_google_email') || localStorage.getItem('watchvibe_last_used_email');
-        let savedName = localStorage.getItem('watchvibe_last_used_user_name');
-
-        if (!savedEmail) {
-          const rawProf = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-          if (rawProf) {
-            const p = JSON.parse(rawProf);
-            if (p && p.email && p.email.includes('@')) {
-              savedName = p.name || savedName;
-              return { email: p.email.trim(), name: sanitizeRealUserName(savedName, p.email) };
-            }
-          }
-        }
-
-        if (savedEmail && savedEmail.includes('@')) {
-          savedName = sanitizeRealUserName(savedName, savedEmail);
-          return { email: savedEmail.trim(), name: savedName };
-        }
-      } catch(e) {}
-      return null;
-    }
-
-    function getSavedAccountsList() {
-      try {
-        const raw = localStorage.getItem('watchvibe_saved_accounts');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch(e) {}
-      const lastEmail = localStorage.getItem('watchvibe_last_used_google_email');
-      const lastName = localStorage.getItem('watchvibe_last_used_user_name');
-      if (lastEmail && lastEmail.includes('@')) {
-        return [{ email: lastEmail, name: lastName || sanitizeRealUserName(null, lastEmail), lastUsed: Date.now() }];
-      }
-      return [];
-    }
-
-    function saveAccountToHistory(email, name) {
-      if (!email || !email.includes('@')) return;
-      const cleanEmail = email.trim();
-      const cleanName = sanitizeRealUserName(name, cleanEmail);
-      let list = getSavedAccountsList();
-      list = list.filter(a => a.email.toLowerCase() !== cleanEmail.toLowerCase());
-      list.unshift({ email: cleanEmail, name: cleanName, lastUsed: Date.now() });
-      if (list.length > 5) list = list.slice(0, 5);
-      try {
-        localStorage.setItem('watchvibe_saved_accounts', JSON.stringify(list));
-      } catch(e) {}
-    }
-
-    function removeSavedAccount(email, event) {
-      if (event) event.stopPropagation();
-      let list = getSavedAccountsList();
-      list = list.filter(a => a.email.toLowerCase() !== email.toLowerCase());
-      try {
-        localStorage.setItem('watchvibe_saved_accounts', JSON.stringify(list));
-        if (list.length === 0) {
-          localStorage.removeItem('watchvibe_last_used_google_email');
-          localStorage.removeItem('watchvibe_last_used_user_name');
-        } else {
-          localStorage.setItem('watchvibe_last_used_google_email', list[0].email);
-          localStorage.setItem('watchvibe_last_used_user_name', list[0].name);
-        }
-      } catch(e) {}
-      updateGoogleSignInUi();
-      showToast('🗑️ Account removed from this device.');
-    }
-
-    function setLastUsedLoginInfo(email, name) {
-      if (!email || !email.includes('@')) return;
-      const cleanEmail = email.trim();
-      const cleanName = sanitizeRealUserName(name, cleanEmail);
-      try {
-        localStorage.setItem('watchvibe_last_used_google_email', cleanEmail);
-        localStorage.setItem('watchvibe_device_google_email', cleanEmail);
-        localStorage.setItem('watchvibe_last_used_user_name', cleanName);
-        localStorage.setItem('watchvibe_last_used_email', cleanEmail);
-        saveAccountToHistory(cleanEmail, cleanName);
-        if (typeof AdminAnalytics !== 'undefined') {
-          AdminAnalytics.recordUserLogin(cleanName, cleanEmail, true);
-        }
-      } catch(e) {}
-    }
+    // Legacy "remembered account" 1-click login was removed: it let anyone sign in with just an email.
+    function getLastUsedLoginInfo() { return null; }
+    function getSavedAccountsList() { return []; }
+    function saveAccountToHistory() {}
+    function removeSavedAccount() {}
+    function setLastUsedLoginInfo() {}
 
     function updateGoogleSignInUi() {
       const label = document.getElementById('googleSignInLabel');
-      const multiAccountsTray = document.getElementById('googleMultiAccountsTray');
-      const accountsListEl = document.getElementById('googleSavedAccountsList');
-      if (!label) return;
-
-      const accounts = getSavedAccountsList();
-      
-      if (accounts && accounts.length > 0) {
-        const primary = accounts[0];
-        label.innerText = `Continue as ${primary.name}`;
-
-        // Render Multi-Account Chips Tray if multiple accounts or saved
-        if (multiAccountsTray && accountsListEl) {
-          if (accounts.length > 1) {
-            multiAccountsTray.classList.remove('hidden');
-            accountsListEl.innerHTML = accounts.map((acc, idx) => {
-              const init = (acc.name[0] || 'U').toUpperCase();
-              return `
-                <div onclick="handleGoogleSignIn('${acc.email}', '${acc.name}')" class="bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/50 p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition group">
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-black text-xs text-white shadow shrink-0">
-                      ${init}
-                    </div>
-                    <div class="min-w-0">
-                      <div class="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">${acc.name}</div>
-                      <div class="text-[10px] text-slate-400 font-mono truncate">${acc.email}</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1.5 shrink-0 ml-2">
-                    <span class="text-[9px] text-purple-400 font-bold bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-500/30">1-Click</span>
-                    <button onclick="removeSavedAccount('${acc.email}', event)" title="Remove account from device" class="w-5 h-5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 flex items-center justify-center transition">
-                      <i class="fa-solid fa-xmark text-[10px]"></i>
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join('');
-          } else {
-            multiAccountsTray.classList.add('hidden');
-          }
-        }
-      } else {
-        label.innerText = 'Continue with Google';
-        if (multiAccountsTray) multiAccountsTray.classList.add('hidden');
-      }
+      const tray = document.getElementById('googleMultiAccountsTray');
+      if (label) label.innerText = 'Continue with Google';
+      if (tray) tray.classList.add('hidden');
     }
 
     function updateProfileUiState() {
-      if (!currentUserSession) {
-        try {
-          const stored = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-          if (stored) currentUserSession = JSON.parse(stored);
-        } catch(e) {}
-      }
       const btn = document.getElementById('cloudAuthBtn');
       const label = document.getElementById('cloudAuthBtnLabel');
       const avatar = document.getElementById('userProfileAvatar');
@@ -357,7 +236,7 @@
         if (label) label.innerText = firstName;
         const initial = ((firstName || 'U')[0] || 'U').toUpperCase();
         if (avatar) {
-          avatar.innerHTML = `<span class="text-[10px] font-black">${initial}</span>`;
+          avatar.innerHTML = `<span class="text-[10px] font-black">${esc(initial)}</span>`;
         }
         if (btn) btn.className = 'bg-purple-900/40 hover:bg-purple-800/60 border border-purple-400 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg text-xs';
         
@@ -413,41 +292,6 @@
       handleGoogleSignIn();
     }
 
-    function loginWithGoogleCredentials(email, name, avatar) {
-      if (!email) return;
-      const cleanName = sanitizeRealUserName(name, email);
-      setLastUsedLoginInfo(email, cleanName);
-      saveAccountToHistory(email, cleanName);
-
-      const staySignedIn = document.getElementById('authStaySignedInCheck') 
-        ? document.getElementById('authStaySignedInCheck').checked 
-        : true;
-
-      currentUserSession = {
-        name: cleanName,
-        email: email.toLowerCase().trim(),
-        avatar: avatar || null,
-        provider: "google",
-        verified: true,
-        staySignedIn: staySignedIn,
-        createdAt: new Date().toISOString()
-      };
-
-      if (staySignedIn) {
-        localStorage.setItem('watchvibe_user_profile', JSON.stringify(currentUserSession));
-        try { sessionStorage.removeItem('watchvibe_user_profile'); } catch(e) {}
-      } else {
-        sessionStorage.setItem('watchvibe_user_profile', JSON.stringify(currentUserSession));
-        try { localStorage.removeItem('watchvibe_user_profile'); } catch(e) {}
-      }
-
-      loadUserWatchlistStore(true);
-      syncUserDataFromSupabaseCloud();
-      updateProfileUiState();
-      updateGoogleSignInUi();
-      showToast(`✨ Signed in with Google as ${currentUserSession.name}!`);
-      setTimeout(() => closeAuthModal(), 450);
-    }
 
     function toggleMimiCoreEmailBox(forceState) {
       const box = document.getElementById('mimicoreEmailBox');
@@ -489,205 +333,115 @@
       }
     }
 
-    function handleMimiCoreEmailSubmit(e) {
-      if (e) e.preventDefault();
-      const emailInput = document.getElementById('authEmailInput');
-      const errorMsg = document.getElementById('authErrorMsg');
-
-      if (!emailInput || !emailInput.value.trim()) return;
-      const email = emailInput.value.trim().toLowerCase();
-      if (!email.includes('@')) {
-        if (errorMsg) {
-          errorMsg.innerText = 'Please enter a valid email address.';
-          errorMsg.classList.remove('hidden');
-        }
-        return;
-      }
-
-      // Automatically derive human name without typing (e.g. rohit.sharma@gmail.com -> Rohit Sharma)
-      const cleanName = sanitizeRealUserName(null, email);
-      loginWithGoogleCredentials(email, cleanName);
-
-      showToast(`✨ Welcome to WatchVibe, ${cleanName}!`);
-      setTimeout(() => closeAuthModal(), 400);
-    }
-
-    function handleDiscordSignIn() {
-      if (window.supabaseClient && window.supabaseClient.auth) {
-        try {
-          window.supabaseClient.auth.signInWithOAuth({
-            provider: 'discord',
-            options: { redirectTo: window.location.origin }
-          });
-          return;
-        } catch(e) {}
-      }
-      loginWithGoogleCredentials('discord.user@watchvibe.app', 'Discord Cinephile');
-      showToast('✨ Signed in with Discord!');
-      setTimeout(() => closeAuthModal(), 400);
-    }
-
-    function handleGoogleSignIn(customEmail, customName) {
-      // 1. If explicit account selected from saved list
-      if (customEmail) {
-        loginWithGoogleCredentials(customEmail, customName);
-        return;
-      }
-
-      // 2. 1-Click Fast Sign In if this device already has an account remembered
-      const lastUsed = getLastUsedLoginInfo();
-      if (lastUsed && lastUsed.email) {
-        loginWithGoogleCredentials(lastUsed.email, lastUsed.name);
-        return;
-      }
-
-      const accounts = getSavedAccountsList();
-      if (accounts && accounts.length > 0) {
-        loginWithGoogleCredentials(accounts[0].email, accounts[0].name);
-        return;
-      }
-
-      // 3. Connect to Supabase Google OAuth if configured
-      if (window.supabaseClient && window.supabaseClient.auth) {
-        try {
-          window.supabaseClient.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin }
-          }).then(({ error }) => {
-            if (error) {
-              console.warn('[WatchVibe] Supabase Google OAuth notice:', error.message);
-              toggleMimiCoreEmailBox(true);
-            }
-          }).catch(() => {
-            toggleMimiCoreEmailBox(true);
-          });
-          return;
-        } catch(e) {}
-      }
-
-      // 4. Smooth expansion of email input box
-      toggleMimiCoreEmailBox(true);
-    }
-
-    function handleAuthSubmit(e) {
-      e.preventDefault();
+    function showAuthError(msg) {
       const errEl = document.getElementById('authErrorMsg');
       if (errEl) {
-        errEl.classList.add('hidden');
-        errEl.innerText = '';
+        errEl.innerText = msg;
+        errEl.classList.remove('hidden');
+      } else {
+        showToast('⚠️ ' + msg);
       }
+    }
+
+    async function handleOAuthSignIn(provider) {
+      if (!window.supabaseClient) {
+        showAuthError('Sign-in service is unavailable. Check your connection and reload.');
+        return;
+      }
+      const { error } = await window.supabaseClient.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+      if (error) showAuthError(error.message || 'Could not start sign-in.');
+    }
+
+    function handleDiscordSignIn() { return handleOAuthSignIn('discord'); }
+    function handleGoogleSignIn() { return handleOAuthSignIn('google'); }
+
+    // Email sign-in via real Supabase Auth: magic link (default) or password.
+    // No session is created locally; the session only exists once Supabase verifies it.
+    async function handleMimiCoreEmailSubmit(e) {
+      if (e) e.preventDefault();
+      const errEl = document.getElementById('authErrorMsg');
+      if (errEl) { errEl.classList.add('hidden'); errEl.innerText = ''; }
 
       const emailInput = document.getElementById('authEmailInput');
-      const email = (emailInput && emailInput.value.trim()) || '';
-      if (!email || !email.includes('@')) {
-        if (errEl) {
-          errEl.innerText = 'Please enter a valid email address.';
-          errEl.classList.remove('hidden');
-        }
+      const email = ((emailInput && emailInput.value) || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAuthError('Please enter a valid email address.');
+        return;
+      }
+      if (!window.supabaseClient) {
+        showAuthError('Sign-in service is unavailable. Check your connection and reload.');
         return;
       }
 
-      const nameInput = document.getElementById('authNameInput');
-      const rawName = (nameInput && nameInput.value.trim()) || '';
-      const name = sanitizeRealUserName(rawName, email);
-      const staySignedIn = document.getElementById('authStaySignedInCheck') ? document.getElementById('authStaySignedInCheck').checked : true;
-
-      setLastUsedLoginInfo(email, name);
-      saveAccountToHistory(email, name);
-      if (window.AdminAnalytics && typeof AdminAnalytics.recordUserLogin === 'function') {
-        AdminAnalytics.recordUserLogin(name, email, staySignedIn);
-      }
-
-      currentUserSession = {
-        name: name,
-        email: email,
-        provider: "email",
-        staySignedIn: staySignedIn,
-        createdAt: new Date().toISOString()
-      };
-      if (staySignedIn) {
-        localStorage.setItem('watchvibe_user_profile', JSON.stringify(currentUserSession));
-        try { sessionStorage.removeItem('watchvibe_user_profile'); } catch(e) {}
-      } else {
-        sessionStorage.setItem('watchvibe_user_profile', JSON.stringify(currentUserSession));
-        try { localStorage.removeItem('watchvibe_user_profile'); } catch(e) {}
-      }
-
-      // Micro-interaction: button spinner & success transition
+      const pwdField = document.getElementById('mimicorePasswordField');
+      const passwordMode = !!pwdField && !pwdField.classList.contains('hidden');
       const submitBtn = document.getElementById('authSubmitBtn');
-      const submitIcon = document.getElementById('authSubmitBtnIcon');
       const submitLabel = document.getElementById('authSubmitBtnLabel');
-      if (submitBtn && submitLabel) {
-        if (submitIcon) submitIcon.className = 'fa-solid fa-circle-notch animate-spin text-purple-200';
-        submitLabel.innerText = 'Signing In...';
-        setTimeout(() => {
-          if (submitIcon) submitIcon.className = 'fa-solid fa-check text-emerald-400';
-          submitLabel.innerText = `Welcome, ${currentUserSession.name}!`;
-        }, 300);
-      }
+      const originalLabel = submitLabel ? submitLabel.innerText : '';
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitLabel) submitLabel.innerText = 'Please wait...';
 
-      loadUserWatchlistStore(true);
-      syncUserDataFromSupabaseCloud();
-      updateProfileUiState();
-      updateGoogleSignInUi();
-      showToast(`✨ Welcome, ${currentUserSession.name}!`);
-      setTimeout(() => {
-        closeAuthModal();
-        if (submitLabel) submitLabel.innerText = 'Continue to Profile';
-        if (submitIcon) submitIcon.className = 'fa-solid fa-arrow-right-to-bracket';
-      }, 700);
-    }
-
-    function userSignOut() {
-      // 1. Immediately delete stored session credentials first
       try {
-        localStorage.removeItem('watchvibe_user_profile');
-        sessionStorage.removeItem('watchvibe_user_profile');
-        if (window.supabaseClient && window.supabaseClient.auth) {
-          window.supabaseClient.auth.signOut().catch(() => {});
+        if (passwordMode) {
+          const pwdInput = document.getElementById('authPasswordInput');
+          const password = (pwdInput && pwdInput.value) || '';
+          if (!password) { showAuthError('Enter your password, or use an email sign-in link.'); return; }
+          const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) {
+            showAuthError(/invalid login/i.test(error.message)
+              ? 'Incorrect email or password. If you never set a password, use an email sign-in link instead.'
+              : error.message);
+            return;
+          }
+          closeAuthModal();
+        } else {
+          const nameInput = document.getElementById('authNameInput');
+          const name = sanitizeRealUserName((nameInput && nameInput.value.trim()) || '', email);
+          const { error } = await window.supabaseClient.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: window.location.origin + window.location.pathname,
+              shouldCreateUser: true,
+              data: { full_name: name }
+            }
+          });
+          if (error) { showAuthError(error.message || 'Could not send the sign-in link.'); return; }
+          showToast('📧 Check your inbox for your sign-in link.');
+          if (errEl) {
+            errEl.innerText = 'Sign-in link sent to ' + email + '. Open it on this device to finish signing in.';
+            errEl.classList.remove('hidden');
+          }
         }
-      } catch(e) {}
-
-      // 2. Clear in-memory active session
-      currentUserSession = null;
-      currentAuthUser = null;
-
-      // 3. Clear guest / memory watchlist
-      userWatchlistIds = [];
-      userWatchedHistory = [];
-      try {
-        localStorage.removeItem('watchvibe_guest_watchlist');
-        localStorage.removeItem('watchvibe_guest_watched');
-      } catch(e) {}
-
-      // 4. Update UI to Logged-Out state immediately
-      updateProfileUiState();
-      updateGoogleSignInUi();
-
-      // 5. Re-render all views in main viewport (feed, watchlist, badges) immediately
-      if (typeof refreshViews === 'function') {
-        refreshViews();
+      } catch (err) {
+        showAuthError('Something went wrong. Please try again.');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitLabel) submitLabel.innerText = originalLabel;
       }
+    }
+    function handleAuthSubmit(e) { return handleMimiCoreEmailSubmit(e); }
 
-      // 6. Dismiss the modal immediately so the user sees the signed-out app
+    async function userSignOut() {
+      try {
+        if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+      } catch(e) {}
+      setLoggedOutUser();
       closeAuthModal();
-
       showToast('👋 Signed out of WatchVibe Profile.');
     }
 
 
-    // --- SUPERADMIN COMMAND STUDIO LOGIC (dasdebarshi1234@gmail.com) ---
+    // --- SUPERADMIN COMMAND STUDIO LOGIC ---
+    // NOTE: this is only a UI gate. Real enforcement lives in Supabase RLS (see supabase/schema.sql):
+    // only a verified JWT for the admin email can read other users' rows.
     const SUPER_ADMIN_EMAIL = 'dasdebarshi1234@gmail.com';
 
     function isSuperAdmin() {
-      const sess = currentUserSession || (function() {
-        try {
-          const s = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-          return s ? JSON.parse(s) : null;
-        } catch(e) { return null; }
-      })();
-      if (!sess || !sess.email) return false;
-      return sess.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      const s = currentUserSession;
+      return !!(s && s.verified && s.email && s.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
     }
 
     // --- REAL-TIME CLOUD USER TRACKER & TELEMETRY ---
@@ -706,51 +460,14 @@
         // Initial clean seed data
         const now = Date.now();
         return {
-          totalSessions: 198,
-          uniqueDevices: 42,
-          geoStats: { 'IN': 164, 'US': 21, 'GB': 8, 'AE': 5 },
-          deviceStats: { mobile: 68, desktop: 32 },
-          ottReferrals: { netflix: 64, prime: 48, hotstar: 35, jiocinema: 27, zee5: 16 },
-          topSearches: { 'RRR': 24, 'Interstellar': 19, '3 Idiots': 17, 'Dark': 14, 'Inception': 12, 'KGF': 10, 'Stree 2': 9 },
-          aiPrompts: [
-            'Mind bending sci-fi thriller with plot twists',
-            'Feel good comedy Bollywood movies for weekend binge',
-            'Dark psychological crime mystery with unexpected endings',
-            'Best south Indian high octane action cinema',
-            'Heartwarming family comedy with great music'
-          ],
-          userAccounts: [
-            {
-              id: 'usr_superadmin',
-              name: 'Debarshi Das',
-              email: 'dasdebarshi1234@gmail.com',
-              role: 'Superadmin 👑',
-              signedInAt: new Date(now - 1000 * 60 * 35).toISOString(),
-              lastActive: new Date().toISOString(),
-              sessionType: 'localStorage',
-              online: true
-            },
-            {
-              id: 'usr_member_1',
-              name: 'Rohan Sharma',
-              email: 'rohan.sharma99@gmail.com',
-              role: 'Member',
-              signedInAt: new Date(now - 1000 * 60 * 12).toISOString(),
-              lastActive: new Date(now - 1000 * 60 * 2).toISOString(),
-              sessionType: 'localStorage',
-              online: true
-            },
-            {
-              id: 'usr_member_2',
-              name: 'Ananya Verma',
-              email: 'ananya.cinema@gmail.com',
-              role: 'Member',
-              signedInAt: new Date(now - 1000 * 60 * 85).toISOString(),
-              lastActive: new Date(now - 1000 * 60 * 18).toISOString(),
-              sessionType: 'sessionStorage',
-              online: false
-            }
-          ]
+          totalSessions: 0,
+          uniqueDevices: 0,
+          geoStats: {},
+          deviceStats: { mobile: 0, desktop: 0 },
+          ottReferrals: {},
+          topSearches: {},
+          aiPrompts: [],
+          userAccounts: []
         };
       },
       save(data) {
@@ -817,68 +534,10 @@
       }
     };
 
-    function initRealtimeUserChannel() {
-      if (!window.supabaseClient) return;
-      try {
-        if (realtimeUserChannel) return;
-        realtimeUserChannel = window.supabaseClient.channel('watchvibe_realtime_users', {
-          config: { broadcast: { self: true }, presence: { key: (currentUserSession?.email || 'anon') } }
-        });
-
-        // Listen for live user logins / heartbeats across any device
-        realtimeUserChannel.on('broadcast', { event: 'user_active' }, ({ payload }) => {
-          if (!payload || !payload.email) return;
-          const data = AdminAnalytics.get();
-          data.userAccounts = data.userAccounts || [];
-          const idx = data.userAccounts.findIndex(u => u.email.toLowerCase() === payload.email.toLowerCase());
-          if (idx >= 0) {
-            data.userAccounts[idx] = { ...data.userAccounts[idx], ...payload, online: true };
-          } else {
-            data.userAccounts.unshift({ ...payload, online: true });
-          }
-          AdminAnalytics.save(data);
-          
-          // Re-render live table if Admin Studio is open
-          const modal = document.getElementById('adminStudioModal');
-          if (modal && !modal.classList.contains('hidden')) {
-            renderUsersTable();
-          }
-        });
-
-        realtimeUserChannel.subscribe(status => {
-          if (status === 'SUBSCRIBED') {
-            console.log('WATCHVIBE: Real-time user presence channel subscribed.');
-            // Send initial ping if user is logged in
-            if (currentUserSession) {
-              const userObj = {
-                id: 'usr_' + currentUserSession.email.replace(/[^a-zA-Z0-9]/g, '_'),
-                name: currentUserSession.name,
-                email: currentUserSession.email,
-                role: (currentUserSession.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) ? 'Superadmin 👑' : 'Member',
-                signedInAt: currentUserSession.createdAt || new Date().toISOString(),
-                lastActive: new Date().toISOString(),
-                sessionType: currentUserSession.staySignedIn ? 'localStorage' : 'sessionStorage',
-                online: true
-              };
-              broadcastUserPresence(userObj);
-            }
-          }
-        });
-      } catch(e) {
-        console.warn('Realtime channel init warning:', e);
-      }
-    }
-
-    function broadcastUserPresence(userObj) {
-      if (!realtimeUserChannel) return;
-      try {
-        realtimeUserChannel.send({
-          type: 'broadcast',
-          event: 'user_active',
-          payload: userObj
-        });
-      } catch(e) {}
-    }
+    // The unauthenticated "user_active" broadcast channel was removed: any visitor could spoof entries
+    // into the admin user list. User lists now come only from the RLS-protected `profiles` table.
+    function initRealtimeUserChannel() {}
+    function broadcastUserPresence() {}
 
     // Load cloud users from Supabase profiles table
     async function fetchCloudUsersFromSupabase() {
@@ -888,8 +547,8 @@
         if (!error && data && data.length > 0) {
           const analyticsData = AdminAnalytics.get();
           data.forEach(p => {
-            if (!p.username) return;
-            const email = p.username;
+            const email = p.email;
+            if (!email) return;
             let meta = {};
             try { if (p.avatar_url) meta = JSON.parse(p.avatar_url); } catch(e) {}
             
@@ -1018,11 +677,11 @@
                 </div>
                 <div>
                   <div class="font-black text-white text-xs flex items-center gap-1.5">
-                    ${u.name}
+                    ${esc(u.name)}
                     ${isMe ? '<span class="text-[9px] bg-purple-500/30 text-purple-300 px-1.5 py-0.2 rounded font-mono font-bold border border-purple-400/30">YOU</span>' : ''}
                   </div>
                   <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                    <span>${u.email}</span>
+                    <span>${esc(u.email)}</span>
                   </div>
                 </div>
               </td>
@@ -1146,7 +805,7 @@
           <div class="flex items-center justify-between py-2 border-b border-[#2C2C3A]/50 text-xs">
             <div class="flex items-center gap-2">
               <span class="w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold font-mono text-[10px] flex items-center justify-center">#${idx+1}</span>
-              <span class="font-bold text-white">${q}</span>
+              <span class="font-bold text-white">${esc(q)}</span>
             </div>
             <span class="bg-purple-900/40 border border-purple-500/30 text-purple-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">${count} queries</span>
           </div>
@@ -1160,7 +819,7 @@
           <div class="bg-[#12121A] p-3 rounded-xl border border-[#2C2C3A] flex items-center justify-between gap-3 text-xs">
             <div class="flex items-center gap-2.5 truncate">
               <i class="fa-solid fa-sparkles text-purple-400 text-xs shrink-0"></i>
-              <span class="text-slate-200 font-medium truncate">"${prompt}"</span>
+              <span class="text-slate-200 font-medium truncate">"${esc(prompt)}"</span>
             </div>
             <button onclick="testAiPromptInStudio('${prompt.replace(/'/g, "\\'")}')" class="shrink-0 bg-purple-600/30 hover:bg-purple-600 text-purple-300 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold border border-purple-500/30 transition">
               Test Prompt
@@ -1237,13 +896,10 @@
     window.testAiPromptInStudio = testAiPromptInStudio;
     window.AdminAnalytics = AdminAnalytics;
 
-    window.promptSwitchGoogleAccount = promptSwitchGoogleAccount;
-    window.promptCustomGoogleSignIn = promptSwitchGoogleAccount;
     window.updateGoogleSignInUi = updateGoogleSignInUi;
     window.getLastUsedLoginInfo = getLastUsedLoginInfo;
     window.setLastUsedLoginInfo = setLastUsedLoginInfo;
     window.sanitizeRealUserName = sanitizeRealUserName;
-    window.switchAuthTab = switchAuthTab;
     window.handleAuthSubmit = handleAuthSubmit;
     window.userSignOut = userSignOut;
     window.updateProfileUiState = updateProfileUiState;
@@ -2496,7 +2152,8 @@
         toast.className = 'fixed bottom-20 md:bottom-8 right-6 z-50 bg-[#1A1A24] text-white px-4 py-3 rounded-2xl border border-purple-500/50 shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none backdrop-blur-md';
         document.body.appendChild(toast);
       }
-      toast.innerHTML = `<i class="fa-solid fa-sparkles text-purple-400"></i><span class="text-xs font-bold">${message}</span>`;
+      toast.innerHTML = '<i class="fa-solid fa-sparkles text-purple-400"></i><span class="text-xs font-bold"></span>';
+      toast.querySelector('span').textContent = message;
       toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
       setTimeout(() => {
         toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
@@ -2586,80 +2243,65 @@
     let currentAuthUser = null;
     let authMode = 'signIn'; // 'signIn' or 'signUp'
 
-    // Initialize Supabase Client
+    // Initialize Supabase Client (single shared instance, exposed on window for all helpers)
     function initSupabase() {
-      if (window.supabase) {
-        try {
-          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-          console.log('WATCHVIBE: Supabase Realtime Client initialized.');
-          initRealtimeUserChannel();
-          
-          // Check active session
-          supabaseClient.auth.getSession().then(({ data: { session } }) => {
-            if (session && session.user) {
-              setLoggedInUser(session.user);
-            }
-          });
+      if (!window.supabase) {
+        console.warn('WATCHVIBE: Supabase library failed to load; running in guest mode.');
+        return;
+      }
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        });
+        window.supabaseClient = supabaseClient;
 
-          // Listen for auth state changes (Never auto-log out on refresh if user has local profile)
-          supabaseClient.auth.onAuthStateChange((event, session) => {
-            if (session && session.user) {
-              setLoggedInUser(session.user);
-            } else if (event === 'SIGNED_OUT') {
-              if (!localStorage.getItem('watchvibe_user_profile') && !sessionStorage.getItem('watchvibe_user_profile')) {
-                setLoggedOutUser();
-              }
-            }
-          });
+        // Fires INITIAL_SESSION on load, SIGNED_IN after magic link / OAuth, SIGNED_OUT on logout.
+        // Defer work with setTimeout so we never await Supabase calls inside this callback (deadlock risk).
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+          setTimeout(() => {
+            if (session && session.user) setLoggedInUser(session.user);
+            else setLoggedOutUser();
+          }, 0);
+        });
 
-          // Subscribe to live battle votes
-          setupBattleRealtime();
-        } catch (e) {
-          console.warn('Supabase initialization warning:', e);
-        }
+        setupBattleRealtime();
+      } catch (e) {
+        console.warn('Supabase initialization warning:', e);
       }
     }
 
     function setLoggedInUser(user) {
+      if (!user || !user.email) return;
+      const isNewUser = !currentAuthUser || currentAuthUser.id !== user.id;
       currentAuthUser = user;
-      if (!currentUserSession) {
-        try {
-          const stored = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-          if (stored) currentUserSession = JSON.parse(stored);
-        } catch(e) {}
-      }
-      if (!currentUserSession && user && user.email) {
-        const name = sanitizeRealUserName(user.user_metadata?.full_name, user.email);
-        currentUserSession = {
-          name: name,
-          email: user.email,
-          provider: "supabase",
-          staySignedIn: true,
-          createdAt: user.created_at || new Date().toISOString()
-        };
-        try { localStorage.setItem('watchvibe_user_profile', JSON.stringify(currentUserSession)); } catch(e) {}
+      const meta = user.user_metadata || {};
+      currentUserSession = {
+        id: user.id,
+        name: sanitizeRealUserName(meta.full_name || meta.name, user.email),
+        email: user.email.trim().toLowerCase(),
+        avatar: meta.avatar_url || null,
+        provider: (user.app_metadata && user.app_metadata.provider) || 'email',
+        verified: !!user.email_confirmed_at,
+        createdAt: user.created_at || new Date().toISOString()
+      };
+      if (isNewUser) {
+        loadUserWatchlistStore(true);
+        syncUserDataFromSupabaseCloud();
+        closeAuthModal();
       }
       updateProfileUiState();
-      syncCloudWatchlists();
+      updateGoogleSignInUi();
     }
 
     function setLoggedOutUser() {
+      const hadSession = !!currentUserSession;
       currentAuthUser = null;
-      // Preserve persistent profile session across refreshes!
-      if (!currentUserSession) {
-        try {
-          const stored = localStorage.getItem('watchvibe_user_profile') || sessionStorage.getItem('watchvibe_user_profile');
-          if (stored) currentUserSession = JSON.parse(stored);
-        } catch(e) {}
-      }
-      const label = document.getElementById('cloudAuthBtnLabel');
-      if (label && !currentUserSession) label.innerText = 'Profile';
+      currentUserSession = null;
+      userWatchlistIds = [];
+      userWatchedHistory = [];
       updateProfileUiState();
-
-      const loggedInDiv = document.getElementById('authLoggedInState');
-      const loggedOutDiv = document.getElementById('authLoggedOutState');
-      if (loggedInDiv) loggedInDiv.classList.add('hidden');
-      if (loggedOutDiv) loggedOutDiv.classList.remove('hidden');
+      updateGoogleSignInUi();
+      if (hadSession) loadUserWatchlistStore(true);
     }
 
     function handleUnifiedEmailInput(val) {
@@ -2798,40 +2440,11 @@
       closeAuthModal();
     }
 
-    // Cloud Watchlist Sync
+    // Cloud Watchlist Sync: one row per authenticated user in `user_watchlists` (RLS: auth.uid() = user_id).
+    // See supabase/schema.sql. The debounced writer is syncUserDataToSupabaseCloud().
     async function syncCloudWatchlists() {
-      if (!supabase || !currentAuthUser) return;
-      try {
-        const { data, error } = await supabase
-          .from('user_watchlists')
-          .select('*')
-          .eq('user_id', currentAuthUser.id);
-
-        if (!error && data) {
-          console.log(`WATCHVIBE: Loaded ${data.length} watchlist items from Supabase Cloud.`);
-          showToast(`☁️ Cloud Watchlist Synced: ${data.length} titles loaded.`);
-        }
-      } catch (e) {
-        console.warn('Watchlist sync warning:', e);
-      }
-    }
-
-    async function saveWatchlistToCloud(mediaItem, status = 'plan_to_watch') {
-      if (!supabase || !currentAuthUser) return;
-      try {
-        await supabaseClient.from('user_watchlists').upsert({
-          user_id: currentAuthUser.id,
-          media_id: mediaItem.id,
-          title: mediaItem.title,
-          poster: mediaItem.poster,
-          year: mediaItem.year,
-          status: status,
-          dominant_vibe: mediaItem.dominantVibe || 'must_watch'
-        }, { onConflict: 'user_id,media_id' });
-        showToast(`☁️ Saved "${mediaItem.title}" to Cloud Watchlist`);
-      } catch (e) {
-        console.warn('Save to cloud watchlist warning:', e);
-      }
+      if (!window.supabaseClient || !currentAuthUser) return;
+      await syncUserDataFromSupabaseCloud();
     }
 
     // Live Community Battle Voting Realtime
@@ -2839,7 +2452,7 @@
     function setupBattleRealtime() {
       if (!supabaseClient) return;
       try {
-        supabase
+        supabaseClient
           .channel('public:battle_votes')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'battle_votes' }, payload => {
             console.log('Live battle vote received:', payload);
@@ -3391,13 +3004,11 @@
     let syncCloudDebounceTimer = null;
 
     function syncUserDataToSupabaseCloud() {
-      if (!window.supabaseClient || !currentUserSession || !currentUserSession.email) return;
+      if (!window.supabaseClient || !currentAuthUser) return;
       clearTimeout(syncCloudDebounceTimer);
       syncCloudDebounceTimer = setTimeout(async () => {
         try {
           const userPayload = {
-            email: currentUserSession.email.toLowerCase(),
-            name: currentUserSession.name,
             watchlist: userWatchlistIds,
             watched_history: userWatchedHistory,
             last_active: new Date().toISOString()
@@ -3405,7 +3016,7 @@
           await window.supabaseClient
             .from('user_watchlists')
             .upsert({
-              user_id: currentUserSession.email.toLowerCase(),
+              user_id: currentAuthUser.id,
               watchlist_data: userPayload,
               updated_at: new Date().toISOString()
             });
@@ -3417,12 +3028,12 @@
     }
 
     async function syncUserDataFromSupabaseCloud() {
-      if (!window.supabaseClient || !currentUserSession || !currentUserSession.email) return;
+      if (!window.supabaseClient || !currentAuthUser) return;
       try {
         const { data, error } = await window.supabaseClient
           .from('user_watchlists')
           .select('watchlist_data')
-          .eq('user_id', currentUserSession.email.toLowerCase())
+          .eq('user_id', currentAuthUser.id)
           .maybeSingle();
 
         if (data && data.watchlist_data) {
@@ -3465,7 +3076,7 @@
       }
 
       // One-time legacy migration for superadmin Debarshi so testing data is preserved:
-      if (currentUserSession && currentUserSession.email && currentUserSession.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      if (isSuperAdmin()) {
         const legacyWl = localStorage.getItem('watchvibe_saved_watchlist');
         if (legacyWl && userWatchlistIds.length === 0) {
           try {
@@ -5341,7 +4952,7 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
           suggestionsHtml = `
             <div class="bg-[#16161E] border border-purple-500/30 p-3 rounded-2xl space-y-1.5 shadow-md">
               <div class="text-[10px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Suggested Stars Matching "${query}":
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Suggested Stars Matching "${esc(query)}":
               </div>
               <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 ${matchedNames.map(name => `
@@ -5587,7 +5198,7 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
           ${suggestionsHtml}
           <div class="text-center py-12 space-y-3 bg-[#16161E] rounded-3xl border border-[#2C2C3A]">
             <i class="fa-solid fa-film text-4xl text-purple-400/40"></i>
-            <div class="text-white font-bold text-sm">No exact titles match "${query}"</div>
+            <div class="text-white font-bold text-sm">No exact titles match "${esc(query)}"</div>
             <div class="text-xs text-slate-400">Try searching for famous stars like "Salman Khan", "Shah Rukh Khan", "Prabhas", "Christopher Nolan", or "Oppenheimer"</div>
           </div>
         `;

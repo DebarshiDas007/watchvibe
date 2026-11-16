@@ -2,15 +2,17 @@
 > **"Don't just rate it. Tell us the vibe."**  
 > Social entertainment discovery for **Android, iOS, macOS, Windows, and Web** built with Flutter.
 
-🌐 **Live Production Web App:** [https://watchvibe-app.netlify.app/](https://watchvibe-app.netlify.app/)  
-⚡ **Local Dev Server:** `http://localhost:8080`
+🌐 **Live Production Web App:** [https://watchvibe-b92.pages.dev/](https://watchvibe-b92.pages.dev/)  
+⚡ **Local Dev Server:** `cd web_live_build && python -m http.server 8080`
+
+> The production app is the single-file PWA in `web_live_build/`. The Flutter code in `lib/` is an experimental, not-yet-buildable port (see `HANDOFF.md`).
 
 ---
 
 > [!IMPORTANT]
 > **Persistent Session Handoff & Memory:**  
 > For complete architecture history, zero-cost free-tier guidelines, component maps, and session instructions, see:  
-> 📖 [memory/HANDOFF.md](file:///C:/Users/USER/.gemini/antigravity/scratch/watchvibe/memory/HANDOFF.md)
+> 📖 [memory/HANDOFF.md](memory/HANDOFF.md) and [HANDOFF.md](HANDOFF.md)
 
 ---
 
