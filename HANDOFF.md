@@ -31,13 +31,15 @@ cd D:\watchvibe\web_live_build; python -m http.server 8080   # local preview
 
 Secrets live only in `D:\watchvibe\.env` (git-ignored). Never put credentials, tokens or test passwords in tracked files.
 
-## 4. Manual steps still required (cannot be done from code)
+## 4. Manual steps
 
-1. Run `supabase/schema.sql` in the Supabase SQL editor. If an old `user_watchlists` table keyed on email exists, rename it first (see comments in the file).
-2. Supabase → Authentication → URL Configuration: Site URL = live URL; add `http://localhost:8080` to Redirect URLs. Enable Email, and Google/Discord providers if desired.
-3. **Delete/rotate the old test account** `vibe_tester@watchvibe.app` — its password was committed to a public repo in `memory/HANDOFF.md` (still visible in git history, commit `dd244e5`).
-4. Optional hardening: move the TMDB key behind a Cloudflare Worker proxy and rotate the current key (it is public in `index.html`).
+Done (Nov 2026): `supabase/schema.sql` applied (legacy tables kept as `*_legacy`, permissive policies dropped); Site URL + redirect URLs set; leaked `vibe_tester@watchvibe.app` deleted.
 
+Still open:
+1. Enable Google / Discord in Supabase (needs OAuth client ID + secret), then set `OAUTH_ENABLED` to true in `index.html`.
+2. Review leftover test users (`temp_tester_9876@watchvibe.app`, `regular@gmail.com`, `test_cinephile@gmail.com`).
+3. Configure a custom SMTP provider in Supabase before real users (built-in mailer is rate-limited).
+4. Optional: move the TMDB key behind a Cloudflare Worker and rotate it (it is public in `index.html`).
 ## 5. Phase 2 (done): Mood Picker + honest matching
 
 - AI Vibe Matcher has multi-select moods (cry / mind-blown / laugh / cozy / adrenaline / hidden gems), a runtime filter and genre-aware scoring. Match % is relative to the best candidate; placeholder vote splits (e.g. 100/100/100) are normalised and confidence-weighted.
