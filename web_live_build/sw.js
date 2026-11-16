@@ -1,9 +1,9 @@
-const CACHE_NAME = 'watchvibe-cache-v10';
+const CACHE_NAME = 'watchvibe-cache-v11';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  'https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js',
+  './tailwind.js',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
