@@ -248,6 +248,9 @@
         if (emailEl) emailEl.innerText = currentUserSession.email;
         const wlEl = document.getElementById('profileWatchlistCount');
         if (wlEl) wlEl.innerText = `${(userWatchlistIds || []).length} Titles`;
+        updateSidebarUserCard();
+        const personaEl = document.getElementById('profileVibePersona');
+        if (personaEl) personaEl.innerText = computeVibePersona();
 
         // Superadmin Entry Point Visibility Gate (dasdebarshi1234@gmail.com)
         const adminBtn = document.getElementById('adminStudioEntryPoint');
@@ -320,6 +323,9 @@
       if (!pwdField) return;
 
       const isPasswordMode = !pwdField.classList.contains('hidden');
+      const nameField = document.getElementById('authNameField');
+      if (nameField) nameField.classList.toggle('hidden', !isPasswordMode);
+      clearAuthMessages();
       if (isPasswordMode) {
         pwdField.classList.add('hidden');
         if (toggleBtn) toggleBtn.innerText = 'Have a password? Sign in with it';
@@ -333,7 +339,78 @@
       }
     }
 
+    // Flip these to true once the provider is enabled in Supabase (Authentication -> Sign In / Providers).
+    const OAUTH_ENABLED = { google: false, discord: false };
+
+    function showAuthInfo(msg) {
+      const okEl = document.getElementById('authStatusMsg');
+      const errEl = document.getElementById('authErrorMsg');
+      if (errEl) { errEl.classList.add('hidden'); errEl.innerText = ''; }
+      if (okEl) { okEl.innerText = msg; okEl.classList.remove('hidden'); }
+    }
+
+    function clearAuthMessages() {
+      ['authErrorMsg', 'authStatusMsg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('hidden'); el.innerText = ''; }
+      });
+    }
+
+    function markOAuthAvailability() {
+      [['googleSignInBtn', 'google'], ['discordSignInBtn', 'discord']].forEach(([id, p]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const off = !OAUTH_ENABLED[p];
+        btn.style.opacity = off ? '0.55' : '';
+        btn.setAttribute('aria-disabled', off ? 'true' : 'false');
+        let badge = btn.querySelector('.oauth-soon');
+        if (off && !badge) {
+          badge = document.createElement('span');
+          badge.className = 'oauth-soon';
+          badge.style.cssText = 'margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.25);color:inherit';
+          badge.textContent = 'SOON';
+          btn.appendChild(badge);
+        } else if (!off && badge) {
+          badge.remove();
+        }
+      });
+    }
+
+    // Supabase redirects back with #error=...&error_description=... (e.g. expired or already-used magic link).
+    function handleAuthCallbackErrors() {
+      try {
+        const raw = (window.location.hash || '').replace(/^#/, '') || window.location.search.replace(/^\?/, '');
+        const params = new URLSearchParams(raw);
+        const code = params.get('error_code') || params.get('error');
+        if (!code) return;
+        const friendly = {
+          otp_expired: 'That sign-in link has expired or was already used. Request a new one.',
+          access_denied: 'Sign-in was cancelled or the link is no longer valid. Request a new one.'
+        };
+        const msg = friendly[code] || (params.get('error_description') || 'Sign-in failed. Please try again.').replace(/\+/g, ' ');
+        history.replaceState(null, '', window.location.pathname);
+        setTimeout(() => {
+          openAuthModal();
+          toggleMimiCoreEmailBox(true);
+          showAuthError(msg);
+        }, 400);
+      } catch (e) {}
+    }
+
+    function computeVibePersona() {
+      const counts = {};
+      (userWatchedHistory || []).forEach(h => { const v = h.myVibe || h.dominantVibe; if (v) counts[v] = (counts[v] || 0) + 2; });
+      (userWatchlistIds || []).forEach(id => {
+        const m = (typeof mediaDatabase !== 'undefined') ? mediaDatabase.find(x => x.id === id) : null;
+        if (m && m.dominantVibe) counts[m.dominantVibe] = (counts[m.dominantVibe] || 0) + 1;
+      });
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      return top && typeof VIBES !== 'undefined' && VIBES[top[0]] ? VIBES[top[0]].label : 'Not yet rated';
+    }
+
     function showAuthError(msg) {
+      const okEl = document.getElementById('authStatusMsg');
+      if (okEl) { okEl.classList.add('hidden'); okEl.innerText = ''; }
       const errEl = document.getElementById('authErrorMsg');
       if (errEl) {
         errEl.innerText = msg;
@@ -344,6 +421,11 @@
     }
 
     async function handleOAuthSignIn(provider) {
+      if (!OAUTH_ENABLED[provider]) {
+        toggleMimiCoreEmailBox(true);
+        showAuthError((provider === 'google' ? 'Google' : 'Discord') + ' sign-in is not enabled yet. Use your email instead: we will send you a sign-in link.');
+        return;
+      }
       if (!window.supabaseClient) {
         showAuthError('Sign-in service is unavailable. Check your connection and reload.');
         return;
@@ -362,8 +444,7 @@
     // No session is created locally; the session only exists once Supabase verifies it.
     async function handleMimiCoreEmailSubmit(e) {
       if (e) e.preventDefault();
-      const errEl = document.getElementById('authErrorMsg');
-      if (errEl) { errEl.classList.add('hidden'); errEl.innerText = ''; }
+      clearAuthMessages();
 
       const emailInput = document.getElementById('authEmailInput');
       const email = ((emailInput && emailInput.value) || '').trim().toLowerCase();
@@ -410,17 +491,41 @@
           });
           if (error) { showAuthError(error.message || 'Could not send the sign-in link.'); return; }
           showToast('📧 Check your inbox for your sign-in link.');
-          if (errEl) {
-            errEl.innerText = 'Sign-in link sent to ' + email + '. Open it on this device to finish signing in.';
-            errEl.classList.remove('hidden');
-          }
+          showAuthInfo('Sign-in link sent to ' + email + '. Open it in this browser to finish signing in (check spam too).');
+          startAuthResendCooldown(30);
         }
       } catch (err) {
         showAuthError('Something went wrong. Please try again.');
       } finally {
-        if (submitBtn) submitBtn.disabled = false;
-        if (submitLabel) submitLabel.innerText = originalLabel;
+        if (!authCooldownTimer) {
+          if (submitBtn) submitBtn.disabled = false;
+          if (submitLabel) submitLabel.innerText = originalLabel;
+        }
       }
+    }
+
+    // Supabase's built-in mailer is heavily rate-limited, so prevent rapid re-sends.
+    let authCooldownTimer = null;
+    function startAuthResendCooldown(seconds) {
+      const btn = document.getElementById('authSubmitBtn');
+      const label = document.getElementById('authSubmitBtnLabel');
+      if (!btn || !label) return;
+      let left = seconds;
+      btn.disabled = true;
+      const tick = () => {
+        if (left <= 0) {
+          clearInterval(authCooldownTimer);
+          authCooldownTimer = null;
+          btn.disabled = false;
+          label.innerText = 'Email me a new sign-in link';
+          return;
+        }
+        label.innerText = 'Resend available in ' + left + 's';
+        left -= 1;
+      };
+      clearInterval(authCooldownTimer);
+      tick();
+      authCooldownTimer = setInterval(tick, 1000);
     }
     function handleAuthSubmit(e) { return handleMimiCoreEmailSubmit(e); }
 
@@ -1085,24 +1190,20 @@
 
       </div>
 
-      <!-- User Card at Bottom of Sidebar -->
+      <!-- User Card at Bottom of Sidebar (filled by updateSidebarUserCard) -->
       <div class="bg-[#1D1D25] p-3.5 rounded-2xl border border-[#2C2C3A] text-xs space-y-2">
         <div class="flex items-center gap-3">
-          <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120" class="w-10 h-10 rounded-full border-2 border-purple-400 object-cover" alt="Avatar">
+          <div id="sidebarUserAvatar" class="w-10 h-10 rounded-full border-2 border-purple-400 bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black shrink-0 overflow-hidden"><i class="fa-solid fa-user"></i></div>
           <div class="min-w-0 flex-1">
-            <div class="font-bold text-white truncate">Alex Rivera</div>
-            <div class="text-[10px] text-purple-400 font-semibold flex items-center gap-1">
-              <i class="fa-solid fa-fire text-amber-400"></i> 14 Wk Streak
-            </div>
+            <div id="sidebarUserName" class="font-bold text-white truncate">Guest</div>
+            <button id="sidebarUserSub" type="button" onclick="openAuthModal()" class="text-[10px] text-purple-400 font-semibold hover:text-purple-300 text-left cursor-pointer">Sign in to sync your watchlist</button>
           </div>
         </div>
-        <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#2C2C3A] pt-2">
-          <span><b>168</b> Movies</span>
-          <span><b>34</b> Shows</span>
-          <span class="text-emerald-400 font-bold">89% Match</span>
+        <div id="sidebarUserStats" class="text-[10px] text-slate-400 flex justify-between border-t border-[#2C2C3A] pt-2">
+          <span><b>0</b> Watched</span>
+          <span><b>0</b> Want to watch</span>
         </div>
-      </div>
-    </aside>
+      </div>    </aside>
 
     <!-- FULL SCREEN MAIN CONTENT VIEWPORT (RESPONSIVE) -->
     <main class="flex-1 min-w-0 min-h-screen px-4 py-6 sm:px-8 lg:px-12 w-full max-w-full pb-24 md:pb-12">
@@ -1195,8 +1296,7 @@
   </div>
 
   <!-- OFFICIAL VIDEO TRAILER MODAL -->
-  <div id="trailerModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] hidden flex items-center justify-center p-3 sm:p-6" onclick="if(event.target === this) closeTrailer();
-        closeAuthModal();">
+  <div id="trailerModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] hidden flex items-center justify-center p-3 sm:p-6" onclick="if(event.target === this) closeTrailer();">
     <div class="relative w-full max-w-4xl bg-[#16161E] rounded-3xl overflow-hidden border border-[#2C2C3A] shadow-2xl flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#2C2C3A] bg-[#12121A]">
@@ -1241,12 +1341,12 @@
 
     <!-- USER PROFILE & AUTHENTICATION MODAL (MIMICORE ARCHITECTURE) -->
   <div id="authModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5" onclick="if(event.target === this) closeAuthModal();">
-    <div class="mimicore-card w-full max-w-[500px] p-6 sm:p-8 relative space-y-5 max-h-[92vh] overflow-y-auto">
+    <div class="mimicore-card w-full max-w-[500px] p-6 sm:p-8 relative space-y-5 max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="authModalHeaderTitle">
       <!-- Modal Header -->
       <div class="flex justify-between items-start pb-1">
         <div>
           <h3 id="authModalHeaderTitle" class="text-xl sm:text-2xl font-black text-white tracking-tight">Sign in or create an account</h3>
-          <p id="authModalHeaderSubtitle" class="text-xs text-slate-400 mt-1 leading-relaxed">Free to use. Sync your watchlist across all your devices with zero passwords.</p>
+          <p id="authModalHeaderSubtitle" class="text-xs text-slate-400 mt-1 leading-relaxed">Free to use. Sync your watchlist across devices. No password needed: we email you a sign-in link.</p>
         </div>
         <button onclick="closeAuthModal()" type="button" aria-label="Close modal" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition shrink-0 ml-2 cursor-pointer">
           <i class="fa-solid fa-xmark text-sm"></i>
@@ -1259,7 +1359,7 @@
         <span class="text-slate-600">·</span>
         <span class="flex items-center gap-1.5">🎯 <span class="text-purple-300">AI Vibe Matcher</span></span>
         <span class="text-slate-600">·</span>
-        <span class="flex items-center gap-1.5">⚡ <span class="text-amber-300">Zero Passwords</span></span>
+        <span class="flex items-center gap-1.5">⚡ <span class="text-amber-300">No Password Needed</span></span>
       </div>
 
       <!-- Logged In Profile State (Visible when session is active) -->
@@ -1269,8 +1369,8 @@
             <i class="fa-solid fa-user"></i>
           </div>
           <div class="min-w-0 flex-1">
-            <div id="authActiveUserName" class="text-sm font-black text-white truncate">Vibe Connoisseur</div>
-            <div id="authActiveUserEmail" class="text-xs text-slate-400 truncate font-mono">user@gmail.com</div>
+            <div id="authActiveUserName" class="text-sm font-black text-white truncate"></div>
+            <div id="authActiveUserEmail" class="text-xs text-slate-400 truncate font-mono"></div>
             <div class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1.5 mt-0.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Profile Active & Cloud Synced
             </div>
@@ -1280,11 +1380,11 @@
         <div class="grid grid-cols-2 gap-2 text-center text-xs">
           <div class="bg-white/[0.03] p-2.5 rounded-xl border border-white/[0.08]">
             <div class="text-slate-400 text-[10px]">Saved Watchlist</div>
-            <div id="profileWatchlistCount" class="text-base font-black text-purple-300">12 Titles</div>
+            <div id="profileWatchlistCount" class="text-base font-black text-purple-300">0 Titles</div>
           </div>
           <div class="bg-white/[0.03] p-2.5 rounded-xl border border-white/[0.08]">
             <div class="text-slate-400 text-[10px]">Vibe Persona</div>
-            <div class="text-base font-black text-amber-400">Mind Blown</div>
+            <div id="profileVibePersona" class="text-base font-black text-amber-400">Not yet rated</div>
           </div>
         </div>
 
@@ -1355,7 +1455,7 @@
         <div id="mimicoreEmailBox" class="hidden pt-3 border-t border-white/[0.08] space-y-3.5">
           <form onsubmit="handleMimiCoreEmailSubmit(event)" class="space-y-3">
             <div>
-              <label class="block text-slate-300 text-xs font-semibold mb-1.5">Email address</label>
+              <label for="authEmailInput" class="block text-slate-300 text-xs font-semibold mb-1.5">Email address</label>
               <input type="email" id="authEmailInput" placeholder="you@example.com" autocomplete="email" required class="mimicore-input">
               
               <!-- 1-Click Domain Quick-Pills -->
@@ -1367,18 +1467,24 @@
               </div>
             </div>
 
+            <div id="authNameField">
+              <label for="authNameInput" class="block text-slate-300 text-xs font-semibold mb-1.5">Display name <span class="text-slate-500 font-normal">(optional)</span></label>
+              <input type="text" id="authNameInput" placeholder="How should we greet you?" autocomplete="name" maxlength="40" class="mimicore-input">
+            </div>
+
             <!-- Optional Password Mode Container -->
             <div id="mimicorePasswordField" class="hidden space-y-1">
-              <label class="block text-slate-300 text-xs font-semibold mb-1">Password</label>
+              <label for="authPasswordInput" class="block text-slate-300 text-xs font-semibold mb-1">Password</label>
               <div class="relative">
-                <input type="password" id="authPasswordInput" placeholder="Enter your password" class="mimicore-input pr-10">
+                <input type="password" id="authPasswordInput" placeholder="Enter your password" autocomplete="current-password" class="mimicore-input pr-10">
                 <button type="button" onclick="togglePasswordVisibility('authPasswordInput', 'authPasswordEyeIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition p-1">
                   <i id="authPasswordEyeIcon" class="fa-regular fa-eye text-xs"></i>
                 </button>
               </div>
             </div>
 
-            <div id="authErrorMsg" class="hidden text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-xl"></div>
+            <div id="authErrorMsg" role="alert" class="hidden text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-xl"></div>
+            <div id="authStatusMsg" role="status" class="hidden text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-xl"></div>
 
             <!-- Mimicore Vivid Primary Button -->
             <button type="submit" id="authSubmitBtn" class="mimicore-primary-btn">
@@ -1397,7 +1503,7 @@
         <!-- Footer Reassurance -->
         <div class="pt-3 border-t border-white/[0.06] text-center space-y-2">
           <p class="text-[11px] text-slate-500 leading-relaxed">
-            By signing in you agree to the <a href="javascript:void(0)" class="text-slate-400 hover:text-white underline">license</a>, the <a href="javascript:void(0)" class="text-slate-400 hover:text-white underline">acceptable use policy</a> and the <a href="javascript:void(0)" class="text-slate-400 hover:text-white underline">privacy policy</a>.
+            We only store your email, name and watchlist to sync your account. No passwords are stored by WatchVibe; sign-in is handled by Supabase Auth.
           </p>
           <div>
             <button type="button" onclick="closeAuthModal()" class="text-xs text-slate-400 hover:text-purple-300 transition inline-flex items-center gap-1.5 font-medium cursor-pointer">
@@ -1887,6 +1993,9 @@
     let searchDebounceTimer = null;
     let aiVibeQuery = "";
     let aiVibeResults = null;
+    let aiMoods = [];            // selected mood ids (multi-select)
+    let aiMaxRuntime = 0;        // minutes; 0 = any
+    let aiMatchTotal = 0;        // how many titles passed the filters
 
     // TMDB API Constants
     const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -2366,6 +2475,7 @@
     }
 
     function openAuthModal() {
+      markOAuthAvailability();
       updateProfileUiState();
       if (typeof updateGoogleSignInUi === 'function') updateGoogleSignInUi();
       if (!currentUserSession && typeof initGoogleIdentityServices === 'function') initGoogleIdentityServices();
@@ -2385,7 +2495,7 @@
         if (headerSub) headerSub.innerText = 'Tap your account to sign in with 1-click';
       } else {
         if (headerTitle) headerTitle.innerText = 'Sign in or create an account';
-        if (headerSub) headerSub.innerText = 'Free to use. Sync your watchlist across all your devices with zero passwords.';
+        if (headerSub) headerSub.innerText = 'Free to use. Sync your watchlist across devices. No password needed: we email you a sign-in link.';
       }
 
       const modal = document.getElementById('authModal');
@@ -2443,8 +2553,13 @@
     // Cloud Watchlist Sync: one row per authenticated user in `user_watchlists` (RLS: auth.uid() = user_id).
     // See supabase/schema.sql. The debounced writer is syncUserDataToSupabaseCloud().
     async function syncCloudWatchlists() {
-      if (!window.supabaseClient || !currentAuthUser) return;
+      if (!window.supabaseClient || !currentAuthUser) {
+        showToast('Sign in to sync your watchlist.');
+        return;
+      }
       await syncUserDataFromSupabaseCloud();
+      syncUserDataToSupabaseCloud();
+      showToast('☁️ Watchlist synced to your account.');
     }
 
     // Live Community Battle Voting Realtime
@@ -3282,24 +3397,46 @@
     aiVibeResults = aiVibeResults || null;
     selectedIndianLang = selectedIndianLang || null;
 
-    function runAiVibeMatcher(promptText) {
-      const q = (promptText || document.getElementById('aiVibeInput')?.value || '').trim();
-      if (!q) return;
-      if (typeof AdminAnalytics !== 'undefined') {
+    // --- MOOD PICKER: each mood boosts vibe categories and adds keyword hints ---
+    const AI_MOODS = [
+      { id: 'cry',      label: 'Need a good cry',   emoji: '😭', genres: ['Drama','Romance','Family'], vibes: { emotional_damage: 8, must_watch: 3 }, words: ['family','loss','love','drama','father','brother'] },
+      { id: 'mind',     label: 'Blow my mind',      emoji: '🤯', genres: ['Sci-Fi','Mystery','Thriller'], vibes: { mind_blown: 8, must_watch: 3 },       words: ['sci-fi','thriller','mystery','time','twist','dream'] },
+      { id: 'laugh',    label: 'Make me laugh',     emoji: '😂', genres: ['Comedy'], vibes: { fun_time: 8 },                         words: ['comedy','funny','friends','chaos'] },
+      { id: 'comfort',  label: 'Cozy & comforting', emoji: '🫶', genres: ['Family','Comedy','Romance','Animation'], vibes: { fun_time: 4, hidden_gem: 3, emotional_damage: 2 }, words: ['family','village','wholesome','small','music'] },
+      { id: 'hype',     label: 'Pure adrenaline',   emoji: '🔥', genres: ['Action','Adventure','War','Thriller'], vibes: { must_watch: 5, fun_time: 3, mind_blown: 3 }, words: ['action','war','hero','fight','epic','thriller'] },
+      { id: 'gem',      label: 'Hidden gems',       emoji: '💎', genres: [], vibes: { hidden_gem: 8, must_watch: 2 },        words: ['indie','realism','small'] }
+    ];
+
+    function parseRuntimeMinutes(d) {
+      if (!d) return 0;
+      const h = /(\d+)\s*h/.exec(d), m = /(\d+)\s*m/.exec(d);
+      return (h ? parseInt(h[1], 10) * 60 : 0) + (m ? parseInt(m[1], 10) : 0);
+    }
+
+    function toggleAiMood(id) {
+      aiMoods = aiMoods.includes(id) ? aiMoods.filter(x => x !== id) : [...aiMoods, id];
+      runAiVibeMatcher(undefined, true);
+    }
+
+    function setAiRuntime(mins) {
+      aiMaxRuntime = mins;
+      runAiVibeMatcher(undefined, true);
+    }
+
+    function runAiVibeMatcher(promptText, keepScroll) {
+      const typed = (promptText || document.getElementById('aiVibeInput')?.value || '').trim();
+      const q = typed;
+      if (!q && aiMoods.length === 0) {
+        showToast('Type what you feel like, or pick a mood.');
+        return;
+      }
+      if (q && typeof AdminAnalytics !== 'undefined') {
         AdminAnalytics.recordAiPrompt(q);
       }
       aiVibeQuery = q;
       const lower = q.toLowerCase();
 
-      const vibeWeights = {
-        must_watch: 0,
-        mind_blown: 0,
-        emotional_damage: 0,
-        hidden_gem: 0,
-        fun_time: 0,
-        time_pass: 0,
-        skip_it: 0
-      };
+      const vibeWeights = { must_watch: 0, mind_blown: 0, emotional_damage: 0, hidden_gem: 0, fun_time: 0, time_pass: 0, skip_it: 0 };
 
       if (lower.match(/mind|twist|sci-fi|crazy|nolan|confus|dimension|matrix|wormhole|puzzle|intellect|mindfuck/)) {
         vibeWeights.mind_blown += 6;
@@ -3327,34 +3464,79 @@
         vibeWeights.hidden_gem += 3;
       }
 
-      const scored = mediaDatabase.map(m => {
+      // selected moods add their own weights and keyword hints
+      const moodWords = [];
+      const moodGenres = [];
+      aiMoods.forEach(id => {
+        const mood = AI_MOODS.find(x => x.id === id);
+        if (!mood) return;
+        Object.entries(mood.vibes).forEach(([v, w]) => { vibeWeights[v] += w; });
+        moodWords.push(...mood.words);
+        moodGenres.push(...(mood.genres || []));
+      });
+
+      // Typed text also implies moods, so free-text prompts benefit from genre matching too.
+      [[/mind|twist|sci-fi|puzzle|mindfuck|nolan/, 'mind'], [/cry|tear|sad|heart|emotional|devastat/, 'cry'],
+       [/fun|laugh|comedy|hilarious|chaotic/, 'laugh'], [/comfort|wholesome|cozy|feel good|relax|warm/, 'comfort'],
+       [/mass|action|adrenaline|epic|fight|hype/, 'hype']].forEach(([rx, id]) => {
+        if (lower.match(rx)) {
+          const mood = AI_MOODS.find(x => x.id === id);
+          if (mood) { moodGenres.push(...(mood.genres || [])); moodWords.push(...mood.words); }
+        }
+      });
+
+      const typeFilter = selectedTopCategory && selectedTopCategory !== 'all' ? selectedTopCategory : null;
+      const candidates = mediaDatabase.filter(m => {
+        if (aiMaxRuntime && parseRuntimeMinutes(m.duration) > aiMaxRuntime) return false;
+        if (typeFilter && (m.type || 'Movie') !== typeFilter) return false;
+        return true;
+      });
+      aiMatchTotal = candidates.length;
+
+      const words = lower.split(/\s+/).filter(w => w.length > 2);
+      const scored = candidates.map(m => {
         let score = 0;
-        const pcts = getVibePercentages(m);
+        // Many catalog titles carry placeholder vote splits (e.g. 100/100/100). Normalise each title's split
+        // to 100% and scale by a vote-confidence factor so unreliable data can't dominate the ranking.
+        const rawPcts = getVibePercentages(m);
+        const pSum = Object.values(rawPcts).reduce((a, b) => a + (b || 0), 0) || 1;
+        const conf = Math.min(1, Math.log10((m.totalVotes || 0) + 10) / 4.5);
         for (const [vibe, weight] of Object.entries(vibeWeights)) {
-          score += (pcts[vibe] || 0) * weight;
+          score += ((rawPcts[vibe] || 0) / pSum * 100) * conf * weight;
         }
+        (m.genres || []).forEach(g => { if (moodGenres.includes(g)) score += 250; });
         const textBlob = `${m.title} ${m.director} ${(m.cast || []).join(' ')} ${m.genres.join(' ')} ${m.synopsis} ${m.region || ''}`.toLowerCase();
-        const words = lower.split(/\s+/).filter(w => w.length > 2);
+        const hits = [];
         for (const w of words) {
-          if (textBlob.includes(w)) score += 120;
+          if (textBlob.includes(w)) { score += 120; hits.push(w); }
         }
-        const alignmentPct = Math.min(99, Math.max(78, Math.round(82 + (score % 18))));
-        return { ...m, aiScore: score, alignmentPct };
+        for (const w of moodWords) {
+          if (textBlob.includes(w)) score += 40;
+        }
+        score += (m.rating || 0) * 8; // gentle quality tiebreaker
+        return { ...m, aiScore: score, aiHits: hits.slice(0, 3) };
       });
 
       scored.sort((a, b) => b.aiScore - a.aiScore);
-      aiVibeResults = scored.slice(0, 4);
+      const top = scored.slice(0, 8);
+      const best = top.length ? Math.max(top[0].aiScore, 1) : 1;
+      // Match % is each title's score relative to the best candidate (honest, not random).
+      aiVibeResults = top.map(m => ({ ...m, alignmentPct: Math.max(55, Math.min(99, Math.round(99 * m.aiScore / best))) }));
       refreshViews();
 
-      setTimeout(() => {
-        const el = document.getElementById('aiVibeResultsSection');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      if (!keepScroll) {
+        setTimeout(() => {
+          const el = document.getElementById('aiVibeResultsSection');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     }
 
     function clearAiVibeMatcher() {
       aiVibeQuery = '';
       aiVibeResults = null;
+      aiMoods = [];
+      aiMaxRuntime = 0;
       refreshViews();
     }
 
@@ -3589,7 +3771,7 @@ function renderDiscover() {
               <div class="relative flex-1">
                 <i class="fa-solid fa-sparkles absolute left-4 top-3 text-purple-400 text-xs"></i>
                 <input id="aiVibeInput" type="text" 
-                  value="${aiVibeQuery}"
+                  value="${esc(aiVibeQuery)}"
                   onkeydown="if(event.key === 'Enter') runAiVibeMatcher();"
                   placeholder="${isStandup ? 'e.g. Relatable everyday life observations or dark comedy' : (isSeries ? 'e.g. Gripping dystopian mystery with shocking twists' : 'e.g. Heartwarming comfort tears or mindfuck sci-fi...')}"
                   class="w-full bg-[#16161E] border border-purple-500/40 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-300 transition">
@@ -3597,6 +3779,23 @@ function renderDiscover() {
               <button onclick="runAiVibeMatcher()" class="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shrink-0 flex items-center gap-1.5">
                 <i class="fa-solid fa-bolt"></i> Match Vibe
               </button>
+            </div>
+
+            <!-- Mood Picker (multi-select) + runtime filter -->
+            <div class="space-y-2">
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pick your mood</div>
+              <div class="flex flex-wrap gap-2">
+                ${AI_MOODS.map(mo => {
+                  const on = aiMoods.includes(mo.id);
+                  return `<button type="button" onclick="toggleAiMood('${mo.id}')" aria-pressed="${on}" class="px-3 py-1.5 rounded-xl text-[11px] font-bold border transition ${on ? 'bg-purple-600/40 border-purple-300 text-white ring-2 ring-purple-400' : 'bg-[#16161E]/80 border-purple-500/30 text-purple-200 hover:border-purple-300 hover:text-white'}">${mo.emoji} ${mo.label}</button>`;
+                }).join('')}
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Runtime</span>
+                ${[[0, 'Any'], [60, 'Quick (≤60 min)'], [100, 'Under 100 min'], [130, 'Under 2h 10m']].map(([mins, lbl]) => `
+                  <button type="button" onclick="setAiRuntime(${mins})" aria-pressed="${aiMaxRuntime === mins}" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${aiMaxRuntime === mins ? 'bg-emerald-600/30 border-emerald-300 text-white' : 'bg-[#16161E]/80 border-white/10 text-slate-300 hover:text-white'}">${lbl}</button>
+                `).join('')}
+              </div>
             </div>
 
             <!-- Quick Inspiration Prompt Pills -->
@@ -3620,9 +3819,9 @@ function renderDiscover() {
               <div id="aiVibeResultsSection" class="pt-2 space-y-3 border-t border-purple-500/30">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-brain"></i> AI Vibe Match Results for "${aiVibeQuery}"
+                    <i class="fa-solid fa-brain"></i> AI Vibe Match Results for "${esc(aiVibeQuery)}"
                   </span>
-                  <span class="text-[11px] text-slate-400">Ranked by emotional resonance</span>
+                  <span class="text-[11px] text-slate-400">Top ${aiVibeResults.length} of ${aiMatchTotal} titles${aiMoods.length ? ' · ' + aiMoods.map(id => (AI_MOODS.find(x => x.id === id) || {}).label).filter(Boolean).join(' + ') : ''}</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   ${aiVibeResults.map(m => `
@@ -3633,8 +3832,9 @@ function renderDiscover() {
                           ${m.alignmentPct}% Vibe Match
                         </span>
                       </div>
-                      <div class="text-xs font-bold text-white truncate">${m.title}</div>
-                      <div class="text-[10px] text-emerald-400 font-bold">${VIBES[m.dominantVibe]?.label || 'Must Watch'}</div>
+                      <div class="text-xs font-bold text-white truncate">${esc(m.title)}</div>
+                      <div class="text-[10px] text-emerald-400 font-bold">${VIBES[m.dominantVibe]?.label || 'Must Watch'} · ${esc(m.duration || '')}</div>
+                      ${m.aiHits && m.aiHits.length ? `<div class="text-[10px] text-slate-400 truncate">matched: ${esc(m.aiHits.join(', '))}</div>` : ''}
                     </div>
                   `).join('')}
                 </div>
@@ -5473,37 +5673,80 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
       `;
     }
     
+    function getProfileStats() {
+      const watched = userWatchedHistory || [];
+      const byId = id => (typeof mediaDatabase !== 'undefined' ? mediaDatabase.find(x => x.id === id) : null);
+      const counts = {};
+      watched.forEach(h => { const v = h.myVibe || h.dominantVibe; if (v) counts[v] = (counts[v] || 0) + 1; });
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      const dist = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([v, c]) => ({ id: v, count: c, pct: Math.round(c / total * 100) }));
+      let movies = 0, series = 0;
+      watched.forEach(h => { const m = byId(h.id); if (m && m.type === 'Series') series++; else movies++; });
+      return { watchedCount: watched.length, wantCount: (userWatchlistIds || []).length, movies, series, dist };
+    }
+
     function renderProfile() {
+      const s = getProfileStats();
+      const sess = currentUserSession;
+      const name = sess ? sess.name : 'Guest';
+      const sub = sess ? sess.email : 'Not signed in';
+      const avatar = sess && sess.avatar
+        ? `<img src="${esc(sess.avatar)}" referrerpolicy="no-referrer" class="w-16 h-16 rounded-full border-2 border-purple-400 object-cover">`
+        : `<div class="w-16 h-16 rounded-full border-2 border-purple-400 bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-black">${esc((name[0] || 'G').toUpperCase())}</div>`;
+      const bar = s.dist.length
+        ? `<div class="h-4 w-full rounded-full overflow-hidden flex">${s.dist.map(d => `<div style="width:${d.pct}%;background-color:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
+           <div class="flex flex-wrap gap-3 text-xs font-bold pt-1">${s.dist.map(d => `<span style="color:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}">${d.pct}% ${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}</span>`).join('')}</div>`
+        : `<div class="text-xs text-slate-400">Rate a title with a vibe and your taste breakdown will appear here.</div>`;
       return `
         <div class="space-y-6 max-w-3xl">
           <div class="flex items-center gap-4">
-            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160" class="w-18 h-18 rounded-full border-2 border-purple-400 object-cover">
-            <div>
-              <h3 class="text-xl font-black text-white">Alex Rivera</h3>
-              <p class="text-xs text-purple-400 font-semibold">@alex_vibe • 14 Wk Watch Streak</p>
-              <div class="flex gap-3 text-xs text-slate-400 mt-1">
-                <span><b>168</b> Movies</span> • <span><b>34</b> Series</span> • <span class="text-emerald-400 font-bold">Level 4 Cinephile</span>
+            ${avatar}
+            <div class="min-w-0">
+              <h3 class="text-xl font-black text-white truncate">${esc(name)}</h3>
+              <p class="text-xs text-purple-400 font-semibold truncate">${esc(sub)}</p>
+              <div class="flex flex-wrap gap-3 text-xs text-slate-400 mt-1">
+                <span><b>${s.movies}</b> Movies watched</span> • <span><b>${s.series}</b> Series watched</span> • <span><b>${s.wantCount}</b> on watchlist</span>
               </div>
+              ${sess ? '' : '<button type="button" onclick="openAuthModal()" class="mt-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded-xl cursor-pointer">Sign in to sync</button>'}
             </div>
           </div>
 
           <div class="bg-[#1D1D25] p-5 rounded-2xl border border-[#2C2C3A] space-y-3">
             <div class="text-xs font-bold uppercase tracking-wider text-slate-300">Your Signature Vibe Taste Distribution</div>
-            <div class="h-4 w-full rounded-full overflow-hidden flex">
-              <div style="width: 48%; background-color: #A855F7" title="Mind Blown"></div>
-              <div style="width: 30%; background-color: #22C55E" title="Must Watch"></div>
-              <div style="width: 22%; background-color: #F43F5E" title="Emotional Damage"></div>
-            </div>
-            <div class="flex flex-wrap gap-3 text-xs font-bold pt-1">
-              <span class="text-purple-400">💥 48% Mind Blown</span>
-              <span class="text-emerald-400">👑 30% Must Watch</span>
-              <span class="text-rose-400">❤️ 22% Emotional Damage</span>
-            </div>
+            ${bar}
           </div>
         </div>
       `;
     }
 
+    function updateSidebarUserCard() {
+      const s = getProfileStats();
+      const sess = currentUserSession;
+      const nameEl = document.getElementById('sidebarUserName');
+      const subEl = document.getElementById('sidebarUserSub');
+      const avEl = document.getElementById('sidebarUserAvatar');
+      const stEl = document.getElementById('sidebarUserStats');
+      if (!nameEl) return;
+      nameEl.textContent = sess ? sess.name : 'Guest';
+      if (subEl) {
+        subEl.textContent = sess ? 'Signed in · ' + computeVibePersona() : 'Sign in to sync your watchlist';
+        subEl.onclick = sess ? null : () => openAuthModal();
+        subEl.style.cursor = sess ? 'default' : 'pointer';
+      }
+      if (avEl) {
+        avEl.innerHTML = '';
+        if (sess && sess.avatar) {
+          const img = document.createElement('img');
+          img.src = sess.avatar; img.referrerPolicy = 'no-referrer'; img.className = 'w-full h-full object-cover';
+          avEl.appendChild(img);
+        } else if (sess) {
+          avEl.textContent = (sess.name[0] || 'U').toUpperCase();
+        } else {
+          avEl.innerHTML = '<i class="fa-solid fa-user"></i>';
+        }
+      }
+      if (stEl) stEl.innerHTML = `<span><b>${s.watchedCount}</b> Watched</span><span><b>${s.wantCount}</b> Want to watch</span>`;
+    }
     // --- CONTROLLER NAVIGATION ---
     function switchTab(tab) {
       activeTab = tab;
@@ -5519,6 +5762,7 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
       else if (activeTab === 'profile') content = renderProfile();
 
       document.getElementById('mainViewport').innerHTML = content;
+      updateSidebarUserCard();
 
       // Update Desktop Sidebar active styles
       const tabs = ['discover', 'explore', 'community', 'watchlist', 'profile'];
@@ -5570,6 +5814,7 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
 
     // Initialize
     initSupabase();
+    handleAuthCallbackErrors();
     updateNetworkStatus();
     autoDetectDeviceMode();
     checkDailyAutoRefresh();

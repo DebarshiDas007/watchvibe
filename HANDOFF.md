@@ -38,7 +38,13 @@ Secrets live only in `D:\watchvibe\.env` (git-ignored). Never put credentials, t
 3. **Delete/rotate the old test account** `vibe_tester@watchvibe.app` — its password was committed to a public repo in `memory/HANDOFF.md` (still visible in git history, commit `dd244e5`).
 4. Optional hardening: move the TMDB key behind a Cloudflare Worker proxy and rotate the current key (it is public in `index.html`).
 
-## 5. Known gaps / roadmap
+## 5. Phase 2 (done): Mood Picker + honest matching
+
+- AI Vibe Matcher has multi-select moods (cry / mind-blown / laugh / cozy / adrenaline / hidden gems), a runtime filter and genre-aware scoring. Match % is relative to the best candidate; placeholder vote splits (e.g. 100/100/100) are normalised and confidence-weighted.
+- Sidebar user card and Profile page show the real signed-in user and real watched/watchlist stats (the hardcoded fake persona is gone).
+- Login page: green success state, 30s resend cooldown, optional display name, expired-link error handling. Google/Discord show SOON until you flip `OAUTH_ENABLED` in `index.html` after enabling the provider in Supabase.
+
+## 6. Known gaps / roadmap
 
 - Admin Studio analytics are local-only (localStorage); only the user list comes from Supabase (`profiles`, admin-only via RLS).
 - Watchlist cloud merge is union-only (removals on one device don't propagate).
