@@ -57,7 +57,7 @@ def deploy():
     ]
 
     print(f"[WatchVibe CLI] Deploying {build_dir} to Cloudflare Pages (project: watchvibe)...")
-    proc = subprocess.run(cmd, env=env, text=True, capture_output=True)
+    proc = subprocess.run(cmd, env=env, text=True, encoding='utf-8', errors='replace', capture_output=True)
     print(proc.stdout)
     if proc.stderr:
         print(proc.stderr, file=sys.stderr)
