@@ -6,6 +6,47 @@
 -- keyed on auth.uid() from a verified Supabase Auth JWT. The old design keyed rows on a typed-in email
 -- (no verification) and must not be used.
 
+-- ---------------------------------------------------------------- legacy tables
+-- The first prototype created user_watchlists / battle_votes / vibe_ratings with a different shape
+-- (item_id / voted_item_id columns). Keep that data, but move it out of the way (reversible rename).
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='user_watchlists' and column_name='item_id') then
+    alter table public.user_watchlists rename to user_watchlists_legacy;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='battle_votes' and column_name='voted_item_id') then
+    alter table public.battle_votes rename to battle_votes_legacy;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='vibe_ratings' and column_name='item_id') then
+    alter table public.vibe_ratings rename to vibe_ratings_legacy;
+  end if;
+end $$;
+
+-- Legacy tables must not stay world-accessible through the API.
+do $$
+declare t text;
+begin
+  foreach t in array array['user_watchlists_legacy','battle_votes_legacy','vibe_ratings_legacy'] loop
+    if to_regclass('public.' || t) is not null then
+      execute format('alter table public.%I enable row level security', t);
+    end if;
+  end loop;
+end $$;
+
+-- Drop the prototype's permissive policies (e.g. "Public profiles are viewable by everyone"), which would
+-- otherwise defeat the admin-only profile policy below. Legacy tables end up with RLS on and no policies (deny all).
+do $$
+declare r record;
+begin
+  for r in select schemaname, tablename, policyname from pg_policies
+    where schemaname='public'
+      and (tablename in ('user_watchlists_legacy','battle_votes_legacy','vibe_ratings_legacy')
+           or (tablename='profiles' and policyname not in ('profiles_select_own','profiles_select_admin','profiles_update_own')))
+  loop
+    execute format('drop policy %I on %I.%I', r.policyname, r.schemaname, r.tablename);
+  end loop;
+end $$;
+
 -- ---------------------------------------------------------------- profiles
 create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
