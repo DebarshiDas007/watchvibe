@@ -5761,7 +5761,10 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
       else if (activeTab === 'watchlist') content = renderWatchlist();
       else if (activeTab === 'profile') content = renderProfile();
 
-      document.getElementById('mainViewport').innerHTML = content;
+      const viewport = document.getElementById('mainViewport');
+      viewport.innerHTML = content;
+      // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
+      viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
       updateSidebarUserCard();
 
       // Update Desktop Sidebar active styles
