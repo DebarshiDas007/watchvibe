@@ -36,7 +36,7 @@ Secrets live only in `D:\watchvibe\.env` (git-ignored). Never put credentials, t
 Done (Nov 2026): `supabase/schema.sql` applied (legacy tables kept as `*_legacy`, permissive policies dropped); Site URL + redirect URLs set; leaked `vibe_tester@watchvibe.app` deleted.
 
 Still open:
-1. Google and Discord sign-in are enabled (Supabase + `OAUTH_ENABLED` in `index.html`). Google OAuth app (GCP project `ambient-catcher-514921-m1`) is in **Testing** mode: only listed test users can sign in. To open it to everyone: Branding page (add home page + privacy policy URL) then Audience -> Publish app. Delete the unused original client secret ending hG03 in GCP.
+1. Google and Discord sign-in are enabled and live (Supabase + `OAUTH_ENABLED`). Google OAuth app (GCP project `ambient-catcher-514921-m1`) is published to production with branding/privacy page set; privacy policy is `web_live_build/privacy.html`. Optionally delete the unused original client secret ending hG03 in the GCP client.
 2. Review leftover test users (`temp_tester_9876@watchvibe.app`, `regular@gmail.com`, `test_cinephile@gmail.com`).
 3. Configure a custom SMTP provider in Supabase before real users (built-in mailer is rate-limited).
 4. Optional: move the TMDB key behind a Cloudflare Worker and rotate it (it is public in `index.html`).
