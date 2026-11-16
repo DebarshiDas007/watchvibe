@@ -22,6 +22,21 @@ def deploy():
         sys.exit(1)
     env_file = os.path.join(repo_dir, '.env')
 
+    # Rebuild the compiled Tailwind CSS (web_live_build/tailwind.css) so deploys never ship stale styles.
+    npm_cmd = os.path.join(tools_dir, 'npm.cmd') if tools_dir and os.path.exists(os.path.join(tools_dir, 'npm.cmd')) else shutil.which('npm')
+    if npm_cmd and os.path.isdir(os.path.join(repo_dir, 'node_modules')):
+        build_env = os.environ.copy()
+        if tools_dir:
+            build_env['PATH'] = tools_dir + ';' + build_env.get('PATH', '')
+        b = subprocess.run([npm_cmd, 'run', 'build:css'], cwd=repo_dir, env=build_env, text=True,
+                           encoding='utf-8', errors='replace', capture_output=True)
+        if b.returncode != 0:
+            print('[ERROR] CSS build failed:\n' + (b.stdout or '') + (b.stderr or ''))
+            sys.exit(b.returncode)
+        print('[WatchVibe CLI] Tailwind CSS rebuilt.')
+    else:
+        print('[WARN] node_modules missing; skipping CSS build (run `npm install` once). Using existing tailwind.css.')
+
     # Load from .env if present
     api_token = os.environ.get('CLOUDFLARE_API_TOKEN')
     account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID')

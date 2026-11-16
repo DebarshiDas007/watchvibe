@@ -1,11 +1,11 @@
-const CACHE_NAME = 'watchvibe-cache-v11';
+const CACHE_NAME = 'watchvibe-cache-v12';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './tailwind.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  './tailwind.css',
+  './vendor/supabase/supabase.js',
+  './vendor/fa/css/all.min.css'
 ];
 
 // 1. Install Event — Pre-cache static shell

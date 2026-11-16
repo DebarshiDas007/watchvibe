@@ -20,7 +20,7 @@
 - **Authorization is enforced by Supabase RLS** (`supabase/schema.sql`), not by the page. `isSuperAdmin()` in the page is only a UI gate.
 - Cloud data: `user_watchlists` (one row per `auth.uid()`), `profiles` (auto-created by trigger), `battle_votes`, `vibe_ratings`.
 - Security headers + CSP: `web_live_build/_headers` (Cloudflare Pages). Inline scripts/handlers still require `'unsafe-inline'`.
-- Service worker (`sw.js`) never caches TMDB/Supabase/geo API calls.
+- **No runtime CDNs.** Tailwind is compiled (`npm run build:css` -> `web_live_build/tailwind.css`; `python deploy.py` rebuilds it automatically; run `npm install` once). Font Awesome and supabase-js are vendored in `web_live_build/vendor/`. CSP therefore allows only self + TMDB/Supabase/geo/avatar hosts. If you add new Tailwind classes, rebuild before deploying; do not build class names dynamically (`bg-${x}`), the scanner cannot see them.`n- Service worker (`sw.js`) never caches TMDB/Supabase/geo API calls.
 
 ## 3. Operations
 

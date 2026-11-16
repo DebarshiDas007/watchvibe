@@ -34,3 +34,5 @@ Thumbs.db
 
 # Wrangler local cache
 .wrangler/
+
+node_modules/
