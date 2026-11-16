@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watchvibe-cache-v12';
+const CACHE_NAME = 'watchvibe-cache-v13';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -48,6 +48,14 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache API/auth traffic (TMDB calls carry an api_key in the URL; Supabase carries auth tokens).
   if (/(^|\.)(themoviedb\.org|supabase\.co|ipapi\.co|country\.is)$/.test(url.hostname)) {
+    return;
+  }
+
+  // Only handle same-origin requests plus the poster hosts. A service worker's own fetch() is governed by the
+  // page CSP's connect-src (not img-src), so proxying other cross-origin requests (avatars, YouTube, ...) would
+  // get them blocked. Returning without respondWith lets the browser fetch them natively under img-src.
+  const isPosterHost = url.hostname === 'image.tmdb.org' || url.hostname.endsWith('unsplash.com');
+  if (url.origin !== self.location.origin && !isPosterHost) {
     return;
   }
 
