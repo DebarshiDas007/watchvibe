@@ -14,8 +14,8 @@
 | **Live Production Web App** | [https://watchvibe-b92.pages.dev/](https://watchvibe-b92.pages.dev/) | Deployed on Cloudflare Pages Edge CDN |
 | **Official GitHub Repository** | [https://github.com/DebarshiDas007/watchvibe](https://github.com/DebarshiDas007/watchvibe) | Public GitHub repo, branch `main` |
 | **Local Dev Server** | `http://localhost:8080/` | Multi-threaded python local server |
-| **Project Root Path** | `C:\Users\USER\.gemini\antigravity\scratch\watchvibe\` | Working directory |
-| **Production Build Directory** | `C:\Users\USER\.gemini\antigravity\scratch\watchvibe\web_live_build\` | Clean production SPA bundle |
+| **Project Root Path** | `D:\watchvibe\` | Working directory |
+| **Production Build Directory** | `D:\watchvibe\web_live_build\` | Clean production SPA bundle |
 | **Cloudflare Deploy Script** | [deploy.py](file:///C:/Users/USER/.gemini/antigravity/scratch/watchvibe/deploy.py) | Automated headless Cloudflare CLI deploy |
 
 ---
@@ -52,7 +52,7 @@
 - **Autonomous Headless Deployment**: Configured via `python deploy.py` (`wrangler.cmd pages deploy`).
 - **No Manual Approval Needed**: Deploys run headlessly without manual user intervention.
 - **Credentials Configured**:
-  - Cloudflare API Token in [C:\Users\USER\.gemini\antigravity\scratch\watchvibe\.env](file:///C:/Users/USER/.gemini/antigravity/scratch/watchvibe/.env) and registered into User environment variables.
+  - Cloudflare API Token in [D:\watchvibe\.env](file:///C:/Users/USER/.gemini/antigravity/scratch/watchvibe/.env) and registered into User environment variables.
   - Portable Node.js 20 LTS at `C:\Users\USER\.gemini\antigravity\scratch\tools\nodejs\`.
   - Cloudflare `wrangler` CLI `v4.86.0`.
 
@@ -62,7 +62,7 @@
 
 ### 1. Deploy Live to Cloudflare Pages (Auto-Approved)
 ```powershell
-python C:\Users\USER\.gemini\antigravity\scratch\watchvibe\deploy.py
+python D:\watchvibe\deploy.py
 ```
 
 ### 2. Push Changes to GitHub
@@ -102,5 +102,5 @@ flowchart TD
 
 ## 🔒 5. Access Control & Security Policies
 - **Never commit `.env` to git.**
-- Cloudflare token is stored locally in `C:\Users\USER\.gemini\antigravity\scratch\watchvibe\.env`.
+- Cloudflare token is stored locally in `D:\watchvibe\.env`.
 - Superadmin command studio is restricted strictly to `dasdebarshi1234@gmail.com`.

@@ -4,9 +4,16 @@ import os
 import sys
 
 def deploy():
-    repo_dir = r'C:\Users\USER\.gemini\antigravity\scratch\watchvibe'
+    repo_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.join(repo_dir, 'web_live_build')
-    tools_dir = r'C:\Users\USER\.gemini\antigravity\scratch\tools\nodejs'
+    
+    # Candidate locations for wrangler / nodejs
+    candidate_tools = [
+        r'C:\Users\USER\.gemini\antigravity\scratch\tools\nodejs',
+        os.path.join(repo_dir, 'tools', 'nodejs'),
+        r'D:\tools\nodejs'
+    ]
+    tools_dir = next((d for d in candidate_tools if os.path.exists(os.path.join(d, 'wrangler.cmd'))), candidate_tools[0])
     wrangler_cmd = os.path.join(tools_dir, 'wrangler.cmd')
     env_file = os.path.join(repo_dir, '.env')
 
