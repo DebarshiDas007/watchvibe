@@ -2855,6 +2855,7 @@
       Preview.fallbackTimer = setTimeout(() => {
         if (token !== Preview.token || Preview.playing) return;
         if (!startMuted) { mountPreviewIframe(true); }
+        else { stopTrailerPreview(); } // still nothing (e.g. embedding disabled for this video): drop it and keep the backdrop
       }, 4500);
     }
 
