@@ -3240,7 +3240,7 @@ function posterCard(item, opts) {
             </div>
           </div>
           <div class="mt-2.5 px-0.5">
-            <div class="break-words text-[13px] font-medium leading-snug text-white/90">${esc(item.title)}</div>
+            <div class="min-h-[2.25rem] break-words text-[13px] font-medium leading-snug text-white/90">${esc(item.title)}</div>
             <div class="mt-0.5 flex items-start justify-between gap-2 text-xs text-white/45"><span class="min-w-0 break-words">${esc(sub)}</span><span class="shrink-0 text-amber-300/90">★ ${esc(item.rating)}</span></div>
           </div>
         </button>`;
@@ -3539,7 +3539,7 @@ function posterCard(item, opts) {
                       <img src="${esc(movie.poster)}" alt="${esc(movie.title)}" class="h-full w-full object-cover" onerror="fixFilmPoster(this, ${esc(JSON.stringify(movie.title))}, ${esc(JSON.stringify(String(movie.year)))})">
                       <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
                     </div>
-                    <div class="mt-2.5 break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
+                    <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
                     <div class="px-0.5 text-xs text-white/45">${esc(movie.year)} · <span class="text-amber-300">★</span> ${esc(movie.rating)}</div>
                     <div class="break-words px-0.5 text-xs text-white/35">as ${esc(movie.char || '')}</div>
                     ${movie.boxOffice ? `<div class="px-0.5 text-xs text-white/35">${esc(movie.boxOffice)}</div>` : ''}
@@ -4786,17 +4786,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             <button type="button" onclick="toggleWatched('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watched">Remove</button>`;
       }
       return `
-        <div class="group">
+        <div class="group flex h-full flex-col">
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="block w-full text-left focus:outline-none">
             <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
               ${poster}
               ${badge}
             </div>
-            <div class="mt-2.5 break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
+            <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
             <div class="px-0.5 text-xs text-white/45">${esc(sub)}</div>
           </button>
           ${extra}
-          <div class="mt-2 flex flex-wrap items-center gap-1 px-0.5">${actions}</div>
+          <div class="mt-auto flex flex-wrap items-center gap-1 px-0.5 pt-2">${actions}</div>
         </div>`;
     }
 

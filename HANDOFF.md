@@ -77,3 +77,5 @@ Still open:
 - `index.html` is ~5k lines of inline JS/CSS; split into modules with a build step when practical. Many `innerHTML` templates still interpolate TMDB strings — use `esc()` for any new/changed template.
 - Flutter port: finish or delete.
 - Add real PWA icons (manifest currently points to Unsplash photos).
+
+- (SW v43) Fixed the cached-catalogue corruption (runtime __sv data no longer saved/loaded) and reserved two title lines under posters; library cards pin their buttons to the bottom. Card audit at 375px: 0 image issues, 47 uneven rows left, all genuine 3-line titles. Not re-audited at 768/desktop/320.
