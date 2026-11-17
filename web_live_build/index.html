@@ -1103,7 +1103,7 @@
 
   <!-- ACTOR PROFILE MODAL -->
   <div id="actorModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-6">
-    <div class="bg-[#16161E] border border-[#2C2C3A] w-full max-w-3xl max-h-[92vh] rounded-3xl overflow-y-auto shadow-2xl relative">
+    <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="actorModalContent"></div>
     </div>
   </div>
@@ -1158,27 +1158,17 @@
     </div>
   </div>
 
-  <!-- GROUP MOVIE NIGHT "TASTE BATTLE" MODAL -->
-  <div id="movieNightModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5" onclick="if(event.target === this) closePartyModal();">
-    <div class="bg-[#16161E] border border-purple-500/40 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in">
-      <div class="p-5 border-b border-[#2C2C3A] flex items-center justify-between bg-[#1A1A24]">
-        <div class="flex items-center gap-2.5">
-          <span class="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 flex items-center justify-center border border-purple-400/30">
-            <i class="fa-solid fa-users text-sm"></i>
-          </span>
-          <div>
-            <h3 class="text-sm font-black text-white">Movie Night Taste Battle</h3>
-            <p class="text-[11px] text-purple-300 font-semibold">Group Room Codes • Realtime Voting</p>
-          </div>
+  <!-- MOVIE NIGHT MODAL -->
+  <div id="movieNightModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-5" onclick="if(event.target === this) closePartyModal();" role="dialog" aria-modal="true" aria-label="Movie Night">
+    <div class="w-full max-w-lg overflow-hidden rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
+      <div class="flex items-center justify-between border-b border-white/[0.06] px-6 py-5">
+        <div>
+          <h3 class="font-display text-xl font-medium text-white">Movie Night</h3>
+          <p class="mt-0.5 text-sm text-white/45">Can't agree? Put a few titles to a vote.</p>
         </div>
-        <button onclick="closePartyModal()" class="text-slate-400 hover:text-white text-sm w-7 h-7 rounded-lg hover:bg-[#252533] flex items-center justify-center transition">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+        <button type="button" onclick="closePartyModal()" class="flex h-8 w-8 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
-      <div class="p-6" id="partyRoomBody">
-        <!-- Rendered by renderPartyUI() -->
-      </div>
+      <div class="p-6" id="partyRoomBody"></div>
     </div>
   </div>
 
@@ -2101,11 +2091,12 @@
       if (!toast) {
         toast = document.createElement('div');
         toast.id = 'watchvibeToast';
-        toast.className = 'fixed bottom-20 md:bottom-8 right-6 z-50 bg-[#1A1A24] text-white px-4 py-3 rounded-2xl border border-purple-500/50 shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none backdrop-blur-md';
+        toast.className = 'fixed bottom-20 md:bottom-8 right-6 z-[90] bg-[#1A1A20]/95 text-white px-5 py-3 rounded-full ring-1 ring-white/15 shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none backdrop-blur-md';
         document.body.appendChild(toast);
       }
-      toast.innerHTML = '<i class="fa-solid fa-sparkles text-purple-400"></i><span class="text-xs font-bold"></span>';
-      toast.querySelector('span').textContent = message;
+      toast.innerHTML = '<span class="text-sm"></span>';
+      // strip leading emoji/symbols from older messages so toasts read cleanly
+      toast.querySelector('span').textContent = String(message).replace(/^[^\p{L}\p{N}"'(]+/u, '');
       toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
       setTimeout(() => {
         toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
@@ -3465,7 +3456,7 @@
 
     // --- GROUP MOVIE NIGHT "TASTE BATTLE" (ROOM CODES & REALTIME) ---
     let activePartyRoom = null;
-    let partyVotes = { 0: 3, 1: 5, 2: 2 };
+    let partyVotes = { 0: 0, 1: 0, 2: 0, 3: 0 };
 
     function openPartyModal() {
       document.getElementById('movieNightModal').classList.remove('hidden');
@@ -3476,7 +3467,7 @@
     function createPartyRoom() {
       const code = 'VIBE-' + Math.floor(10 + Math.random() * 90);
       activePartyRoom = code;
-      showToast(`🎉 Room Created: ${code}! Share this code with friends.`);
+      showToast(`Room created: ${code}`);
       renderPartyUI();
     }
     function joinPartyRoom() {
@@ -3487,88 +3478,66 @@
         return;
       }
       activePartyRoom = val;
-      showToast(`🚀 Joined Movie Night Room: ${val}!`);
+      showToast(`Joined room ${val}`);
       renderPartyUI();
     }
     function castPartyVote(idx) {
       partyVotes[idx] = (partyVotes[idx] || 0) + 1;
-      showToast(`🗳️ Vote recorded! Movie Night score updated.`);
+      showToast('Vote recorded');
       renderPartyUI();
     }
+    function partyShortlist() {
+      const pool = mediaDatabase.filter(m => m.type === 'Movie' && (m.totalVotes || 0) > 1000 && m.poster).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 24);
+      const day = Math.floor(Date.now() / 86400000);
+      const out = [];
+      for (let i = 0; i < 4 && pool.length; i++) out.push(pool[(day * 3 + i * 5) % pool.length]);
+      return out;
+    }
+
     function renderPartyUI() {
       const container = document.getElementById('partyRoomBody');
       if (!container) return;
       if (!activePartyRoom) {
         container.innerHTML = `
-          <div class="space-y-4">
-            <div class="bg-[#14141B] p-4 rounded-2xl border border-purple-500/30 text-center space-y-2">
-              <i class="fa-solid fa-users text-3xl text-purple-400"></i>
-              <div class="text-sm font-bold text-white">Can't agree on what to watch?</div>
-              <div class="text-xs text-slate-400">Create a Taste Battle room or enter a room code from your friends. Realtime voting via Supabase.</div>
+          <div class="space-y-5">
+            <p class="text-[15px] leading-relaxed text-white/60">Start a room, share the code, and vote on a shortlist for tonight. Rooms live on this device for now.</p>
+            <button type="button" onclick="createPartyRoom()" class="w-full rounded-full bg-white py-3 text-sm font-semibold text-black transition hover:bg-white/90">Create a room</button>
+            <div class="flex items-center gap-3 text-xs text-white/30"><span class="h-px flex-1 bg-white/10"></span>or join one<span class="h-px flex-1 bg-white/10"></span></div>
+            <div class="flex gap-2">
+              <input id="roomCodeInput" type="text" placeholder="Room code, e.g. VIBE-88" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm uppercase text-white ring-1 ring-white/10 placeholder:normal-case placeholder:text-white/35 focus:outline-none focus:ring-white/30">
+              <button type="button" onclick="joinPartyRoom()" class="shrink-0 rounded-full bg-white/10 px-5 py-2.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15">Join</button>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button onclick="createPartyRoom()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg">
-                <i class="fa-solid fa-plus-circle"></i> Create New Room
-              </button>
-              <div class="flex gap-2">
-                <input id="roomCodeInput" type="text" placeholder="e.g. VIBE-88" class="bg-[#16161E] border border-purple-500/30 rounded-xl px-3 text-xs text-white uppercase font-mono w-full">
-                <button onclick="joinPartyRoom()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-3 rounded-xl text-xs shrink-0">
-                  Join
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      } else {
-        const sampleShortlist = [
-          mediaDatabase.find(m => m.id === 'kalki-2898-ad') || mediaDatabase[0],
-          mediaDatabase.find(m => m.id === 'aavesham') || mediaDatabase[1],
-          mediaDatabase.find(m => m.id === 'interstellar') || mediaDatabase[2]
-        ];
-
-        container.innerHTML = `
-          <div class="space-y-4">
-            <div class="bg-gradient-to-r from-purple-900/40 to-emerald-900/30 p-4 rounded-2xl border border-purple-500/40 flex items-center justify-between">
-              <div>
-                <span class="text-[10px] text-purple-300 font-bold uppercase tracking-wider">Live Movie Night Room</span>
-                <div class="text-xl font-black text-white font-mono tracking-wider">${activePartyRoom}</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="navigator.clipboard.writeText('${activePartyRoom}'); showToast('Room code copied!');" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow">
-                  <i class="fa-solid fa-copy"></i> Copy Code
-                </button>
-                <button onclick="activePartyRoom=null; renderPartyUI();" class="text-xs text-slate-400 hover:text-white px-2 py-1">
-                  Leave
-                </button>
-              </div>
-            </div>
-
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-check-to-slot text-emerald-400"></i> Vote for Tonight's Movie
-            </div>
-
-            <div class="space-y-2.5">
-              ${sampleShortlist.map((m, idx) => `
-                <div class="bg-[#14141B] p-3 rounded-2xl border border-[#2A2A38] flex items-center justify-between gap-3">
-                  <img src="${m.poster}" class="w-12 h-16 rounded-xl object-cover shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <div class="text-xs font-black text-white truncate">${m.title}</div>
-                    <div class="text-[10px] text-slate-400">${m.year} • ${m.type} • ${m.region || 'Global'}</div>
-                    <div class="text-[10px] text-purple-300 font-bold mt-1">
-                      ${partyVotes[idx] || 0} Votes
-                    </div>
-                  </div>
-                  <button onclick="castPartyVote(${idx})" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0 shadow flex items-center gap-1.5">
-                    <i class="fa-solid fa-thumbs-up"></i> Vote
-                  </button>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
+          </div>`;
+        return;
       }
+      const list = partyShortlist();
+      container.innerHTML = `
+        <div class="space-y-5">
+          <div class="flex items-center justify-between rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.06]">
+            <div>
+              <div class="text-xs text-white/40">Room code</div>
+              <div class="font-mono text-xl tracking-wider text-white">${esc(activePartyRoom)}</div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="navigator.clipboard.writeText('${esc(activePartyRoom)}'); showToast('Room code copied');" class="rounded-full px-3.5 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Copy</button>
+              <button type="button" onclick="activePartyRoom=null; renderPartyUI();" class="rounded-full px-3 py-1.5 text-sm text-white/50 transition hover:text-white">Leave</button>
+            </div>
+          </div>
+          <div class="text-sm text-white/50">Vote for tonight's pick</div>
+          <div class="space-y-2.5">
+            ${list.map((m, idx) => `
+              <div class="flex items-center gap-3.5 rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/[0.06]">
+                <img src="${esc(m.poster)}" alt="" class="h-16 w-11 shrink-0 rounded-lg object-cover" onerror="handleMediaPosterError(this)">
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-white">${esc(m.title)}</div>
+                  <div class="text-xs text-white/45">${esc(m.year)} · ★ ${esc(m.rating)}</div>
+                </div>
+                <div class="text-sm tabular-nums text-white/60">${partyVotes[idx] || 0}</div>
+                <button type="button" onclick="castPartyVote(${idx})" class="shrink-0 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-black transition hover:bg-white/90">Vote</button>
+              </div>`).join('')}
+          </div>
+        </div>`;
     }
-
 
         // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
 function posterCard(item, opts) {
@@ -4307,94 +4276,34 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
     
     // --- EXPLORE & SEARCH SCREEN ---
     function renderExplore() {
+      const chips = [['all', 'All'], ['actors', 'Stars'], ['movies', 'Movies'], ['series', 'Series'], ['indian', 'Indian cinema'], ['mind_blown', 'Mind-blowing'], ['must_watch', 'Must watch'], ['emotional_damage', 'Emotional']];
       return `
-        <div class="space-y-6">
-          <!-- Universal Search Input Bar -->
-          <div class="relative max-w-3xl">
-            <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-purple-400 text-sm"></i>
-            <input id="universalSearchInput" type="text"
-              value="${currentSearchQuery || ''}"
-              oninput="handleUniversalSearch(this.value)"
-              placeholder="Search actors (Dev Patel, Salman Khan, SRK, Prabhas, Nolan), movies, TV series, or vibes..." 
-              class="w-full bg-[#1D1D25] border border-purple-500/40 rounded-2xl pl-11 pr-10 py-3 text-sm text-white focus:outline-none focus:border-purple-400 transition shadow-lg">
-            ${currentSearchQuery ? `
-              <button onclick="clearSearch()" class="absolute right-3.5 top-3 text-slate-400 hover:text-white text-sm">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            ` : ''}
+        <div class="space-y-8">
+          <div class="relative max-w-2xl">
+            <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-sm text-white/40"></i>
+            <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="handleUniversalSearch(this.value)" placeholder="Search movies, series, actors or directors" autocomplete="off"
+              class="w-full rounded-full bg-white/[0.05] py-3.5 pl-12 pr-12 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
+            ${currentSearchQuery ? `<button type="button" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/45 transition hover:text-white" aria-label="Clear search"><i class="fa-solid fa-xmark"></i></button>` : ''}
           </div>
 
-          <!-- Quick Filter Pills -->
-          <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            ${[
-              { id: 'all', label: 'All Titles' },
-              { id: 'actors', label: '⭐ Top Stars' },
-              { id: 'movies', label: '🎬 Movies' },
-              { id: 'series', label: '📺 Web Series' },
-              { id: 'indian', label: '🇮🇳 Indian Cinema' },
-              { id: 'mind_blown', label: '🤯 Mind Blown' },
-              { id: 'must_watch', label: '👑 Must Watch' },
-              { id: 'emotional_damage', label: '💔 Emotional Damage' }
-            ].map(pill => `
-              <button onclick="handleExplorePill('${pill.id}')" class="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#1D1D25] text-slate-300 border border-[#2C2C3A] hover:border-purple-400/50 hover:text-white transition">
-                ${pill.label}
-              </button>
-            `).join('')}
+          <div class="no-scrollbar flex gap-2 overflow-x-auto">
+            ${chips.map(([id, label]) => `<button type="button" onclick="handleExplorePill('${id}')" class="shrink-0 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">${label}</button>`).join('')}
           </div>
 
-          <!-- DYNAMIC LIVE SEARCH RESULTS CONTAINER -->
           <div id="searchResultsContainer"></div>
 
-          <!-- DEFAULT EXPLORE SECTIONS -->
           <div id="exploreDefaultSections" class="space-y-6">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <h4 class="text-sm font-black text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                  <i class="fa-solid fa-star text-amber-400"></i> Hyped & Trending Stars
-                </h4>
-                <p class="text-xs text-slate-400">Global & Indian cinema icons with viral box office & awards momentum</p>
-              </div>
-            </div>
-
-            <!-- Horizontal Actor Cards -->
-            <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-              ${Object.values(ACTORS).slice(0, 10).map(actor => `
-                <div onclick="openActorProfile('${actor.id}')" 
-                  class="shrink-0 w-60 sm:w-64 bg-[#1D1D25] rounded-2xl p-4 border border-[#2C2C3A] hover:border-purple-400/60 cursor-pointer transition flex flex-col justify-between group shadow-lg">
-                  <div class="flex items-center gap-3.5 mb-3">
-                    <div class="relative">
-                      <img src="${actor.img}" alt="${actor.name}" class="w-14 h-14 rounded-2xl object-cover border border-purple-500/40 group-hover:scale-105 transition" onerror="handleActorImageError(this)">
-                      <span class="absolute -top-1.5 -left-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">
-                        #${actor.rank}
-                      </span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="text-sm font-black text-white truncate">${actor.name}</div>
-                      <div class="text-[11px] text-purple-300 font-semibold truncate">${actor.role}</div>
-                      <div class="text-[10px] text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                        <i class="fa-solid fa-arrow-trend-up"></i> +${actor.surge}% searches
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="bg-[#16161E] p-2.5 rounded-xl border border-[#262633] space-y-1">
-                    <div class="text-[10px] font-bold text-slate-400 truncate">${actor.hypeContext}</div>
-                    <div class="flex justify-between items-center text-[10px] font-bold text-slate-300">
-                      <span>Box Office:</span>
-                      <span class="text-amber-400 font-bold">${actor.boxOfficeTotal}</span>
-                    </div>
-                  </div>
-
-                  <button onclick="event.stopPropagation(); openActorProfile('${actor.id}')" 
-                    class="mt-3 w-full bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-bold py-1.5 rounded-xl transition shadow flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-user"></i> View Profile & Vibe DNA
-                  </button>
-                </div>
-              `).join('')}
+            <h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2>
+            <div class="grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-5 lg:grid-cols-8">
+              ${Object.values(ACTORS).slice(0, 16).map(a => `
+                <button type="button" onclick="openActorProfile('${a.id}')" class="group text-center focus:outline-none">
+                  <img src="${esc(a.img)}" alt="${esc(a.name)}" loading="lazy" class="mx-auto aspect-square w-full max-w-[110px] rounded-full object-cover ring-1 ring-white/10 transition duration-300 group-hover:ring-2 group-hover:ring-white/40" onerror="handleActorImageError(this)">
+                  <div class="mt-2.5 truncate text-[13px] text-white/85 group-hover:text-white">${esc(a.name)}</div>
+                  <div class="truncate text-xs text-white/40">${esc(a.role || '')}</div>
+                </button>`).join('')}
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
 
@@ -4506,17 +4415,9 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
         const matchedNames = FAMOUS_REGISTRY.filter(name => name.toLowerCase().includes(q)).slice(0, 6);
         if (matchedNames.length > 0) {
           suggestionsHtml = `
-            <div class="bg-[#16161E] border border-purple-500/30 p-3 rounded-2xl space-y-1.5 shadow-md">
-              <div class="text-[10px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Suggested Stars Matching "${esc(query)}":
-              </div>
-              <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                ${matchedNames.map(name => `
-                  <button onclick="selectActorSuggestion(this.dataset.name)" data-name="${encodeURIComponent(name)}" class="shrink-0 bg-[#1D1D25] hover:bg-purple-600 text-slate-200 hover:text-white border border-[#2C2C3A] hover:border-purple-400 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow cursor-pointer">
-                    <i class="fa-solid fa-star text-amber-400 text-[10px]"></i> ${name}
-                  </button>
-                `).join('')}
-              </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-sm text-white/40">Did you mean</span>
+              ${matchedNames.map(name => `<button type="button" onclick="selectActorSuggestion(this.dataset.name)" data-name="${encodeURIComponent(name)}" class="rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/80 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">${esc(name)}</button>`).join('')}
             </div>
           `;
         }
@@ -4751,80 +4652,47 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
 
       if (matchedActors.length === 0 && matchedMovies.length === 0) {
         resultsContainer.innerHTML = `
-          ${suggestionsHtml}
-          <div class="text-center py-12 space-y-3 bg-[#16161E] rounded-3xl border border-[#2C2C3A]">
-            <i class="fa-solid fa-film text-4xl text-purple-400/40"></i>
-            <div class="text-white font-bold text-sm">No exact titles match "${esc(query)}"</div>
-            <div class="text-xs text-slate-400">Try searching for famous stars like "Salman Khan", "Shah Rukh Khan", "Prabhas", "Christopher Nolan", or "Oppenheimer"</div>
-          </div>
-        `;
+          <div class="space-y-6">
+            ${suggestionsHtml}
+            <div class="rounded-2xl bg-white/[0.03] py-14 text-center ring-1 ring-white/[0.06]">
+              <div class="text-white/85">${isLiveSyncing ? 'Searching…' : `Nothing found for “${esc(query)}”`}</div>
+              <div class="mt-1 text-sm text-white/40">Try a title, an actor or a director.</div>
+            </div>
+          </div>`;
         return;
       }
 
-      let resHtml = `<div class="space-y-6 animate-fade-in">`;
+      let resHtml = `<div class="space-y-9">`;
       if (suggestionsHtml) resHtml += suggestionsHtml;
 
-      // ACTORS SECTION
       if (matchedActors.length > 0) {
         resHtml += `
-          <div class="space-y-3">
-            <h4 class="text-xs font-black text-purple-300 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-star text-amber-400"></i> Matched Actors & Superstars (${matchedActors.length})
-            </h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <section>
+            <h2 class="font-display text-[22px] font-medium text-white">People</h2>
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               ${matchedActors.map(a => `
-                <div class="bg-[#1D1D25] p-3.5 rounded-2xl border border-purple-500/30 hover:border-purple-400 transition flex items-center gap-3.5 shadow-lg group">
-                  <img id="actor-img-${a.id}" src="${a.img}" alt="${a.name}" loading="lazy" class="w-16 h-16 rounded-2xl object-cover border border-purple-400/30 shrink-0" onerror="handleActorImageError(this)">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-black text-white truncate">${a.name}</span>
-                      <span class="text-[10px] bg-purple-600/30 text-purple-300 px-2 py-0.5 rounded-full font-bold">#${a.rank}</span>
-                    </div>
-                    <div class="text-[11px] text-amber-400 font-bold truncate">${a.boxOfficeTotal}</div>
-                    <div class="text-[10px] text-slate-400 truncate">${a.hypeContext}</div>
-                    <button onclick="openActorProfile('${a.id}')" class="mt-2 text-[10px] font-bold bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg transition shadow flex items-center gap-1 cursor-pointer">
-                      <i class="fa-solid fa-user"></i> View Filmography & Vibes
-                    </button>
+                <button type="button" onclick="openActorProfile('${a.id}')" class="flex items-center gap-4 rounded-2xl bg-white/[0.03] p-3.5 text-left ring-1 ring-white/[0.06] transition hover:bg-white/[0.06]">
+                  <img id="actor-img-${esc(a.id)}" src="${esc(a.img)}" alt="${esc(a.name)}" loading="lazy" class="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-white/10" onerror="handleActorImageError(this)">
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-medium text-white">${esc(a.name)}</div>
+                    <div class="truncate text-xs text-white/45">${esc(a.role || '')}</div>
                   </div>
-                </div>
-              `).join('')}
+                </button>`).join('')}
             </div>
-          </div>
-        `;
+          </section>`;
       }
 
-      // TITLES SECTION
       if (matchedMovies.length > 0) {
         resHtml += `
-          <div class="space-y-3">
-            <div class="flex items-center justify-between text-xs text-slate-400">
-              <span class="font-bold text-white uppercase text-xs flex items-center gap-2">
-                <i class="fa-solid fa-film text-purple-400"></i> Matched Verified Movies & Shows (${matchedMovies.length})
-              </span>
-              <span class="text-emerald-400 font-semibold flex items-center gap-1.5 text-[11px]">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ${isLiveSyncing ? 'Syncing...' : 'Verified & Authentic Artwork'}
-              </span>
+          <section>
+            <div class="flex items-baseline justify-between">
+              <h2 class="font-display text-[22px] font-medium text-white">Titles <span class="ml-1 text-sm font-normal text-white/40">${matchedMovies.length}</span></h2>
+              ${isLiveSyncing ? '<span class="text-xs text-white/40">Searching more…</span>' : ''}
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              ${matchedMovies.map(item => `
-                <div onclick="openDetails('${item.id}')" class="bg-[#1D1D25] p-2.5 rounded-2xl border border-[#2C2C3A] hover:border-purple-400 cursor-pointer transition shadow-lg group flex flex-col justify-between">
-                  <div>
-                    <div class="relative overflow-hidden rounded-xl mb-2 h-48 bg-slate-900">
-                      <img src="${item.poster}" alt="${item.title}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="handleMediaPosterError(this)">
-                      <span class="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[10px] font-bold text-purple-300 border border-purple-500/30">${item.type}</span>
-                      ${item.region ? `<span class="absolute bottom-2 left-2 bg-purple-950/80 px-1.5 py-0.5 rounded text-[9px] font-bold text-white">${item.region.split(' ')[0]}</span>` : ''}
-                    </div>
-                    <div class="text-xs font-bold text-white truncate">${item.title}</div>
-                    <div class="text-[10px] text-slate-400 flex justify-between mt-1">
-                      <span>${item.year}</span>
-                      <span class="text-amber-400 font-bold">★ ${item.rating}</span>
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
+            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              ${matchedMovies.map(item => posterCard(item, { wide: true })).join('')}
             </div>
-          </div>
-        `;
+          </section>`;
       }
 
       resHtml += `</div>`;
@@ -4832,203 +4700,79 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
     }
 
     function renderCommunity() {
-      setTimeout(() => { renderPartyUI(); }, 50);
       return `
-        <div class="space-y-6 max-w-3xl">
-          <!-- GROUP MOVIE NIGHT TASTE BATTLE -->
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-users-viewfinder text-purple-400"></i> Group Movie Night: Taste Battle
-              </h3>
-              <span class="text-xs bg-purple-600/20 text-purple-300 font-bold px-2.5 py-1 rounded-lg border border-purple-500/30">
-                Realtime Room Codes
-              </span>
-            </div>
-            <div class="bg-[#1D1D25] p-5 rounded-3xl border border-purple-500/40 shadow-xl" id="partyRoomBody">
-              <!-- Rendered by renderPartyUI() -->
-            </div>
+        <div class="max-w-2xl space-y-10">
+          <div>
+            <h1 class="font-display text-3xl font-medium text-white">Taste Match</h1>
+            <p class="mt-2 text-[15px] leading-relaxed text-white/55">Compare your vibe profile with friends and find the film you'll both love. This is coming soon. In the meantime, every vibe you vote on builds your own taste profile.</p>
           </div>
+          <div class="rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
+            <h2 class="font-display text-xl font-medium text-white">Movie Night</h2>
+            <p class="mt-1.5 text-sm text-white/50">Start a room and vote on a shortlist with friends.</p>
+            <button type="button" onclick="openPartyModal()" class="mt-4 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Open Movie Night</button>
+          </div>
+        </div>`;
+    }
 
-          <!-- TASTE MATCH TWINS -->
-          <div class="space-y-3 pt-2">
-            <h3 class="text-sm font-black text-slate-200 uppercase tracking-wider flex items-center gap-2">
-              <i class="fa-solid fa-user-group text-emerald-400"></i> Your Taste Match Twins
-            </h3>
-            <div class="bg-[#1D1D25] p-5 rounded-2xl border border-emerald-500/40 flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120" class="w-14 h-14 rounded-full border-2 border-emerald-400 object-cover">
-                <div>
-                  <div class="text-sm font-bold text-white">Sarah Jenkins</div>
-                  <div class="text-xs text-emerald-400 font-bold">89% Taste Match Twin</div>
-                  <div class="text-xs text-slate-400">Both love Mind Blown Sci-Fi & Psychological Thrillers</div>
-                </div>
-              </div>
-              <button onclick="showToast('Followed Sarah Jenkins!')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow">Follow Twin</button>
+    function libraryCard(m, mode) {
+      const v = VIBES[(mode === 'watched' ? (m.myVibe || m.dominantVibe) : m.dominantVibe)] || VIBES.must_watch;
+      const sub = [m.year, m.rating ? '★ ' + m.rating : ''].filter(Boolean).join(' · ');
+      return `
+        <div class="group">
+          <button type="button" onclick="openDetails('${m.id}')" class="block w-full text-left focus:outline-none">
+            <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
+              <img src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
+              <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</span>
             </div>
+            <div class="mt-2.5 truncate px-0.5 text-[13px] font-medium text-white/90">${esc(m.title)}</div>
+            <div class="px-0.5 text-xs text-white/45">${esc(sub)}</div>
+          </button>
+          <div class="mt-2 flex items-center gap-1 px-0.5">
+            ${mode === 'want' ? `<button type="button" onclick="toggleWatched('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">Seen it</button>
+            <button type="button" onclick="toggleWatchlist('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watchlist">Remove</button>` :
+            `<button type="button" onclick="toggleWatched('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watched">Remove</button>`}
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
     function renderWatchlist() {
       const wantList = (mediaDatabase || []).filter(m => userWatchlistIds.includes(m.id));
       const watchedList = userWatchedHistory || [];
-
-      // Calculate personal vibe breakdown from watched history
-      const vibeCounts = {};
-      let totalWatchedVotes = watchedList.length || 1;
-      watchedList.forEach(w => {
-        const v = w.myVibe || w.dominantVibe || 'must_watch';
-        vibeCounts[v] = (vibeCounts[v] || 0) + 1;
-      });
-
+      const counts = {};
+      watchedList.forEach(w => { const v = w.myVibe || w.dominantVibe || 'must_watch'; counts[v] = (counts[v] || 0) + 1; });
+      const total = watchedList.length || 1;
+      const tab = (id, label, n) => `<button type="button" onclick="switchWatchlistSubTab('${id}')" class="rounded-full px-4 py-1.5 text-sm font-medium transition ${currentWatchlistSubTab === id ? 'bg-white text-black' : 'text-white/60 hover:text-white'}">${label} <span class="${currentWatchlistSubTab === id ? 'text-black/50' : 'text-white/35'}">${n}</span></button>`;
+      const empty = (title, text, cta) => `
+        <div class="rounded-2xl bg-white/[0.03] px-6 py-16 text-center ring-1 ring-white/[0.06]">
+          <div class="font-display text-xl text-white">${title}</div>
+          <p class="mx-auto mt-2 max-w-sm text-sm text-white/45">${text}</p>
+          ${cta ? `<button type="button" onclick="goHome()" class="mt-5 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${cta}</button>` : ''}
+        </div>`;
       return `
-        <div class="space-y-6 max-w-5xl">
-          <!-- Header and Sub-Tab Switcher -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2C2C3A] pb-4">
-            <div>
-              <h2 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-bookmark text-purple-400"></i> My Entertainment Library
-              </h2>
-              <p class="text-xs text-slate-400 mt-0.5">Track what you want to watch and celebrate your watched history with personal vibe ratings</p>
-            </div>
-
-            <!-- Sub Tabs: Want to Watch vs Watched & Rated -->
-            <div class="flex bg-[#16161E] p-1 rounded-2xl border border-[#2C2C3A] shrink-0">
-              <button onclick="switchWatchlistSubTab('want')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${currentWatchlistSubTab === 'want' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
-                <i class="fa-solid fa-list-check"></i>
-                <span>Want to Watch (${userWatchlistIds.length})</span>
-              </button>
-              <button onclick="switchWatchlistSubTab('watched')" class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${currentWatchlistSubTab === 'watched' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
-                <i class="fa-solid fa-circle-check"></i>
-                <span>Watched & Rated (${watchedList.length})</span>
-              </button>
-            </div>
+        <div class="space-y-8">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <h1 class="font-display text-3xl font-medium text-white">Watchlist</h1>
+            <div class="flex rounded-full bg-white/[0.05] p-1 ring-1 ring-white/10">${tab('want', 'Want to watch', wantList.length)}${tab('watched', 'Watched', watchedList.length)}</div>
           </div>
-
-          ${currentWatchlistSubTab === 'want' ? `
-            <!-- WANT TO WATCH VIEW -->
-            ${wantList.length === 0 ? `
-              <div class="bg-[#1D1D25] p-12 rounded-3xl border border-[#2C2C3A] text-center space-y-3">
-                <div class="w-14 h-14 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center text-2xl mx-auto shadow">
-                  <i class="fa-solid fa-bookmark"></i>
+          ${currentWatchlistSubTab === 'want' ? (wantList.length === 0
+            ? empty('Nothing saved yet', 'Open any title and tap Watchlist to save it for later.', 'Browse titles')
+            : `<div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">${wantList.map(m => libraryCard(m, 'want')).join('')}</div>`)
+          : (watchedList.length === 0
+            ? empty('No watched titles yet', 'Mark a title as seen or vote on its vibe to build your history.', null)
+            : `
+              <div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+                <div class="text-sm text-white/55">Your vibe profile, from ${watchedList.length} watched</div>
+                <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                  ${Object.entries(VIBES).map(([id, v]) => { const pct = Math.round(((counts[id] || 0) / total) * 100); return pct ? `<div style="width:${pct}%;background:${v.color}" title="${esc(v.label)} ${pct}%"></div>` : ''; }).join('')}
                 </div>
-                <div class="text-white font-black text-base">Your Watchlist is Empty</div>
-                <p class="text-xs text-slate-400 max-w-sm mx-auto">Explore movies and TV series across 2,062 titles and tap the "Watchlist" button to save titles for movie night.</p>
-                <button onclick="switchTab('discover')" class="mt-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow">
-                  Browse Discover Feed
-                </button>
-              </div>
-            ` : `
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                ${wantList.map(m => {
-                  const v = VIBES[m.dominantVibe] || VIBES.must_watch;
-                  return `
-                    <div class="bg-[#1D1D25] p-3 rounded-2xl border border-[#2C2C3A] flex items-center gap-3.5 hover:border-purple-400/50 transition shadow group">
-                      <img src="${m.poster}" class="w-16 h-24 rounded-xl object-cover shrink-0 cursor-pointer" onclick="openDetails('${m.id}')" onerror="handleMediaPosterError(this)">
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-1">
-                          <h4 onclick="openDetails('${m.id}')" class="text-xs font-bold text-white truncate cursor-pointer hover:text-purple-300 transition">${m.title}</h4>
-                          <button onclick="toggleWatchlist('${m.id}')" class="text-slate-500 hover:text-rose-400 text-xs p-1" title="Remove from Watchlist">
-                            <i class="fa-solid fa-trash-can"></i>
-                          </button>
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">${m.year} • ${m.duration} • ★ ${m.rating}</div>
-                        <div class="flex items-center gap-2 mt-2">
-                          <span class="text-[10px] font-bold px-2 py-0.5 rounded" style="color: ${v.color}; background-color: ${v.color}20">
-                            ${v.label}
-                          </span>
-                          <button onclick="toggleWatched('${m.id}')" class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-white px-2 py-0.5 rounded transition flex items-center gap-1">
-                            <i class="fa-solid fa-check"></i> Seen It
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            `}
-          ` : `
-            <!-- WATCHED & PERSONAL VIBE RATINGS VIEW -->
-            <!-- Personal Vibe Persona Card -->
-            <div class="bg-gradient-to-r from-[#1E182A] via-[#1D1D25] to-[#151D28] p-5 rounded-2xl border border-purple-500/30 space-y-3 shadow-xl">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <div class="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-pie text-amber-400"></i> Your Personal Vibe Persona
-                  </div>
-                  <p class="text-[11px] text-slate-400 mt-0.5">Aggregated from your ${watchedList.length} watched and rated movies & shows</p>
-                </div>
-                <div class="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-xl border border-emerald-500/40 shrink-0">
-                  Total Seen: ${watchedList.length} Titles
+                <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">
+                  ${Object.entries(VIBES).map(([id, v]) => counts[id] ? `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)} ${Math.round((counts[id] / total) * 100)}%</span>` : '').join('')}
                 </div>
               </div>
-
-              <!-- Distribution Bar -->
-              <div class="h-3.5 w-full rounded-full overflow-hidden flex bg-[#121218]">
-                ${Object.entries(VIBES).map(([vId, vObj]) => {
-                  const cnt = vibeCounts[vId] || 0;
-                  const pct = Math.round((cnt / totalWatchedVotes) * 100);
-                  if (pct === 0) return '';
-                  return `<div style="width: ${pct}%; background-color: ${vObj.color}" title="${vObj.label}: ${pct}%"></div>`;
-                }).join('')}
-              </div>
-
-              <div class="flex flex-wrap gap-2 pt-1">
-                ${Object.entries(VIBES).map(([vId, vObj]) => {
-                  const cnt = vibeCounts[vId] || 0;
-                  if (cnt === 0) return '';
-                  const pct = Math.round((cnt / totalWatchedVotes) * 100);
-                  return `
-                    <span class="text-xs font-bold px-2.5 py-1 rounded-lg border flex items-center gap-1.5" style="background-color: ${vObj.color}20; color: ${vObj.color}; border-color: ${vObj.color}40">
-                      <i class="fa-solid ${vObj.icon}"></i> ${vObj.label}: ${pct}% (${cnt})
-                    </span>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
-            <!-- Watched Titles Grid with Personal Vibe Rating Badges -->
-            ${watchedList.length === 0 ? `
-              <div class="bg-[#1D1D25] p-12 rounded-3xl border border-[#2C2C3A] text-center space-y-3">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow">
-                  <i class="fa-solid fa-circle-check"></i>
-                </div>
-                <div class="text-white font-black text-base">No Watched Titles Recorded Yet</div>
-                <p class="text-xs text-slate-400 max-w-sm mx-auto">Open any movie or TV series modal and tap "Mark Seen" or vote on a vibe to build your personal entertainment history.</p>
-              </div>
-            ` : `
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                ${watchedList.map(h => {
-                  const myV = VIBES[h.myVibe] || VIBES[h.dominantVibe] || VIBES.must_watch;
-                  return `
-                    <div class="bg-[#1D1D25] p-3 rounded-2xl border border-[#2C2C3A] flex items-center gap-3.5 hover:border-emerald-400/50 transition shadow group">
-                      <img src="${h.poster}" class="w-16 h-24 rounded-xl object-cover shrink-0 cursor-pointer" onclick="openDetails('${h.id}')" onerror="handleMediaPosterError(this)">
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-1">
-                          <h4 onclick="openDetails('${h.id}')" class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-300 transition">${h.title}</h4>
-                          <button onclick="toggleWatched('${h.id}')" class="text-slate-500 hover:text-rose-400 text-xs p-1" title="Remove from Watched">
-                            <i class="fa-solid fa-xmark"></i>
-                          </button>
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">${h.year} • ★ ${h.rating}</div>
-                        <div class="mt-2 flex items-center gap-1.5 flex-wrap">
-                          <span class="text-[10px] font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1" style="background-color: ${myV.color}20; color: ${myV.color}; border-color: ${myV.color}40">
-                            <span>My Vibe:</span> <b>${myV.label}</b>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            `}
-          `}
-        </div>
-      `;
+              <div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">${watchedList.map(h => libraryCard(h, 'watched')).join('')}</div>`)}
+        </div>`;
     }
-    
+
     function getProfileStats() {
       const watched = userWatchedHistory || [];
       const byId = id => (typeof mediaDatabase !== 'undefined' ? mediaDatabase.find(x => x.id === id) : null);
@@ -5047,32 +4791,31 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
       const name = sess ? sess.name : 'Guest';
       const sub = sess ? sess.email : 'Not signed in';
       const avatar = sess && sess.avatar
-        ? `<img src="${esc(sess.avatar)}" referrerpolicy="no-referrer" class="w-16 h-16 rounded-full border-2 border-purple-400 object-cover">`
-        : `<div class="w-16 h-16 rounded-full border-2 border-purple-400 bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-black">${esc((name[0] || 'G').toUpperCase())}</div>`;
+        ? `<img src="${esc(sess.avatar)}" referrerpolicy="no-referrer" alt="" class="h-20 w-20 rounded-full object-cover ring-1 ring-white/15">`
+        : `<div class="flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${esc((name[0] || 'G').toUpperCase())}</div>`;
+      const stat = (n, l) => `<div><div class="font-display text-2xl text-white">${n}</div><div class="text-xs text-white/45">${l}</div></div>`;
       const bar = s.dist.length
-        ? `<div class="h-4 w-full rounded-full overflow-hidden flex">${s.dist.map(d => `<div style="width:${d.pct}%;background-color:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
-           <div class="flex flex-wrap gap-3 text-xs font-bold pt-1">${s.dist.map(d => `<span style="color:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}">${d.pct}% ${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}</span>`).join('')}</div>`
-        : `<div class="text-xs text-slate-400">Rate a title with a vibe and your taste breakdown will appear here.</div>`;
+        ? `<div class="flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${s.dist.map(d => `<div style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
+           <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">${s.dist.map(d => `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('')}</div>`
+        : `<p class="text-sm text-white/45">Vote on a few titles and your taste breakdown will appear here.</p>`;
       return `
-        <div class="space-y-6 max-w-3xl">
-          <div class="flex items-center gap-4">
+        <div class="max-w-2xl space-y-10">
+          <div class="flex items-center gap-5">
             ${avatar}
             <div class="min-w-0">
-              <h3 class="text-xl font-black text-white truncate">${esc(name)}</h3>
-              <p class="text-xs text-purple-400 font-semibold truncate">${esc(sub)}</p>
-              <div class="flex flex-wrap gap-3 text-xs text-slate-400 mt-1">
-                <span><b>${s.movies}</b> Movies watched</span> • <span><b>${s.series}</b> Series watched</span> • <span><b>${s.wantCount}</b> on watchlist</span>
-              </div>
-              ${sess ? '' : '<button type="button" onclick="openAuthModal()" class="mt-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded-xl cursor-pointer">Sign in to sync</button>'}
+              <h1 class="truncate font-display text-3xl font-medium text-white">${esc(name)}</h1>
+              <p class="truncate text-sm text-white/45">${esc(sub)}</p>
+              ${sess ? '<button type="button" onclick="userSignOut()" class="mt-2 text-sm text-white/50 transition hover:text-white">Sign out</button>' : '<button type="button" onclick="openAuthModal()" class="mt-3 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90">Sign in to sync</button>'}
             </div>
           </div>
-
-          <div class="bg-[#1D1D25] p-5 rounded-2xl border border-[#2C2C3A] space-y-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-slate-300">Your Signature Vibe Taste Distribution</div>
-            ${bar}
+          <div class="grid grid-cols-3 gap-4 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
+            ${stat(s.movies, 'Movies watched')}${stat(s.series, 'Series watched')}${stat(s.wantCount, 'On watchlist')}
           </div>
-        </div>
-      `;
+          <section>
+            <h2 class="font-display text-xl font-medium text-white">Your taste</h2>
+            <div class="mt-4 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">${bar}</div>
+          </section>
+        </div>`;
     }
 
     function updateSidebarUserCard() {
