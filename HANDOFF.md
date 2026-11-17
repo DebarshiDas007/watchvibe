@@ -47,6 +47,15 @@ Still open:
 - Sidebar user card and Profile page show the real signed-in user and real watched/watchlist stats (the hardcoded fake persona is gone).
 - Login page: green success state, 30s resend cooldown, optional display name, expired-link error handling. Google/Discord show SOON until you flip `OAUTH_ENABLED` in `index.html` after enabling the provider in Supabase.
 
+## 5b. Recent work (Nov 2026) and where it stands
+
+- **Sign-in window:** redesigned (two-column on desktop, 800px; 920px once signed in; single column on phones). Smooth open/close, staggered reveal, drawer animations (CSS `av-*` keyframes, respects reduced motion). Signing in no longer closes and re-opens it: `setLoggedInUser` keeps it open and shows the icon picker in place.
+- **Profile icons:** 8 original illustrated avatars (`AVATARS` array in `index.html`; Dark Lord, Clown Prince, Iron Hero, Grey Wizard, Pirate Captain, Web Slinger, Mafia Don, Friendly Alien). Saved in Supabase user metadata (`character`) plus localStorage; shown in header, sidebar, Profile page and sign-in window. First sign-in without a choice opens the picker once.
+- **Actor profiles:** restyled to match the app; each profile loads at least 10 best-known titles from TMDB credits (`enrichActor`); broken filmography posters are repaired via TMDB (`fixFilmPoster`); searched people open their own profile (was opening Robert Downey Jr.).
+- **Search tab:** header search button is hidden there so only one search box shows.
+- **PENDING (waiting for your pick):** more icon options were shown in chat but are NOT in the app: 12 Hollywood/genre looks (Night knight, Space ranger, Friendly robot, Samurai, Cowboy, Vampire count, Spy agent, Popcorn buddy, Ghost, Dino, Warrior queen, Shield captain) and 8 Indian-cinema looks (Retro hero, Classic villain, Angry young man, Romantic hero, Mass hero, Retro diva, Outlaw, Maharaja). Suggested final picker size: 12 to 16. Their drawings are not saved in the repo; ask Claude to redraw the ones you choose.
+- Service worker cache is at v28; bump it on every deploy.
+
 ## 6. Testing
 
  - **Where to watch** is live per-region data from TMDB (JustWatch), fetched when a title opens. The old embedded per-title streaming/ottPlatform fields were fabricated and have been removed. Region = user choice > Cloudflare /cdn-cgi/trace (real IP country) > ipapi.co > country.is > time zone. tests/ott-audit.js (await runOttAudit()) checks every title x 15 regions (no phantom or dropped services, valid links). Providers are normalised in tidyProvider(); per-service links are built in buildProviderLink() (unknown services fall back to the TMDB/JustWatch page for the region).
