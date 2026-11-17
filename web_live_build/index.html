@@ -2750,13 +2750,17 @@
           numeric = known[mediaId];
         }
         if (numeric) {
-          const res = await fetch(`${TMDB_BASE_URL}/${isTv ? 'tv' : 'movie'}/${numeric}/videos?api_key=${apiKey}`);
-          if (res.ok) {
+          const endpoint = isTv ? 'tv' : 'movie';
+          const lookup = async (extra) => {
+            const res = await fetch(`${TMDB_BASE_URL}/${endpoint}/${numeric}/videos?api_key=${apiKey}${extra}`);
+            if (!res.ok) return null;
             const data = await res.json();
             const list = (data && data.results) || [];
             const pick = list.find(v => v.site === 'YouTube' && v.type === 'Trailer') || list.find(v => v.site === 'YouTube' && v.type === 'Teaser') || list.find(v => v.site === 'YouTube');
-            if (pick && pick.key) key = pick.key;
-          }
+            return pick && pick.key ? pick.key : null;
+          };
+          // English first; then also accept the film's own language (many regional titles only have native-language trailers)
+          key = (await lookup('')) || (item.language ? await lookup(`&include_video_language=${encodeURIComponent(item.language)},en,null`) : null) || key;
         }
       } catch (e) { console.warn('Trailer lookup failed:', e); }
       return key;
