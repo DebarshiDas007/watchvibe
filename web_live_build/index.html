@@ -65,6 +65,12 @@
     .vs-pop { animation: vs-pop .55s cubic-bezier(.22,1,.36,1); }
     .vs-check { animation: vs-check .4s cubic-bezier(.34,1.56,.64,1) both; }
     @media (prefers-reduced-motion: reduce) { .vs-pop, .vs-check { animation: none; } .vs-opt { transition: none; } }
+    /* "How was it?" sheet */
+    .rs-overlay { animation: av-fade .25s cubic-bezier(.22,1,.36,1) both; }
+    .rs-card { animation: av-card .4s cubic-bezier(.22,1,.36,1) both; }
+    .rs-overlay.rs-out { animation: av-out .2s ease both; }
+    .rs-overlay.rs-out .rs-card { animation: av-card-out .2s ease both; }
+    @media (prefers-reduced-motion: reduce) { .rs-overlay, .rs-card { animation: none; } }
     /* More like this: exactly four cards per page (two on phones) */
     .sim-row > button { flex: 0 0 calc((100% - 8px - 3rem) / 4); width: auto; min-width: 0; align-self: flex-start; }
     @media (max-width: 520px) { .sim-row > button { flex-basis: calc((100% - 8px - 1rem) / 2); } }
@@ -1463,6 +1469,7 @@
     function setLoggedInUser(user) {
       if (!user || !user.email) return;
       const isNewUser = !currentAuthUser || currentAuthUser.id !== user.id;
+      if (isNewUser) libReset();
       currentAuthUser = user;
       const meta = user.user_metadata || {};
       currentUserSession = {
@@ -1499,6 +1506,7 @@
 
     function setLoggedOutUser() {
       const hadSession = !!currentUserSession;
+      libReset();
       currentAuthUser = null;
       currentUserSession = null;
       userWatchlistIds = [];
@@ -2710,6 +2718,7 @@
     }
 
     let userWatchlistIds = [];
+    let userWatchlistMeta = {};   // id -> { title, poster, year, ... } for saved titles that are not in our catalogue
     let userWatchedHistory = [];
     let currentWatchlistSubTab = 'want'; // 'want' or 'watched'
     let syncCloudDebounceTimer = null;
@@ -2721,6 +2730,7 @@
         try {
           const userPayload = {
             watchlist: userWatchlistIds,
+            watchlist_meta: userWatchlistMeta,
             watched_history: userWatchedHistory,
             last_active: new Date().toISOString()
           };
@@ -2755,6 +2765,10 @@
             userWatchlistIds = mergedWl;
             localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
           }
+          if (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') {
+            Object.keys(cloud.watchlist_meta).forEach(k => { if (!userWatchlistMeta[k]) userWatchlistMeta[k] = cloud.watchlist_meta[k]; });
+            localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
+          }
           if (Array.isArray(cloud.watched_history) && cloud.watched_history.length > 0) {
             const existingIds = new Set(userWatchedHistory.map(h => h.id));
             cloud.watched_history.forEach(item => {
@@ -2785,6 +2799,12 @@
       } catch(e) {
         userWatchedHistory = [];
       }
+      try {
+        const storedMeta = localStorage.getItem(prefix + '_watchlist_meta');
+        userWatchlistMeta = storedMeta ? JSON.parse(storedMeta) : {};
+      } catch(e) {
+        userWatchlistMeta = {};
+      }
 
       // One-time legacy migration for superadmin Debarshi so testing data is preserved:
       if (isSuperAdmin()) {
@@ -2804,7 +2824,9 @@
     function saveWatchlistStore() {
       const prefix = getUserStoragePrefix();
       try {
+        Object.keys(userWatchlistMeta).forEach(k => { if (!userWatchlistIds.includes(k)) delete userWatchlistMeta[k]; });   // keep the map tidy
         localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
+        localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
         localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
       } catch(e) {}
       if (typeof updateProfileUiState === 'function') updateProfileUiState();
@@ -2823,6 +2845,7 @@
         showToast('Removed title from your Watchlist.');
       } else {
         userWatchlistIds.push(mediaId);
+        { const it = findLibItem(mediaId); if (it) userWatchlistMeta[mediaId] = libMeta(it); }
         Track.event('watchlist_add', trackTitleInfo(mediaId));
         showToast('📌 Added to your Saved Watchlist!');
       }
@@ -2839,7 +2862,7 @@
     function toggleWatched(mediaId, vibeChoice) {
       if (!mediaId) return;
       const existingIdx = userWatchedHistory.findIndex(h => h.id === mediaId);
-      const item = (mediaDatabase || []).find(m => m.id === mediaId) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[mediaId]);
+      const item = findLibItem(mediaId);
       
       if (existingIdx !== -1) {
         userWatchedHistory.splice(existingIdx, 1);
@@ -3970,7 +3993,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         if (error) { failed = true; VS.want = null; break; }
         if (!cur.remove) { Track.event('vibe_vote', { v: 't' + cur.tier }); if (cur.key === VS.key) vsMirrorWatched(cur.tier, cur.feelings); }
       }
-      VS.saving = false;
+      VS.saving = false; libInvalidate();
       const fresh = await vsLoadSummary(VS.key);              // what the server really holds
       if (fresh && !VS.want && !VS.saving) {
         const same = JSON.stringify(fresh.mine) === JSON.stringify(VS.summary && VS.summary.mine);
@@ -3997,12 +4020,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     // keep the viewer's watched history and taste persona in step with their verdict
     function vsMirrorWatched(tier, feelings) {
       const item = VS.item; if (!item || !findItemById(item.id)) return;
-      const f = feelingOf(feelings && feelings[0]);
-      const vibe = (f && f.vibe) || (tier <= 2 ? 'must_watch' : tier <= 4 ? 'fun_time' : tier === 5 ? 'time_pass' : 'skip_it');
-      const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
-      const i = userWatchedHistory.findIndex(h => h.id === item.id);
-      if (i !== -1) userWatchedHistory[i] = rec; else { const w = userWatchlistIds.indexOf(item.id); if (w !== -1) userWatchlistIds.splice(w, 1); userWatchedHistory.unshift(rec); }
-      saveWatchlistStore();
+      libMirrorWatched(item, tier, feelings);
     }
 
     // ---- reviews
@@ -4121,7 +4139,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         vsFormError(/500 words|Links are not|too fast/.test(m) ? m : /row-level security/i.test(m) ? 'This review was hidden by moderators and can\'t be edited.' : 'Could not post your review. Try again.');
         return;
       }
-      VS.formOpen = false; VS.draft = null; VS.sort = 'new';
+      VS.formOpen = false; VS.draft = null; VS.sort = 'new'; libInvalidate();
       const [rev, mine] = await Promise.all([vsLoadReviews(VS.key, 'new', 0), vsLoadMine(VS.key)]);
       VS.reviews = rev; VS.mine = mine; vsRenderHead(); vsRenderForm(); vsRenderList();
       showToast('Thanks for sharing how it felt.');
@@ -4131,7 +4149,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (!VS.delArmed) { VS.delArmed = true; vsRenderForm(); setTimeout(() => { VS.delArmed = false; vsRenderForm(); }, 4000); return; }
       const { error } = await sbc().from('title_reviews').delete().eq('id', VS.mine.id);
       if (error) { vsFormError('Could not delete your review. Try again.'); return; }
-      VS.mine = null; VS.formOpen = false; VS.draft = null; VS.delArmed = false;
+      VS.mine = null; VS.formOpen = false; VS.draft = null; VS.delArmed = false; libInvalidate();
       VS.reviews = await vsLoadReviews(VS.key, VS.sort, 0); vsRenderHead(); vsRenderForm(); vsRenderList();
       showToast('Review deleted.');
     }
@@ -4149,7 +4167,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <div class="flex flex-wrap items-center gap-2.5">
             <span id="wtwPrimary"><span class="${pill} cursor-default text-white/40 ring-white/10">Checking availability…</span></span>
             <button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill} ${saved ? 'bg-purple-500/25 text-white ring-purple-400/50' : 'text-white/80 ring-white/15 hover:bg-white/[0.07]'}"><i class="fa-solid fa-bookmark text-xs"></i>${saved ? 'Saved' : 'Watchlist'}</button>
-            <button type="button" onclick="toggleWatched('${item.id}')" class="${pill} ${seen ? 'bg-emerald-500/20 text-white ring-emerald-400/40' : 'text-white/80 ring-white/15 hover:bg-white/[0.07]'}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>
+            <button type="button" onclick="markSeen('${item.id}')" class="${pill} ${seen ? 'bg-emerald-500/20 text-white ring-emerald-400/40' : 'text-white/80 ring-white/15 hover:bg-white/[0.07]'}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>
           </div>
 
           <section id="wtwSection" data-item="${esc(item.id)}"></section>
@@ -4710,30 +4728,233 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         </div>`;
     }
 
+    // ---- library helpers: find any saved title, and load the viewer's own verdicts and reviews for it
+    const LIB = { votes: new Map(), reviews: new Map(), loaded: false, loading: false };
+    function findLibItem(id) {
+      return findItemById(id) || (userWatchlistMeta && userWatchlistMeta[id]) || (userWatchedHistory || []).find(h => h.id === id) || null;
+    }
+    function libMeta(it) { return { id: it.id, title: it.title, poster: it.poster, year: it.year, rating: it.rating, type: it.type, tmdbId: it.tmdbId || null, dominantVibe: it.dominantVibe || 'must_watch', duration: it.duration }; }
+    function libCard(it) { return { id: it.id, title: it.title || 'Untitled', poster: it.poster || '', year: it.year || '', rating: it.rating || '', type: it.type, tmdbId: it.tmdbId, dominantVibe: it.dominantVibe || 'must_watch' }; }
+    function libGuessTitle(id) { return /^tmdb-/.test(id) ? 'Loading…' : String(id).replace(/-\d+$/, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+    function libKeyOf(rec) { return vsKey(findLibItem(rec.id) || rec); }
+    function libInvalidate() { LIB.loaded = false; }
+    function libReset() { LIB.votes.clear(); LIB.reviews.clear(); LIB.loaded = false; LIB.loading = false; }
+    async function libLoad() {
+      if (!currentAuthUser || !sbc() || LIB.loading) return;
+      LIB.loading = true;
+      try {
+        const uid = currentAuthUser.id;
+        const [v, r] = await Promise.all([
+          sbc().from('title_votes').select('title_key,tier,feelings').eq('user_id', uid).limit(2000),
+          sbc().from('title_reviews').select('id,title_key,headline,body,spoiler,status').eq('user_id', uid).limit(2000)
+        ]);
+        LIB.votes = new Map((v.data || []).map(x => [x.title_key, x]));
+        LIB.reviews = new Map((r.data || []).map(x => [x.title_key, x]));
+        LIB.loaded = !v.error && !r.error;
+      } catch (e) { LIB.loaded = false; }
+      LIB.loading = false;
+      if (typeof activeTab !== 'undefined' && activeTab === 'watchlist') refreshViews();
+    }
+    // saved titles that aren't in our catalogue and have no stored details yet: look them up on TMDB once
+    let libResolving = false;
+    async function resolveWatchlistMeta() {
+      if (libResolving) return;
+      const pend = userWatchlistIds.filter(id => !findLibItem(id) && /^tmdb-(m|tv)-\d+$/.test(id));
+      if (!pend.length) return;
+      libResolving = true;
+      try {
+        await Promise.all(pend.map(async id => {
+          const m = /^tmdb-(m|tv)-(\d+)$/.exec(id);
+          try {
+            const r = await fetch(`${TMDB_BASE_URL}/${m[1] === 'tv' ? 'tv' : 'movie'}/${m[2]}?api_key=${getActiveTmdbKey()}`);
+            if (!r.ok) return;
+            const d = await r.json();
+            userWatchlistMeta[id] = { id, title: d.title || d.name || 'Untitled', poster: d.poster_path ? TMDB_IMG_URL + d.poster_path : '', year: String((d.release_date || d.first_air_date || '').slice(0, 4)), rating: d.vote_average ? Number(d.vote_average.toFixed(1)) : '', type: m[1] === 'tv' ? 'Series' : 'Movie', tmdbId: m[2], dominantVibe: 'must_watch' };
+          } catch (e) {}
+        }));
+        saveWatchlistStore();
+      } finally { libResolving = false; }
+      if (typeof activeTab !== 'undefined' && activeTab === 'watchlist') refreshViews();
+    }
+
     function libraryCard(m, mode) {
-      const v = VIBES[(mode === 'watched' ? (m.myVibe || m.dominantVibe) : m.dominantVibe)] || VIBES.must_watch;
+      const legacy = VIBES[(mode === 'watched' ? (m.myVibe || m.dominantVibe) : m.dominantVibe)] || VIBES.must_watch;
       const sub = [m.year, m.rating ? '★ ' + m.rating : ''].filter(Boolean).join(' · ');
+      const poster = m.poster
+        ? `<img src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">`
+        : `<div class="flex h-full w-full items-center justify-center p-3 text-center text-xs text-white/35">${m.__pending ? 'Loading…' : esc(m.title)}</div>`;
+      let badge = `<span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${legacy.color}"></span>${esc(legacy.label)}</span>`;
+      let extra = '', actions;
+      if (mode === 'want') {
+        badge = '';
+        actions = `<button type="button" onclick="markSeen('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">Seen it</button>
+            <button type="button" onclick="toggleWatchlist('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watchlist">Remove</button>`;
+      } else {
+        const signedIn = !!currentAuthUser;
+        const key = libKeyOf(m), vote = LIB.votes.get(key), rev = LIB.reviews.get(key);
+        const tr = vote ? TIERS[vote.tier - 1] : null;
+        if (signedIn) {
+          badge = tr
+            ? `<span class="absolute left-2 top-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-full bg-black/75 px-2.5 py-0.5 text-[10px] font-medium backdrop-blur" style="color:${tr.color}">${tr.n === 1 ? '<i class="fa-solid fa-star text-[9px]"></i>' : `<span class="h-1.5 w-1.5 rounded-full" style="background:${tr.color}"></span>`}<span class="truncate">${esc(tr.label)}</span></span>`
+            : (LIB.loaded ? '<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white/55 backdrop-blur">Not rated yet</span>' : '');
+          const f = vote && feelingOf((vote.feelings || [])[0]);
+          extra = `${f ? `<div class="mt-1.5 px-0.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}</span></div>` : ''}
+            ${rev ? `<p class="mt-1.5 line-clamp-2 break-words px-0.5 text-xs leading-snug text-white/55">${rev.spoiler ? '<i class="fa-solid fa-eye-slash mr-1 text-[10px]"></i>Review with spoilers' : '“' + esc(rev.headline) + '”'}</p>` : ''}`;
+        }
+        actions = `${signedIn ? `<button type="button" onclick="openRateSheet('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">${vote ? 'Edit' : 'Add verdict'}</button>` : ''}
+            <button type="button" onclick="toggleWatched('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watched">Remove</button>`;
+      }
       return `
         <div class="group">
-          <button type="button" onclick="openDetails('${m.id}')" class="block w-full text-left focus:outline-none">
+          <button type="button" onclick="openDetails('${esc(m.id)}')" class="block w-full text-left focus:outline-none">
             <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
-              <img src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
-              <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</span>
+              ${poster}
+              ${badge}
             </div>
             <div class="mt-2.5 break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
             <div class="px-0.5 text-xs text-white/45">${esc(sub)}</div>
           </button>
-          <div class="mt-2 flex items-center gap-1 px-0.5">
-            ${mode === 'want' ? `<button type="button" onclick="toggleWatched('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">Seen it</button>
-            <button type="button" onclick="toggleWatchlist('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watchlist">Remove</button>` :
-            `<button type="button" onclick="toggleWatched('${m.id}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watched">Remove</button>`}
-          </div>
+          ${extra}
+          <div class="mt-2 flex flex-wrap items-center gap-1 px-0.5">${actions}</div>
         </div>`;
     }
 
+    // ---- "How was it?": mark a title as seen and give your verdict in one step
+    const RS = { open: false, id: null, item: null, key: '', tier: 0, feeling: '', headline: '', body: '', spoiler: false, mark: false, showBody: false, busy: false, pop: null, touched: false };
+    function markSeen(id) {
+      if (userWatchedHistory.some(h => h.id === id)) { toggleWatched(id); return; }      // already seen: this un-marks it
+      openRateSheet(id, { mark: true });
+    }
+    async function openRateSheet(id, opts) {
+      const item = findLibItem(id); if (!item) return;
+      const mark = !!(opts && opts.mark);
+      if (!currentAuthUser || !sbc()) {
+        if (mark) { toggleWatched(id); showToast('Marked as watched. Sign in to add your verdict.'); }
+        else vsAuth('Sign in to add your verdict.');
+        return;
+      }
+      if (RS.open) rateSheetClose(true);
+      Object.assign(RS, { open: true, id, item, key: vsKey(item), tier: 0, feeling: '', headline: '', body: '', spoiler: false, mark, showBody: false, busy: false, pop: null, touched: false });
+      rateSheetBuild();
+      // prefill with what the viewer already said about this title
+      const key = RS.key;
+      try {
+        const [v, r] = await Promise.all([
+          sbc().from('title_votes').select('tier,feelings').eq('user_id', currentAuthUser.id).eq('title_key', key).maybeSingle(),
+          sbc().from('title_reviews').select('headline,body,spoiler').eq('user_id', currentAuthUser.id).eq('title_key', key).maybeSingle()
+        ]);
+        if (RS.open && RS.key === key && !RS.touched) {
+          if (v.data) { RS.tier = v.data.tier; RS.feeling = (v.data.feelings || [])[0] || ''; }
+          if (r.data) { RS.headline = r.data.headline || ''; RS.body = r.data.body || ''; RS.spoiler = !!r.data.spoiler; RS.showBody = !!RS.body; }
+          rateSheetBuild();
+        }
+      } catch (e) {}
+    }
+    function rateSheetBuild() {
+      let el = document.getElementById('rateSheet');
+      if (!el) { el = document.createElement('div'); el.id = 'rateSheet'; document.body.appendChild(el); }
+      const it = RS.item;
+      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 backdrop-blur-md sm:items-center sm:p-5';
+      el.onclick = e => { if (e.target === el) rateSheetClose(); };
+      el.innerHTML = `<div class="rs-card relative max-h-[94vh] w-full max-w-[560px] overflow-y-auto overflow-x-hidden rounded-t-[28px] bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10 sm:rounded-[28px] sm:p-7" role="dialog" aria-modal="true" aria-labelledby="rsTitle">
+          <button type="button" onclick="rateSheetClose()" aria-label="Close" class="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>
+          <div class="flex items-center gap-4 pr-10">
+            ${it.poster ? `<img src="${esc(it.poster)}" alt="" class="h-[72px] w-12 shrink-0 rounded-lg object-cover ring-1 ring-white/10" onerror="this.style.display='none'">` : ''}
+            <div class="min-w-0"><div class="text-xs uppercase tracking-[0.14em] text-white/40">${RS.mark ? 'Marking as seen' : 'Your verdict'}</div><h2 id="rsTitle" class="mt-0.5 break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2></div>
+          </div>
+          <h3 class="mt-6 text-sm font-medium text-white">How was it?</h3>
+          <div id="rsTiers" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+          <div class="mt-5 text-xs text-white/40">What best describes it? Pick one. Tap it again to clear.</div>
+          <div id="rsFeel" class="mt-2 flex flex-wrap gap-2"></div>
+          <label for="rsHeadline" class="mt-6 block text-[13px] font-medium text-white/80">In a few words <span class="font-normal text-white/35">(optional)</span></label>
+          <input id="rsHeadline" type="text" maxlength="140" value="${esc(RS.headline)}" oninput="RS.headline=this.value;RS.touched=true" placeholder="e.g. I walked out silent, then cried in the car" class="mt-2 w-full rounded-xl bg-white/[0.05] px-4 py-3 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30">
+          <div id="rsMore"></div>
+          <p id="rsErr" role="alert" class="mt-3 hidden rounded-xl bg-rose-500/10 px-3 py-2 text-[13px] text-rose-300 ring-1 ring-rose-400/25"></p>
+          <div class="mt-5 flex flex-wrap items-center gap-2.5">
+            <button id="rsSave" type="button" onclick="rateSheetSave()" class="rounded-full bg-white px-7 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">${RS.mark ? 'Save and mark as seen' : 'Save'}</button>
+            ${RS.mark ? '<button type="button" onclick="rateSheetSkip()" class="rounded-full px-5 py-2.5 text-sm text-white/70 ring-1 ring-white/15 transition hover:bg-white/[0.06] hover:text-white">Skip for now</button>' : ''}
+            <button type="button" onclick="rateSheetClose()" class="rounded-full px-4 py-2.5 text-sm text-white/45 transition hover:text-white">Cancel</button>
+          </div>
+        </div>`;
+      rateSheetOptions(); rateSheetMore();
+    }
+    function rateSheetOptions() {
+      const pop = RS.pop; RS.pop = null;
+      const tiers = document.getElementById('rsTiers'), feel = document.getElementById('rsFeel'); if (!tiers || !feel) return;
+      const check = '<i class="fa-solid fa-check vs-check ml-auto text-[11px]"></i>';
+      tiers.innerHTML = TIERS.map(tr => { const sel = RS.tier === tr.n;
+        return `<button type="button" onclick="rateSheetTier(${tr.n})" aria-pressed="${sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 't' + tr.n ? 'vs-pop' : ''}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; }).join('');
+      feel.innerHTML = FEELINGS.map(f => { const sel = RS.feeling === f.id;
+        return `<button type="button" onclick="rateSheetFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'f' + f.id ? 'vs-pop' : ''}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; }).join('');
+    }
+    function rateSheetMore() {
+      const box = document.getElementById('rsMore'); if (!box) return;
+      box.innerHTML = RS.showBody
+        ? `<label for="rsBody" class="mt-4 block text-[13px] font-medium text-white/80">Tell the full story <span class="font-normal text-white/35">(up to 500 words)</span></label>
+           <textarea id="rsBody" rows="5" oninput="RS.body=this.value;RS.touched=true;rateSheetCount()" class="mt-2 w-full resize-y rounded-xl bg-white/[0.05] px-4 py-3 text-[15px] leading-relaxed text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30">${esc(RS.body)}</textarea>
+           <div class="mt-2 flex flex-wrap items-center justify-between gap-3"><label class="flex cursor-pointer items-center gap-2 text-[13px] text-white/70"><input id="rsSpoiler" type="checkbox" ${RS.spoiler ? 'checked' : ''} onchange="RS.spoiler=this.checked;RS.touched=true" class="h-4 w-4 accent-purple-500">Contains spoilers</label><span id="rsCount" class="text-xs text-white/35">0 / 500 words</span></div>`
+        : '<button type="button" onclick="RS.showBody=true;rateSheetMore()" class="mt-3 text-[13px] text-white/55 underline decoration-white/20 underline-offset-4 transition hover:text-white">Write more</button>';
+      rateSheetCount();
+    }
+    function rateSheetCount() { const c = document.getElementById('rsCount'); if (!c) return; const n = vsWords(RS.body); c.textContent = `${n} / 500 words`; c.className = 'text-xs ' + (n > 500 ? 'text-rose-300' : 'text-white/35'); }
+    function rateSheetTier(n) { RS.touched = true; RS.tier = n; RS.pop = 't' + n; rateSheetOptions(); }
+    function rateSheetFeeling(id) { RS.touched = true; RS.feeling = RS.feeling === id ? '' : id; if (RS.feeling) RS.pop = 'f' + id; rateSheetOptions(); }
+    function rateSheetErr(msg) { const e = document.getElementById('rsErr'); if (!e) return; e.textContent = msg || ''; e.classList.toggle('hidden', !msg); }
+    function rateSheetClose(instant) {
+      const el = document.getElementById('rateSheet'); RS.open = false;
+      if (!el) return;
+      if (instant) { el.remove(); return; }
+      el.classList.add('rs-out'); setTimeout(() => el.remove(), 200);
+    }
+    function rateSheetSkip() { const id = RS.id; rateSheetClose(); if (id && !userWatchedHistory.some(h => h.id === id)) toggleWatched(id); }
+    async function rateSheetSave() {
+      if (RS.busy) return;
+      const headline = RS.headline.trim(), body = RS.body.trim();
+      if (!RS.tier) { rateSheetErr('Pick how it was first, or choose Skip for now.'); return; }
+      if (headline.length === 1 || (body && headline.length < 2)) { rateSheetErr('Add a few words for the one-line review, or clear the text.'); return; }
+      if (vsWords(body) > 500) { rateSheetErr('Please keep it to 500 words or fewer.'); return; }
+      if (/(https?:\/\/|www\.|\.com\/|\.in\/|\.net\/)/i.test(headline + ' ' + body)) { rateSheetErr('Links are not allowed in reviews.'); return; }
+      rateSheetErr(''); RS.busy = true;
+      const btn = document.getElementById('rsSave'); if (btn) btn.disabled = true;
+      const uid = currentAuthUser.id, key = RS.key, item = RS.item;
+      const feelings = RS.feeling ? [RS.feeling] : [];
+      const v = await sbc().from('title_votes').upsert({ user_id: uid, title_key: key, tier: RS.tier, feelings }, { onConflict: 'user_id,title_key' });
+      if (v.error) { RS.busy = false; if (btn) btn.disabled = false; rateSheetErr('Could not save your verdict. Try again.'); return; }
+      if (headline.length >= 2) {
+        const r = await sbc().from('title_reviews').upsert({ user_id: uid, title_key: key, title_name: String(item.title || '').slice(0, 120), author_name: vsAuthorName(), author_icon: (currentUserSession && currentUserSession.character) || null, headline, body, spoiler: RS.spoiler }, { onConflict: 'user_id,title_key' });
+        if (r.error) {
+          RS.busy = false; if (btn) btn.disabled = false;
+          const m = String(r.error.message || '');
+          rateSheetErr(/500 words|Links are not|too fast/.test(m) ? m : /row-level security/i.test(m) ? 'Your review was hidden by moderators, so it can\'t be edited.' : 'Your verdict saved, but the review did not. Try again.');
+          libInvalidate(); return;
+        }
+      }
+      Track.event('vibe_vote', { v: 't' + RS.tier });
+      libMirrorWatched(item, RS.tier, feelings);
+      libInvalidate();
+      rateSheetClose(); RS.busy = false;
+      showToast(RS.mark ? 'Marked as seen. Thanks for sharing how it felt.' : 'Saved.');
+      if (typeof activeTab !== 'undefined' && activeTab === 'watchlist') refreshViews();
+      const dm = document.getElementById('detailModal');
+      if (dm && !dm.classList.contains('hidden') && document.getElementById('modalContent').dataset.itemId === item.id) renderMovieDetailsModal(item);
+    }
+    // put the title in Watched (and out of Want to watch), tagged with the viewer's feeling, so the taste profile stays in step
+    function libMirrorWatched(item, tier, feelings) {
+      const f = feelingOf(feelings && feelings[0]);
+      const vibe = (f && f.vibe) || (tier <= 2 ? 'must_watch' : tier <= 4 ? 'fun_time' : tier === 5 ? 'time_pass' : 'skip_it');
+      const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, type: item.type, tmdbId: item.tmdbId || null, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
+      const i = userWatchedHistory.findIndex(h => h.id === item.id);
+      if (i !== -1) userWatchedHistory[i] = { ...userWatchedHistory[i], ...rec, watchedDate: userWatchedHistory[i].watchedDate || rec.watchedDate };
+      else { const w = userWatchlistIds.indexOf(item.id); if (w !== -1) userWatchlistIds.splice(w, 1); userWatchedHistory.unshift(rec); }
+      saveWatchlistStore();
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && RS.open) rateSheetClose(); });
+
     function renderWatchlist() {
-      const wantList = (mediaDatabase || []).filter(m => userWatchlistIds.includes(m.id));
+      const wantList = userWatchlistIds.map(id => { const it = findLibItem(id); return it ? libCard(it) : { id, title: libGuessTitle(id), poster: '', year: '', rating: '', __pending: /^tmdb-(m|tv)-\d+$/.test(id) }; });
       const watchedList = userWatchedHistory || [];
+      if (currentAuthUser && !LIB.loaded && !LIB.loading) libLoad();
+      setTimeout(resolveWatchlistMeta, 0);
       const counts = {};
       watchedList.forEach(w => { const v = w.myVibe || w.dominantVibe || 'must_watch'; counts[v] = (counts[v] || 0) + 1; });
       const total = watchedList.length || 1;
