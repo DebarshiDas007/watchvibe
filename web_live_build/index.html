@@ -3929,7 +3929,7 @@ function posterCard(item, opts) {
       handleMediaPosterError(img, title);
     }
     function openActorProfile(actorId) {
-      let actor = ACTORS[actorId];
+      let actor = ACTORS[actorId] || (window.DYNAMIC_ACTORS && window.DYNAMIC_ACTORS[actorId]);
       if (!actor) {
         const clean = (actorId || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         for (const [k, v] of Object.entries(ACTORS)) {
@@ -3949,7 +3949,7 @@ function posterCard(item, opts) {
       }
 
       if (currentActorSort === 'boxOffice') {
-        list.sort((a, b) => b.boxOfficeVal - a.boxOfficeVal);
+        list.sort((a, b) => ((b.boxOfficeVal || 0) - (a.boxOfficeVal || 0)) || ((b.popularity || 0) - (a.popularity || 0)));
       } else if (currentActorSort === 'rating') {
         list.sort((a, b) => b.rating - a.rating);
       } else if (currentActorSort === 'popularity') {
@@ -3976,8 +3976,8 @@ function posterCard(item, opts) {
                 <h2 class="mt-1.5 break-words font-display text-3xl font-medium leading-tight text-white sm:text-4xl">${esc(actor.name)}</h2>
                 <p class="mt-1 text-sm text-white/45">${esc(actor.born || '')}</p>
                 <div class="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-2 sm:justify-start">
-                  <div><div class="text-[11px] uppercase tracking-wider text-white/40">Career box office</div><div class="text-base font-medium text-white">${esc(actor.boxOfficeTotal || '')}</div></div>
-                  <div><div class="text-[11px] uppercase tracking-wider text-white/40">Average rating</div><div class="text-base font-medium text-white"><span class="text-amber-300">★</span> ${esc(actor.avgRating || '')}</div></div>
+                  ${actor.boxOfficeTotal && actor.boxOfficeTotal !== 'Global Superstar' ? `<div><div class="text-[11px] uppercase tracking-wider text-white/40">Career box office</div><div class="text-base font-medium text-white">${esc(actor.boxOfficeTotal)}</div></div>` : ''}
+                  ${actor.avgRating ? `<div><div class="text-[11px] uppercase tracking-wider text-white/40">Average rating</div><div class="text-base font-medium text-white"><span class="text-amber-300">★</span> ${esc(actor.avgRating)}</div></div>` : ''}
                 </div>
               </div>
             </div>
@@ -4037,13 +4037,70 @@ function posterCard(item, opts) {
         </div>
       `;
 
+      const modalEl = document.getElementById('actorModal');
+      const wasOpenSame = !modalEl.classList.contains('hidden') && window.__actorOpen === actor.id;
+      const scEl = modalEl.firstElementChild; const keepTop = wasOpenSame ? scEl.scrollTop : 0;
       document.getElementById('actorModalContent').innerHTML = html;
-      document.getElementById('actorModal').classList.remove('hidden');
+      modalEl.classList.remove('hidden');
+      scEl.scrollTop = keepTop;
+      window.__actorOpen = actor.id;
+      if (!actor.__enriched) enrichActor(actor);
+    }
+
+    // Make sure every profile shows at least 10 of the person's best-known titles (TMDB credits).
+    window.__personIdCache = window.__personIdCache || {};
+    async function enrichActor(actor) {
+      if (actor.__enriching) return;
+      actor.__enriching = true;
+      try {
+        const apiKey = getActiveTmdbKey();
+        let pid = (/^tmdb-person-(\d+)$/.exec(actor.id) || [])[1] || window.__personIdCache[actor.name];
+        if (!pid) {
+          const r = await fetch(`${TMDB_BASE_URL}/search/person?api_key=${apiKey}&query=${encodeURIComponent(actor.name)}`);
+          const j = await r.json();
+          const hit = (j.results || []).sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0];
+          pid = hit && hit.id; if (pid) window.__personIdCache[actor.name] = pid;
+        }
+        if (!pid) return;
+        const r = await fetch(`${TMDB_BASE_URL}/person/${pid}?api_key=${apiKey}&append_to_response=combined_credits`);
+        if (!r.ok) return;
+        const p = await r.json();
+        const genreVibe = g => (g || []).some(x => [878, 9648, 53, 14].includes(x)) ? 'mind_blown' : (g || []).some(x => [18, 10749].includes(x)) ? 'emotional_damage' : 'fun_time';
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const have = new Set((actor.filmography || []).map(f => norm(f.title)));
+        const pool = [...(p.combined_credits?.cast || []), ...(p.combined_credits?.crew || []).filter(c => c.job === 'Director')]
+          .filter(c => c.poster_path && (c.title || c.name) && !(c.genre_ids || []).some(g => [10767, 10763, 10764, 99].includes(g)) && !/self|himself|herself|archive/i.test(c.character || '') && (c.vote_count || 0) >= 25)
+          .sort((a, b) => ((b.vote_count || 0) * (b.vote_average || 0)) - ((a.vote_count || 0) * (a.vote_average || 0)));
+        const added = [];
+        for (const c of pool) {
+          const title = c.title || c.name; const k = norm(title);
+          if (have.has(k)) continue; have.add(k);
+          const isTv = c.media_type === 'tv';
+          const rating = c.vote_average ? Number(c.vote_average.toFixed(1)) : 0;
+          const dv = rating >= 8 ? 'must_watch' : genreVibe(c.genre_ids);
+          added.push({ id: `tmdb-${isTv ? 'tv' : 'm'}-${c.id}`, title, char: c.character || c.job || '', year: String((c.release_date || c.first_air_date || '').slice(0, 4) || ''), rating, poster: `${TMDB_IMG_URL}${c.poster_path}`, dominantVibe: dv, vibes: [...new Set([dv, rating >= 7.5 ? 'must_watch' : dv])], popularity: c.vote_count || 0, boxOfficeVal: 0, boxOffice: '' });
+          if ((actor.filmography || []).length + added.length >= 14) break;
+        }
+        actor.filmography = [...(actor.filmography || []), ...added];
+        if (!actor.avgRating) {
+          const rs = actor.filmography.map(f => Number(f.rating)).filter(Boolean);
+          if (rs.length) actor.avgRating = (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1);
+        }
+        if (/is a celebrated cinema personality/.test(actor.bio || '') && p.biography) actor.bio = p.biography.length > 520 ? p.biography.slice(0, 520).replace(/\s+\S*$/, '') + '…' : p.biography;
+        if (!actor.born && (p.birthday || p.place_of_birth)) actor.born = [p.birthday, p.place_of_birth].filter(Boolean).join(' • ');
+        actor.__enriched = true;
+      } catch (e) { /* keep what we have */ }
+      finally {
+        actor.__enriching = false;
+        const m = document.getElementById('actorModal');
+        if (actor.__enriched && m && !m.classList.contains('hidden') && window.__actorOpen === actor.id) openActorProfile(actor.id);
+      }
     }
     function closeActorProfile() { document.getElementById('actorModal').classList.add('hidden'); }
 
     // --- FULL TITLE DETAIL MODAL ---
 window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
+window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     async function openDetails(mediaId) {
       if (!mediaId) return;
