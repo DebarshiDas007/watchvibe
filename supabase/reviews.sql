@@ -7,7 +7,7 @@ create table if not exists public.title_votes (
   user_id    uuid not null references auth.users(id) on delete cascade,
   title_key  text not null check (char_length(title_key) between 3 and 60),
   tier       smallint not null check (tier between 1 and 6),
-  feelings   text[] not null default '{}' check (cardinality(feelings) <= 2 and feelings <@ array['mind_blown','emotional_damage','hidden_gem','fun_time']::text[]),
+  feelings   text[] not null default '{}' check (cardinality(feelings) <= 1 and feelings <@ array['moved_to_tears','laughed_out_loud','mind_blown','hidden_gem','good_timepass']::text[]),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, title_key)
@@ -37,10 +37,11 @@ language sql stable security definer set search_path = public as $$
       count(*) filter (where tier = 1), count(*) filter (where tier = 2), count(*) filter (where tier = 3),
       count(*) filter (where tier = 4), count(*) filter (where tier = 5), count(*) filter (where tier = 6)),
     'feelings', jsonb_build_object(
+      'moved_to_tears',   count(*) filter (where 'moved_to_tears' = any(feelings)),
+      'laughed_out_loud', count(*) filter (where 'laughed_out_loud' = any(feelings)),
       'mind_blown',       count(*) filter (where 'mind_blown' = any(feelings)),
-      'emotional_damage', count(*) filter (where 'emotional_damage' = any(feelings)),
       'hidden_gem',       count(*) filter (where 'hidden_gem' = any(feelings)),
-      'fun_time',         count(*) filter (where 'fun_time' = any(feelings))),
+      'good_timepass',    count(*) filter (where 'good_timepass' = any(feelings))),
     'mine', (select jsonb_build_object('tier', v.tier, 'feelings', v.feelings) from public.title_votes v where v.title_key = p_key and v.user_id = auth.uid())
   ) from public.title_votes where title_key = p_key;
 $$;

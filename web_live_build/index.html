@@ -57,6 +57,14 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+    /* Verdict and feeling buttons: tactile press and a pop when chosen */
+    .vs-opt { cursor: pointer; transition: transform .18s cubic-bezier(.22,1,.36,1), background-color .25s ease, box-shadow .25s ease; -webkit-tap-highlight-color: transparent; }
+    .vs-opt:active { transform: scale(.95); }
+    @keyframes vs-pop { 0% { transform: scale(.93); outline: 2px solid var(--c); outline-offset: 0; } 40% { transform: scale(1.07); } 100% { transform: scale(1); outline: 2px solid transparent; outline-offset: 10px; } }
+    @keyframes vs-check { from { transform: scale(0) rotate(-40deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+    .vs-pop { animation: vs-pop .55s cubic-bezier(.22,1,.36,1); }
+    .vs-check { animation: vs-check .4s cubic-bezier(.34,1.56,.64,1) both; }
+    @media (prefers-reduced-motion: reduce) { .vs-pop, .vs-check { animation: none; } .vs-opt { transition: none; } }
     /* More like this: exactly four cards per page (two on phones) */
     .sim-row > button { flex: 0 0 calc((100% - 8px - 3rem) / 4); width: auto; min-width: 0; align-self: flex-start; }
     @media (max-width: 520px) { .sim-row > button { flex-basis: calc((100% - 8px - 1rem) / 2); } }
@@ -3839,8 +3847,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       { n: 5, label: 'Timepass', hint: 'Fine for a lazy evening.', color: '#FB923C' },
       { n: 6, label: 'Left at Interval', hint: 'Not for me.', color: '#EF4444' }
     ];
-    const FEELING_IDS = ['mind_blown', 'emotional_damage', 'hidden_gem', 'fun_time'];
-    const VS = { item: null, key: '', summary: null, reviews: null, mine: null, sort: 'felt', formOpen: false, draft: null, delArmed: false, reported: new Set(), revealed: new Set() };
+    // one feeling per person per title; `vibe` maps it to the older vibe palette used by the taste persona
+    const FEELINGS = [
+      { id: 'moved_to_tears', label: 'Moved to Tears', color: '#F43F5E', vibe: 'emotional_damage' },
+      { id: 'laughed_out_loud', label: 'Laughed Out Loud', color: '#06B6D4', vibe: 'fun_time' },
+      { id: 'mind_blown', label: 'Mind Blown', color: '#A855F7', vibe: 'mind_blown' },
+      { id: 'hidden_gem', label: 'Hidden Gem', color: '#F59E0B', vibe: 'hidden_gem' },
+      { id: 'good_timepass', label: 'Good Timepass', color: '#84CC16', vibe: 'time_pass' }
+    ];
+    const FEELING_IDS = FEELINGS.map(f => f.id);
+    const feelingOf = id => FEELINGS.find(f => f.id === id);
+    const VS = { item: null, key: '', summary: null, reviews: null, mine: null, sort: 'felt', formOpen: false, draft: null, delArmed: false, pop: null, want: null, saving: false, reported: new Set(), revealed: new Set() };
     const VS_MIN_PUBLIC = 3, VS_PAGE = 5;
     const vsPct = (a, b) => b ? Math.round(a / b * 100) : 0;
     const sbc = () => window.supabaseClient;
@@ -3860,7 +3877,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     function vibeSectionSkeleton() {
       return `<h3 class="font-display text-lg font-medium text-white">How did it feel?</h3>
-        <div id="vsSummary" class="mt-4"></div>
+        <div id="vsSummary" class="mt-4"><div id="vsCommunity"></div><div id="vsMine" class="mt-6"></div></div>
         <div id="vsRevHead" class="mt-10"></div>
         <div id="vsForm"></div>
         <div id="vsList" class="mt-4 space-y-3"></div>
@@ -3895,9 +3912,10 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       row.classList.remove('hidden');
     }
 
-    function vsRenderSummary() {
-      const box = vsEl('vsSummary'); if (!box) return;
-      const s = VS.summary, mine = s && s.mine, total = s ? s.total : 0;
+    function vsRenderSummary() { vsRenderCommunity(); vsRenderMine(); }
+    function vsRenderCommunity() {
+      const box = vsEl('vsCommunity'); if (!box) return;
+      const s = VS.summary, total = s ? s.total : 0;
       let html = '';
       if (!sbc()) html += '<p class="text-sm text-white/40">Verdicts are unavailable right now.</p>';
       else if (!s) html += '<p class="text-sm text-white/40">Loading what people felt…</p>';
@@ -3906,58 +3924,81 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         html += `<div class="space-y-2.5">${TIERS.map((tr, i) => { const c = s.tiers[i] || 0, p = vsPct(c, total);
           return `<div class="flex items-center gap-3 text-[13px]" title="${c} ${c === 1 ? 'verdict' : 'verdicts'}"><span class="w-32 shrink-0 truncate sm:w-36 ${i === 0 ? 'text-amber-200' : 'text-white/65'}">${i === 0 ? vsStar : ''}${esc(tr.label)}</span><div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><div class="h-full rounded-full transition-all duration-500" style="width:${p}%;background:${tr.color}"></div></div><span class="w-10 shrink-0 text-right text-white/45">${p}%</span></div>`; }).join('')}</div>
           <p class="mt-3 text-xs text-white/35">Based on ${total.toLocaleString()} verdicts</p>`;
-        const feel = FEELING_IDS.map(id => [id, s.feelings && s.feelings[id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
-        if (feel.length) html += `<div class="mt-4 flex flex-wrap gap-2">${feel.map(([id, c]) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[id].color}"></span>${esc(VIBES[id].label)} <span class="text-white/40">${vsPct(c, total)}%</span></span>`).join('')}</div>`;
+        const feel = FEELINGS.map(f => [f, s.feelings && s.feelings[f.id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+        if (feel.length) html += `<div class="mt-4 flex flex-wrap gap-2">${feel.map(([f, c]) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)} <span class="text-white/40">${vsPct(c, total)}%</span></span>`).join('')}</div>`;
       }
-      // your own verdict
+      box.innerHTML = html;
+    }
+    function vsRenderMine() {
+      const box = vsEl('vsMine'); if (!box) return;
+      const s = VS.summary, mine = s && s.mine, total = s ? s.total : 0;
+      const pop = VS.pop; VS.pop = null;      // the pop animation plays once, only for the option that was just tapped
+      const check = '<i class="fa-solid fa-check vs-check ml-auto text-[11px]"></i>';
       const tierBtn = tr => { const sel = mine && mine.tier === tr.n;
-        return `<button type="button" onclick="vsSetTier(${tr.n})" aria-pressed="${!!sel}" class="rounded-xl px-3 py-2.5 text-left ring-1 transition duration-200 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'}" style="${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}</span><span class="mt-0.5 block text-[11px] text-white/40">${esc(tr.hint)}</span></button>`; };
-      const feelBtn = id => { const v = VIBES[id], sel = mine && (mine.feelings || []).includes(id);
-        return `<button type="button" onclick="vsToggleFeeling('${id}')" aria-pressed="${!!sel}" class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 transition duration-200 ${sel ? 'text-white' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'}" style="${sel ? `background:${v.color}26;--tw-ring-color:${v.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</button>`; };
+        return `<button type="button" onclick="vsSetTier(${tr.n})" aria-pressed="${!!sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 'tier:' + tr.n ? 'vs-pop' : ''}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; };
+      const cur = mine && (mine.feelings || [])[0];
+      const feelBtn = f => { const sel = cur === f.id;
+        return `<button type="button" onclick="vsToggleFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'feel:' + f.id ? 'vs-pop' : ''}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; };
       const same = mine && total >= VS_MIN_PUBLIC ? vsPct(s.tiers[mine.tier - 1] || 0, total) : null;
-      html += `<div class="mt-6 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] sm:p-5">
+      box.innerHTML = `<div class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] sm:p-5">
           <div class="flex items-center justify-between gap-3"><div class="text-sm font-medium text-white">Your verdict</div>${mine ? '<button type="button" onclick="vsRemoveVote()" class="text-xs text-white/45 transition hover:text-white">Remove</button>' : ''}</div>
           <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">${TIERS.map(tierBtn).join('')}</div>
-          <div class="mt-4 text-xs text-white/40">What did it make you feel? Pick up to two.</div>
-          <div class="mt-2 flex flex-wrap gap-2">${FEELING_IDS.map(feelBtn).join('')}</div>
+          <div class="mt-4 text-xs text-white/40">What best describes it? Pick one. Tap it again to clear.</div>
+          <div class="mt-2 flex flex-wrap gap-2">${FEELINGS.map(feelBtn).join('')}</div>
           ${same !== null ? `<p class="mt-3 text-xs text-white/50">You and ${same}% of viewers chose ${esc(TIERS[mine.tier - 1].label)}.</p>` : ''}
           ${!currentAuthUser ? '<p class="mt-3 text-xs text-white/45">Sign in to save your verdict and write a review.</p>' : ''}
         </div>`;
-      box.innerHTML = html;
     }
 
-    async function vsSaveVote(tier, feelings) {
+    // Saves are queued so rapid taps can never finish out of order: the newest choice is always what ends up stored.
+    function vsSaveVote(tier, feelings) {
       if (!vsAuth('Sign in to share your verdict.')) return;
-      const prev = VS.summary && VS.summary.mine;
-      if (VS.summary) VS.summary.mine = { tier, feelings };   // instant feedback
-      vsRenderSummary();
-      const { error } = await sbc().from('title_votes').upsert({ user_id: currentAuthUser.id, title_key: VS.key, tier, feelings }, { onConflict: 'user_id,title_key' });
-      if (error) { if (VS.summary) VS.summary.mine = prev || null; vsRenderSummary(); showToast('Could not save your verdict. Try again.'); return; }
-      Track.event('vibe_vote', { v: 't' + tier });
-      vsMirrorWatched(tier, feelings);
-      const fresh = await vsLoadSummary(VS.key);
-      if (fresh) { VS.summary = fresh; vsRenderSummary(); vsTopRow(); vsRenderList(); }
+      if (VS.summary) VS.summary.mine = { tier, feelings };   // instant feedback, with the pop animation
+      vsRenderMine();
+      VS.want = { key: VS.key, tier, feelings };
+      vsPersist();
     }
-    function vsSetTier(n) { const m = VS.summary && VS.summary.mine; vsSaveVote(n, m ? (m.feelings || []) : []); }
+    async function vsPersist() {
+      if (VS.saving) return;                                  // the running loop will pick up the newest choice
+      VS.saving = true; let failed = false;
+      while (VS.want) {
+        const cur = VS.want; VS.want = null;
+        const q = cur.remove
+          ? sbc().from('title_votes').delete().eq('user_id', currentAuthUser.id).eq('title_key', cur.key)
+          : sbc().from('title_votes').upsert({ user_id: currentAuthUser.id, title_key: cur.key, tier: cur.tier, feelings: cur.feelings }, { onConflict: 'user_id,title_key' });
+        const { error } = await q;
+        if (error) { failed = true; VS.want = null; break; }
+        if (!cur.remove) { Track.event('vibe_vote', { v: 't' + cur.tier }); if (cur.key === VS.key) vsMirrorWatched(cur.tier, cur.feelings); }
+      }
+      VS.saving = false;
+      const fresh = await vsLoadSummary(VS.key);              // what the server really holds
+      if (fresh && !VS.want && !VS.saving) {
+        const same = JSON.stringify(fresh.mine) === JSON.stringify(VS.summary && VS.summary.mine);
+        VS.summary = fresh; vsRenderCommunity(); if (!same || failed) vsRenderMine(); vsTopRow(); vsRenderList();
+      }
+      if (failed) showToast('Could not save your verdict. Try again.');
+    }
+    function vsSetTier(n) { const m = VS.summary && VS.summary.mine; if (m && m.tier === n) return; VS.pop = 'tier:' + n; vsSaveVote(n, m ? (m.feelings || []) : []); }
     function vsToggleFeeling(id) {
       const m = VS.summary && VS.summary.mine;
       if (!m) { if (vsAuth('Sign in to share your verdict.')) showToast('Choose your verdict first, then add a feeling.'); return; }
-      let f = (m.feelings || []).slice();
-      if (f.includes(id)) f = f.filter(x => x !== id); else { if (f.length >= 2) f.shift(); f.push(id); }
-      vsSaveVote(m.tier, f);
+      const cur = (m.feelings || [])[0];
+      const next = cur === id ? [] : [id];                       // one at a time: a new pick replaces the old one, the same pick clears it
+      if (next.length) VS.pop = 'feel:' + id;
+      vsSaveVote(m.tier, next);
     }
-    async function vsRemoveVote() {
+    function vsRemoveVote() {
       if (!vsAuth()) return;
-      const prev = VS.summary && VS.summary.mine;
-      if (VS.summary) VS.summary.mine = null; vsRenderSummary();
-      const { error } = await sbc().from('title_votes').delete().eq('user_id', currentAuthUser.id).eq('title_key', VS.key);
-      if (error) { if (VS.summary) VS.summary.mine = prev; vsRenderSummary(); showToast('Could not remove your verdict.'); return; }
-      const fresh = await vsLoadSummary(VS.key); if (fresh) { VS.summary = fresh; vsRenderSummary(); vsTopRow(); vsRenderList(); }
+      if (VS.summary) VS.summary.mine = null;
+      vsRenderMine();
+      VS.want = { key: VS.key, remove: true };
+      vsPersist();
     }
     // keep the viewer's watched history and taste persona in step with their verdict
     function vsMirrorWatched(tier, feelings) {
       const item = VS.item; if (!item || !findItemById(item.id)) return;
-      const vibe = (feelings && feelings[0]) || (tier <= 2 ? 'must_watch' : tier <= 4 ? 'fun_time' : tier === 5 ? 'time_pass' : 'skip_it');
+      const f = feelingOf(feelings && feelings[0]);
+      const vibe = (f && f.vibe) || (tier <= 2 ? 'must_watch' : tier <= 4 ? 'fun_time' : tier === 5 ? 'time_pass' : 'skip_it');
       const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
       const i = userWatchedHistory.findIndex(h => h.id === item.id);
       if (i !== -1) userWatchedHistory[i] = rec; else { const w = userWatchlistIds.indexOf(item.id); if (w !== -1) userWatchlistIds.splice(w, 1); userWatchedHistory.unshift(rec); }
@@ -3980,7 +4021,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const ic = typeof AVATARS !== 'undefined' ? AVATARS.find(a => a.id === r.author_icon) : null;
       const avatar = ic ? `<img src="${avatarUri(ic)}" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover">` : `<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/25 text-xs font-medium text-white">${esc((r.author_name || '?')[0].toUpperCase())}</span>`;
       const chips = [tr ? `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style="background:${tr.color}22;color:${tr.color}">${tr.n === 1 ? vsStar : ''}${esc(tr.label)}</span>` : '']
-        .concat((r.feelings || []).filter(f => VIBES[f]).map(f => `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] text-white/65 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[f].color}"></span>${esc(VIBES[f].label)}</span>`)).join('');
+        .concat((r.feelings || []).map(feelingOf).filter(Boolean).map(f => `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] text-white/65 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}</span>`)).join('');
       const hidden = r.spoiler && !VS.revealed.has(r.id);
       const long = (r.body || '').length > 280;
       const text = hidden
