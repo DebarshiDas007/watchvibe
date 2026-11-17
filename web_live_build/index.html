@@ -3227,7 +3227,7 @@ function posterCard(item, opts) {
       const sub = [item.year, item.__platform || item.type].filter(Boolean).join(' · ');
       const sizing = opts.wide ? 'w-full' : 'w-[150px] sm:w-[170px] shrink-0';
       return `
-        <button type="button" onclick="openDetails('${item.id}')" class="group ${sizing} text-left focus:outline-none">
+        <button type="button" onclick="openDetails('${item.id}')" class="group self-start ${sizing} text-left focus:outline-none">
           <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
             <img src="${esc(item.poster)}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
             ${opts.badge ? `<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">${esc(opts.badge)}</span>` : ''}
@@ -3530,7 +3530,7 @@ function posterCard(item, opts) {
                 ${list.map(movie => {
                   const dominant = VIBES[movie.dominantVibe] || VIBES.fun_time;
                   return `
-                  <button type="button" onclick="openDetails('${esc(movie.id)}')" class="group block w-full text-left focus:outline-none">
+                  <button type="button" onclick="openDetails('${esc(movie.id)}')" class="group block w-full self-start text-left focus:outline-none">
                     <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
                       <img src="${esc(movie.poster)}" alt="${esc(movie.title)}" class="h-full w-full object-cover" onerror="fixFilmPoster(this, ${esc(JSON.stringify(movie.title))}, ${esc(JSON.stringify(String(movie.year)))})">
                       <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
