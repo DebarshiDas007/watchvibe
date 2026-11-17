@@ -3599,11 +3599,18 @@ function posterCard(item, opts) {
 
       // ---------- Curated home ----------
       // Featured carousel: the 5 best recent films, started at a different one each day
-      const heroTop = ottAll.filter(m => m.type === 'Movie' && m.backdrop && (m.totalVotes || 0) > 200).sort(byRating).slice(0, HERO_COUNT);
-      const heroShift = heroTop.length ? Math.floor(Date.now() / 86400000) % heroTop.length : 0;
-      const heroPool = heroTop.slice(heroShift).concat(heroTop.slice(0, heroShift));
+      const featItems = homeFeaturedAllowed() ? featuredItems() : null;
+      let heroPool;
+      if (featItems && featItems.length >= 3) heroPool = featItems;
+      else if (homeFeaturedAllowed() && FEAT.state === 'loading') heroPool = [];                  // the day's first lookup is running
+      else {
+        const heroTop = ottAll.filter(m => m.type === 'Movie' && m.backdrop && (m.totalVotes || 0) > 200).sort(byRating).slice(0, HERO_COUNT);
+        const heroShift = heroTop.length ? Math.floor(Date.now() / 86400000) % heroTop.length : 0;
+        heroPool = heroTop.slice(heroShift).concat(heroTop.slice(0, heroShift));
+      }
       if (!(HERO.pool.length === heroPool.length && HERO.pool.every((m, i) => m.id === heroPool[i].id)) || HERO.idx >= heroPool.length) HERO.idx = 0;
-      const heroHtml = heroPool.length ? heroCarouselHtml(heroPool) : '';
+      const heroHtml = heroPool.length ? heroCarouselHtml(heroPool)
+        : (FEAT.state === 'loading' ? '<section id="heroSkeleton" class="-mx-4 min-h-[360px] animate-pulse bg-white/[0.03] sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" aria-hidden="true"></section>' : '');
       if (heroPool.length) setTimeout(() => heroMount(heroPool), 0);
 
       const moodChips = AI_MOODS.map(mo => {
@@ -3663,6 +3670,79 @@ function posterCard(item, opts) {
         </div>`;
     }
 
+    // ================= Featured picks: what is hot right now, refreshed every day =================
+    // /api/featured ranks movies and series for the viewer's country (trending, JustWatch popularity, new on the big OTT services,
+    // Wikipedia attention). The page chooses five from that ranking, never repeats the last two days, and keeps the same five all day.
+    const FEAT = { state: 'idle', day: '', cc: '', picks: null, timer: 0 };
+    const FEAT_KEY = 'watchvibe_featured_v1', FEAT_HIST = 'watchvibe_featured_hist_v1';
+    function featDay() { return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10); }   // the day turns over at midnight India time
+    function featLoadStored() {
+      try { const s = JSON.parse(localStorage.getItem(FEAT_KEY) || 'null'); if (s && s.day === featDay() && s.cc === selectedCountry && Array.isArray(s.picks) && s.picks.length >= 3) return s.picks; } catch (e) {}
+      return null;
+    }
+    function featChoose(pool) {
+      let hist = {}; try { hist = JSON.parse(localStorage.getItem(FEAT_HIST) || '{}'); } catch (e) {}
+      const today = featDay();
+      const recent = new Set(Object.entries(hist).filter(([d]) => d !== today).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 2).flatMap(([, ids]) => ids));
+      const fresh = pool.filter(p => !recent.has(p.id));
+      const src = fresh.length >= 5 ? fresh : pool;                 // a thin day: allow repeats rather than a short banner
+      const chosen = [];
+      const count = f => chosen.filter(f).length;
+      const tryAdd = (p, strict) => {
+        if (chosen.includes(p) || chosen.length >= HERO_COUNT) return false;
+        if (strict && p.upcoming && count(c => c.upcoming) >= 1) return false;       // at most one "coming soon"
+        if (strict && count(c => c.type === p.type) >= 3) return false;              // a mix of films and series
+        chosen.push(p); return true;
+      };
+      src.forEach(p => tryAdd(p, true));
+      src.forEach(p => tryAdd(p, false));
+      // at least two you can press play on today, when the ranking has them
+      for (const p of src) {
+        if (count(c => c.platform) >= 2) break;
+        if (!p.platform || chosen.includes(p)) continue;
+        const drop = [...chosen].reverse().find(c => !c.platform);
+        if (drop) chosen.splice(chosen.indexOf(drop), 1, p);
+      }
+      chosen.sort((a, b) => b.score - a.score);
+      hist[today] = chosen.map(p => p.id);
+      Object.keys(hist).sort().slice(0, -4).forEach(k => delete hist[k]);             // keep the last four days
+      try { localStorage.setItem(FEAT_HIST, JSON.stringify(hist)); } catch (e) {}
+      return chosen;
+    }
+    function ensureFeatured() {
+      const day = featDay();
+      if (FEAT.state === 'ready' && FEAT.day === day && FEAT.cc === selectedCountry) return;
+      const stored = featLoadStored();
+      if (stored) { FEAT.picks = stored; FEAT.state = 'ready'; FEAT.day = day; FEAT.cc = selectedCountry; return; }
+      if (FEAT.state === 'loading' && FEAT.cc === selectedCountry) return;
+      if (FEAT.state === 'failed' && FEAT.day === day && FEAT.cc === selectedCountry) return;
+      FEAT.state = 'loading'; FEAT.day = day; FEAT.cc = selectedCountry; FEAT.picks = null;
+      const cc = selectedCountry;
+      const abort = new AbortController(); clearTimeout(FEAT.timer);
+      FEAT.timer = setTimeout(() => abort.abort(), 6000);
+      fetch(`/api/featured?cc=${encodeURIComponent(cc)}`, { signal: abort.signal }).then(r => r.json()).then(j => {
+        if (cc !== selectedCountry) return;
+        if (!j || !Array.isArray(j.picks) || j.picks.length < 3) throw new Error('empty');
+        const picks = featChoose(j.picks);
+        try { localStorage.setItem(FEAT_KEY, JSON.stringify({ day: featDay(), cc, picks })); } catch (e) {}
+        FEAT.picks = picks; FEAT.state = 'ready';
+      }).catch(() => { FEAT.state = 'failed'; }).finally(() => { clearTimeout(FEAT.timer); if (typeof activeTab !== 'undefined' && activeTab === 'discover' && !window.homeRow) refreshViews(); });
+    }
+    // the day's picks as page items: the catalogue entry when we have one, otherwise built from the ranking itself
+    function featuredItems() {
+      ensureFeatured();
+      if (FEAT.state !== 'ready' || !FEAT.picks) return null;
+      return FEAT.picks.map(p => {
+        const cat = mediaDatabase.find(m => { const r = tmdbRef(m); return r && Number(r.n) === Number(p.tmdb) && r.isTv === (p.type === 'Series'); });
+        if (cat) return { ...cat, __badge: p.badge, backdrop: cat.backdrop || p.backdrop };
+        const item = { id: p.id, tmdbId: String(p.tmdb), title: p.title, type: p.type, year: p.year, genres: p.genres, backdrop: p.backdrop, poster: p.poster, synopsis: p.overview, rating: p.rating, totalVotes: p.votes, language: p.language, dominantVibe: 'must_watch', __badge: p.badge };
+        window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {}; if (!window.DYNAMIC_MEDIA[p.id]) window.DYNAMIC_MEDIA[p.id] = item;
+        return item;
+      });
+    }
+    // an open page rolls over to the new day by itself
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && FEAT.state === 'ready' && FEAT.day !== featDay() && activeTab === 'discover' && !window.homeRow) { FEAT.state = 'idle'; refreshViews(); } });
+
     // ================= Featured carousel =================
     const HERO_COUNT = 5;          // 5 titles x 15 s = a 75 s loop: enough variety, and every title still gets its turn
     const HERO_SECONDS = 15;
@@ -3688,7 +3768,7 @@ function posterCard(item, opts) {
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
           <div class="relative max-w-3xl px-14 pb-9 pt-6 sm:px-16 sm:pb-11 sm:pt-10 lg:pb-14 lg:pl-20">
-            <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>Featured · ${esc(dom.label)}</div>
+            <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>Featured · ${esc(item.__badge || dom.label)}</div>
             <h2 class="mt-3" data-hero-title>${heroTitleHtml(item, i)}</h2>
             <p class="mt-3 text-sm text-white/70 lg:text-base"><span data-hero-cert>${cert}</span>${esc(meta)}${rtHtml(item, 'ml-3 text-amber-300')}</p>
             <div class="mt-5 flex flex-wrap gap-3">
@@ -3816,6 +3896,9 @@ function posterCard(item, opts) {
     }
     function heroNext() { heroGo(HERO.idx + 1, true); }
     function heroPrev() { heroGo(HERO.idx - 1, true); }
+    // the daily picks only make sense on the plain home page: not inside a filtered or language-limited view
+    function homeFeaturedAllowed() { return !selectedTopLanguage && selectedTopCategory === 'all' && selectedTopVibe === 'all'; }
+
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a></div>
