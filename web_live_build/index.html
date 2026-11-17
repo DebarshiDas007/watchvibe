@@ -2281,6 +2281,41 @@
       return REGION_CHOICES.filter(cc => cc !== exclude && all && all[cc] && ((all[cc].flatrate || []).length || (all[cc].ads || []).length || (all[cc].free || []).length)).slice(0, 4);
     }
 
+    // ---- Direct "watch now" pages: our server looks up each service's own page for the title (JustWatch data) ----
+    const DIRECT_OFFERS = new Map();
+    async function getDirectOffers(item, cc) {
+      const ref = tmdbRef(item);
+      if (!ref || !item || !item.title) return null;
+      const key = (ref.isTv ? 'tv' : 'movie') + ':' + ref.n + ':' + cc;
+      if (DIRECT_OFFERS.has(key)) return DIRECT_OFFERS.get(key);
+      try {
+        const r = await fetch(`/api/links?tmdb=${encodeURIComponent(ref.n)}&type=${ref.isTv ? 'tv' : 'movie'}&cc=${encodeURIComponent(cc)}&title=${encodeURIComponent(item.title)}`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        const offers = d && d.found && Array.isArray(d.offers) ? d.offers : null;
+        DIRECT_OFFERS.set(key, offers);
+        return offers;
+      } catch (e) { return null; }
+    }
+    function directUrlFor(offers, serviceName) {
+      const want = String(serviceName || '').toLowerCase();
+      const cand = (offers || []).filter(o => /^https:\/\//i.test(o.u) && tidyProvider(o.n, 'stream').name.toLowerCase() === want);
+      if (!cand.length) return null;
+      const rank = o => ({ FLATRATE: 0, FREE: 1, ADS: 2, RENT: 3, BUY: 4 }[o.t] ?? 5) + (/channel/i.test(o.n) ? 10 : 0); // a service's own page beats "via Amazon Channel"
+      cand.sort((a, b) => rank(a) - rank(b));
+      return cand[0].u;
+    }
+    async function upgradeDirectLinks(item, cc) {
+      const offers = await getDirectOffers(item, cc);
+      if (!offers) return; // lookup failed or unknown: the search links stay as a safe fallback
+      const sec = document.getElementById('wtwSection');
+      if (!sec || sec.dataset.item !== item.id || selectedCountry !== cc) return; // the window moved on
+      document.querySelectorAll('#wtwSection a[data-ott], #wtwPrimary a[data-ott]').forEach(a => {
+        const u = directUrlFor(offers, a.dataset.ott);
+        if (u) { a.href = u; a.dataset.direct = '1'; }
+      });
+    }
+
     // Region-aware destination for a service (pure: no side effects). Unknown services fall back to TMDB's / JustWatch's page for the region.
     function buildProviderLink(providerName, movieTitle, isTv, region, tmdbWatchLink) {
       const n = String(providerName || '').toLowerCase();
@@ -2318,7 +2353,7 @@
     // count a click only when a service link is actually opened (not when the page is rendered)
     document.addEventListener('click', e => {
       const a = e.target && e.target.closest ? e.target.closest('a[data-ott]') : null;
-      if (a) { try { const sec = document.getElementById('wtwSection'); const info = trackTitleInfo(sec && sec.dataset.item); Track.event('ott_click', { svc: a.dataset.ott, id: info.id, t: info.t }); } catch (err) {} }
+      if (a) { try { const sec = document.getElementById('wtwSection'); const info = trackTitleInfo(sec && sec.dataset.item); Track.event('ott_click', { svc: a.dataset.ott, id: info.id, t: info.t, d: a.dataset.direct ? 1 : 0 }); } catch (err) {} }
     });
 
     function availabilityPillHtml(e, item, cc, av) {
@@ -2375,6 +2410,7 @@
           prim.innerHTML = `<span class="${pillCls} cursor-default text-white/50 ring-white/15">Not available in ${esc(cname)}</span>`;
         }
       }
+      if (av.has) upgradeDirectLinks(item, cc);
     }
 
     async function fillAvailability(item) {

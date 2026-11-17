@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watchvibe-cache-v29';
+const CACHE_NAME = 'watchvibe-cache-v30';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -48,6 +48,11 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache API/auth traffic (TMDB calls carry an api_key in the URL; Supabase carries auth tokens).
   if (/(^|\.)(themoviedb\.org|supabase\.co|ipapi\.co|country\.is)$/.test(url.hostname)) {
+    return;
+  }
+
+  // Our own API (e.g. /api/links) is cached at the edge with proper headers; never serve it from this cache.
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
     return;
   }
 
