@@ -79,3 +79,5 @@ Still open:
 - Add real PWA icons (manifest currently points to Unsplash photos).
 
 - (SW v43) Fixed the cached-catalogue corruption (runtime __sv data no longer saved/loaded) and reserved two title lines under posters; library cards pin their buttons to the bottom. Card audit at 375px: 0 image issues, 47 uneven rows left, all genuine 3-line titles. Not re-audited at 768/desktop/320.
+
+- (SW v45) Title window shows official logo art + age certification (TMDB). Ratings are IMDb only: /api/imdb (functions/api/imdb.js) asks TMDB for the IMDb id then OMDb (key a2434d40 fallback in the function; set OMDB_KEY env to override), edge cached 7 days; the client fills rtHtml() spans only for titles on screen (IntersectionObserver) and caches in localStorage watchvibe_imdb_v1. Free key = 1,000 OMDb calls/day, non-commercial licence. Sorting still uses TMDB scores internally.

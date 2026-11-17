@@ -2256,6 +2256,57 @@
       return OTT.cache.has((ref.isTv ? 'tv:' : 'movie:') + ref.n) ? OTT.cache.get((ref.isTv ? 'tv:' : 'movie:') + ref.n) : undefined;
     }
 
+    // ---- IMDb ratings: the only rating the site shows. /api/imdb (OMDb, cached at the edge) is asked only for titles actually on screen ----
+    const IMDB = { map: new Map(), q: [], queued: new Set(), active: 0, pausedUntil: 0, KEY: 'watchvibe_imdb_v1', io: null, saveT: 0 };
+    try {
+      const o = JSON.parse(localStorage.getItem(IMDB.KEY) || '{}'), now = Date.now();
+      Object.entries(o).forEach(([k, v]) => { if (v && now - v.t < (v.r ? 14 : 2) * 864e5) IMDB.map.set(k, v); });
+    } catch (e) {}
+    function imdbKey(item) { const r = tmdbRef(item); return r ? (r.isTv ? 't:' : 'm:') + r.n : ''; }
+    function imdbText(k, sep) { const v = IMDB.map.get(k); return v && v.r ? (sep || '') + '\u2605 ' + v.r.toFixed(1) : ''; }
+    // <span> that shows "★ 8.4" (IMDb) once known and nothing until then; never a made-up or TMDB number
+    function rtHtml(item, cls, sep) {
+      const k = imdbKey(item); if (!k) return '';
+      return `<span data-rt="${k}"${sep ? ` data-sp="${esc(sep)}"` : ''} class="${cls || ''}" title="IMDb rating">${esc(imdbText(k, sep))}</span>`;
+    }
+    function imdbSaveSoon() {
+      clearTimeout(IMDB.saveT);
+      IMDB.saveT = setTimeout(() => { try { const o = {}; IMDB.map.forEach((v, k) => { o[k] = v; }); localStorage.setItem(IMDB.KEY, JSON.stringify(o)); } catch (e) {} }, 800);
+    }
+    function imdbApply(k) {
+      document.querySelectorAll('[data-rt="' + k + '"]').forEach(el => { const s = imdbText(k, el.dataset.sp); if (el.textContent !== s) el.textContent = s; });
+      const row = document.getElementById('imdbRow'), v = IMDB.map.get(k);
+      if (row && row.dataset.k === k && v && v.v) { document.getElementById('imdbVotes').textContent = v.v; row.classList.remove('hidden'); }
+    }
+    function imdbPump() {
+      while (IMDB.active < 6 && IMDB.q.length && Date.now() >= IMDB.pausedUntil) {
+        const k = IMDB.q.shift(); IMDB.active++;
+        (async () => {
+          try {
+            const [tt, n] = k.split(':');
+            const res = await fetch(`/api/imdb?tmdb=${n}&type=${tt === 't' ? 'tv' : 'movie'}`);
+            const d = await res.json();
+            if (d && d.limit) IMDB.pausedUntil = Date.now() + 10 * 60 * 1000;      // daily OMDb quota used up: try again later
+            else if (d && !d.error) { IMDB.map.set(k, { r: d.r || 0, v: d.v || null, t: Date.now() }); imdbSaveSoon(); imdbApply(k); }
+          } catch (e) {} finally { IMDB.queued.delete(k); IMDB.active--; imdbPump(); }
+        })();
+      }
+    }
+    function imdbWant(k) { if (!k || IMDB.map.has(k) || IMDB.queued.has(k)) return; IMDB.queued.add(k); IMDB.q.push(k); imdbPump(); }
+    function imdbScan() {
+      document.querySelectorAll('[data-rt]:not([data-rto])').forEach(el => {
+        el.dataset.rto = '1';
+        const k = el.dataset.rt;
+        if (IMDB.map.has(k)) { const s = imdbText(k, el.dataset.sp); if (el.textContent !== s) el.textContent = s; }
+        else if (IMDB.io) IMDB.io.observe(el); else imdbWant(k);
+      });
+    }
+    (function () {
+      if ('IntersectionObserver' in window) IMDB.io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { IMDB.io.unobserve(e.target); imdbWant(e.target.dataset.rt); } }), { rootMargin: '150px' });
+      let t = 0;
+      new MutationObserver(() => { clearTimeout(t); t = setTimeout(imdbScan, 120); }).observe(document.documentElement, { childList: true, subtree: true });
+    })();
+
     // ---- Official title artwork (TMDB logos) and age certification (TMDB release_dates / content_ratings, which come from each country's rating board) ----
     const EXTRAS = { cache: new Map(), inflight: new Map() };
     async function getTitleExtras(item) {
@@ -2299,6 +2350,7 @@
       return `<span class="mr-2.5 inline-flex items-center gap-1 whitespace-nowrap rounded-[3px] px-1.5 py-px align-middle text-[11px] font-semibold leading-snug text-white/85 ring-1 ring-white/50" title="Age rating (${esc(regionName(c.cc))})">${c.own ? '' : `<span class="font-normal text-white/50">${esc(c.cc)}</span>`}${esc(c.label)}</span>`;
     }
     async function fillTitleExtras(item) {
+      imdbApply(imdbKey(item));   // IMDb vote count from the saved ratings, when we already have them
       const ex = await getTitleExtras(item);
       const c = document.getElementById('modalContent');
       if (!ex || !c || c.dataset.itemId !== item.id) return;
@@ -3273,7 +3325,7 @@
                 <img src="${esc(m.poster)}" alt="" class="h-16 w-11 shrink-0 rounded-lg object-cover" onerror="handleMediaPosterError(this)">
                 <div class="min-w-0 flex-1">
                   <div class="truncate text-sm font-medium text-white">${esc(m.title)}</div>
-                  <div class="text-xs text-white/45">${esc(m.year)} · ★ ${esc(m.rating)}</div>
+                  <div class="text-xs text-white/45">${esc(m.year)}${rtHtml(m, '', ' · ')}</div>
                 </div>
                 <div class="text-sm tabular-nums text-white/60">${partyVotes[idx] || 0}</div>
                 <button type="button" onclick="castPartyVote(${idx})" class="shrink-0 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-black transition hover:bg-white/90">Vote</button>
@@ -3299,7 +3351,7 @@ function posterCard(item, opts) {
           </div>
           <div class="mt-2.5 px-0.5">
             <div class="min-h-[2.25rem] break-words text-[13px] font-medium leading-snug text-white/90">${esc(item.title)}</div>
-            <div class="mt-0.5 flex items-start justify-between gap-2 text-xs text-white/45"><span class="min-w-0 break-words">${esc(sub)}</span><span class="shrink-0 text-amber-300/90">★ ${esc(item.rating)}</span></div>
+            <div class="mt-0.5 flex items-start justify-between gap-2 text-xs text-white/45"><span class="min-w-0 break-words">${esc(sub)}</span>${rtHtml(item, 'shrink-0 text-amber-300/90')}</div>
           </div>
         </button>`;
     }
@@ -3408,7 +3460,7 @@ function posterCard(item, opts) {
           <div class="relative max-w-2xl p-6 sm:p-10">
             <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${heroDom.color}"></span>Featured · ${esc(heroDom.label)}</div>
             <h1 class="mt-3 break-words font-display text-4xl font-medium leading-[1.1] text-white sm:text-5xl">${esc(hero.title)}</h1>
-            <p class="mt-3 text-sm text-white/60">${esc([hero.year, (hero.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), hero.duration].filter(Boolean).join('  ·  '))}<span class="ml-3 text-amber-300">★ ${esc(hero.rating)}</span></p>
+            <p class="mt-3 text-sm text-white/60">${esc([hero.year, (hero.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), hero.duration].filter(Boolean).join('  ·  '))}${rtHtml(hero, 'ml-3 text-amber-300')}</p>
             <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-white/70">${esc(hero.synopsis || '')}</p>
             <div class="mt-6 flex flex-wrap gap-3">
               <button type="button" onclick="openDetails('${hero.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
@@ -3598,7 +3650,7 @@ function posterCard(item, opts) {
                       <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
                     </div>
                     <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
-                    <div class="px-0.5 text-xs text-white/45">${esc(movie.year)} · <span class="text-amber-300">★</span> ${esc(movie.rating)}</div>
+                    <div class="px-0.5 text-xs text-white/45">${esc(movie.year)}${rtHtml(movie, '', ' · ')}</div>
                     <div class="break-words px-0.5 text-xs text-white/35">as ${esc(movie.char || '')}</div>
                     ${movie.boxOffice ? `<div class="px-0.5 text-xs text-white/35">${esc(movie.boxOffice)}</div>` : ''}
                   </button>`;
@@ -4216,7 +4268,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             ${item.director ? `<div><dt class="text-white/40">Director</dt><dd class="break-words text-white/85">${esc(item.director)}</dd></div>` : ''}
             ${item.cast && item.cast.length ? `<div><dt class="text-white/40">Cast</dt><dd class="break-words text-white/85">${esc(item.cast.slice(0, 5).join(', '))}</dd></div>` : ''}
             <div id="topVibeRow" class="hidden"><dt class="text-white/40">Community verdict</dt><dd id="topVibeVal" class="flex flex-wrap items-center gap-2 break-words text-white/85"></dd></div>
-            ${realVotes ? `<div><dt class="text-white/40">TMDB votes</dt><dd class="break-words text-white/85">${realVotes}</dd></div>` : ''}
+            <div id="imdbRow" data-k="${imdbKey(item)}" class="hidden"><dt class="text-white/40">IMDb votes</dt><dd id="imdbVotes" class="break-words text-white/85"></dd></div>
           </dl>
 
           <section id="vibeSection" data-item="${esc(item.id)}">${vibeSectionSkeleton()}</section>
@@ -4252,7 +4304,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <div class="relative z-[1] flex w-full flex-col gap-4 p-5 pt-20 sm:flex-row sm:items-end sm:justify-between sm:p-8 sm:pt-24">
             <div class="min-w-0 flex-1">
               <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl"><span data-t>${esc(item.title)}</span></h2>
-              <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}<span class="ml-3 whitespace-nowrap text-amber-300">★ ${esc(item.rating)}</span></p>
+              <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
             </div>
             <div id="previewControls" class="flex shrink-0 flex-wrap items-center gap-2">
               <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25 backdrop-blur">
@@ -4296,7 +4348,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const item = mediaDatabase[swipeDeckIndex % mediaDatabase.length];
       document.getElementById('swipePoster').src = item.poster;
       document.getElementById('swipeTitle').innerText = item.title;
-      document.getElementById('swipeSubtitle').innerText = `${item.year} • ${item.type} • ★ ${item.rating}`;
+      document.getElementById('swipeSubtitle').innerText = `${item.year} • ${item.type}${imdbText(imdbKey(item), ' • ')}`;
       document.getElementById('swipeBadge').innerText = item.dominantVibe ? VIBES[item.dominantVibe].label : 'Must Watch';
       document.getElementById('swipeFeedbackStamp').classList.add('hidden');
     }
@@ -4818,7 +4870,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     function libraryCard(m, mode) {
       const legacy = VIBES[(mode === 'watched' ? (m.myVibe || m.dominantVibe) : m.dominantVibe)] || VIBES.must_watch;
-      const sub = [m.year, m.rating ? '★ ' + m.rating : ''].filter(Boolean).join(' · ');
+      const sub = esc(m.year || '') + rtHtml(m, '', ' · ');
       const poster = m.poster
         ? `<img src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">`
         : `<div class="flex h-full w-full items-center justify-center p-3 text-center text-xs text-white/35">${m.__pending ? 'Loading…' : esc(m.title)}</div>`;
@@ -4852,7 +4904,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               ${badge}
             </div>
             <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
-            <div class="px-0.5 text-xs text-white/45">${esc(sub)}</div>
+            <div class="px-0.5 text-xs text-white/45">${sub}</div>
           </button>
           ${extra}
           <div class="mt-auto flex flex-wrap items-center gap-1 px-0.5 pt-2">${actions}</div>
@@ -5055,7 +5107,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-[#14141A] ring-1 ring-white/10 focus:outline-none" aria-label="Open ${esc(m.title)}">${poster}</button>
           <div class="min-w-0 flex-1">
             <button type="button" onclick="openDetails('${esc(m.id)}')" class="block max-w-full break-words text-left text-[15px] font-medium leading-snug text-white hover:underline focus:outline-none">${esc(m.title)}</button>
-            <div class="text-xs text-white/45">${esc([m.year, m.rating ? '★ ' + m.rating : ''].filter(Boolean).join(' · '))}</div>
+            <div class="text-xs text-white/45">${esc(m.year || '')}${rtHtml(m, '', ' · ')}</div>
             <div class="mt-2 flex flex-wrap items-center gap-1.5">${tr ? libChip(tr, true) : (LIB.loaded ? '<span class="rounded-full px-2.5 py-0.5 text-[11px] text-white/50 ring-1 ring-white/10">Not rated yet</span>' : '')}${f ? libFeelChip(f) : ''}</div>
             ${rev ? `<p class="mt-2 break-words text-sm font-medium text-white/85">${rev.spoiler ? '<i class="fa-solid fa-eye-slash mr-1.5 text-xs text-white/50"></i>Review with spoilers' : esc(rev.headline)}</p>${rev.body && !rev.spoiler ? `<p class="mt-1 line-clamp-3 break-words text-[13px] leading-relaxed text-white/55">${esc(rev.body)}</p>` : ''}` : ''}
             <div class="mt-3 flex flex-wrap items-center gap-1.5">
@@ -5222,7 +5274,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             <div class="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/10">${it.poster ? `<img src="${esc(it.poster)}" alt="" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : ''}</div>
             <div class="min-w-0 flex-1 pr-6">
               <h2 class="break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2>
-              <div class="mt-1 text-sm text-white/50">${esc([it.year, it.rating ? '★ ' + it.rating : '', it.type].filter(Boolean).join(' · '))}</div>
+              <div class="mt-1 text-sm text-white/50">${esc(it.year || '')}${rtHtml(it, '', ' · ')}${it.type ? ' · ' + esc(it.type) : ''}</div>
               ${c ? `<div class="mt-2.5 flex flex-wrap items-center gap-2">${libChip(c.top, true)}<span class="text-[11px] text-white/40">${c.loved}% loved it</span></div>` : ''}
               ${where}
             </div>
