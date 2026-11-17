@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'watchvibe-cache-v14';
+const CACHE_NAME = 'watchvibe-cache-v14';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   './vendor/fa/css/all.min.css'
 ];
 
-// 1. Install Event â€” Pre-cache static shell
+// 1. Install Event - Pre-cache static shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -20,7 +20,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. Activate Event â€” Clean up outdated caches
+// 2. Activate Event - Clean up outdated caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keyList) => {
@@ -36,7 +36,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Fetch Event â€” Network First with Cache Fallback for HTML, Stale-While-Revalidate for images
+// 3. Fetch Event - Network First with Cache Fallback for HTML, Stale-While-Revalidate for images
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
