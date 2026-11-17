@@ -35,11 +35,12 @@ Secrets live only in `D:\watchvibe\.env` (git-ignored). Never put credentials, t
 
 Done (Nov 2026): `supabase/schema.sql` applied (legacy tables kept as `*_legacy`, permissive policies dropped); Site URL + redirect URLs set; leaked `vibe_tester@watchvibe.app` deleted.
 
+Also done: leftover test users deleted (only real users remain); custom SMTP via Brevo is live (Supabase -> Authentication -> Emails -> SMTP Settings; host smtp-relay.brevo.com:587, key named `supabase-auth`, free plan 300 emails/day, account `dasdebarshi1234@gmail.com`). The SMTP key lives only in Supabase; never commit it. Brevo rewrites the sender to `...@12828432.brevosend.com`; to send from your own domain later, authenticate a domain in Brevo and update the Supabase sender address.
+
 Still open:
-1. Google and Discord sign-in are enabled and live (Supabase + `OAUTH_ENABLED`). Google OAuth app (GCP project `ambient-catcher-514921-m1`) is published to production with branding/privacy page set; privacy policy is `web_live_build/privacy.html`. Optionally delete the unused original client secret ending hG03 in the GCP client.
-2. Review leftover test users (`temp_tester_9876@watchvibe.app`, `regular@gmail.com`, `test_cinephile@gmail.com`).
-3. Configure a custom SMTP provider in Supabase before real users (built-in mailer is rate-limited).
-4. Optional: move the TMDB key behind a Cloudflare Worker and rotate it (it is public in `index.html`).
+1. Optional: delete the unused original Google OAuth client secret (ending hG03) in GCP project `ambient-catcher-514921-m1`.
+2. Optional hardening: move the TMDB key behind a Cloudflare Worker and rotate it (it is public in `index.html`).
+3. Back Movie Night rooms and battle voting with Supabase (currently mostly local/hardcoded).
 ## 5. Phase 2 (done): Mood Picker + honest matching
 
 - AI Vibe Matcher has multi-select moods (cry / mind-blown / laugh / cozy / adrenaline / hidden gems), a runtime filter and genre-aware scoring. Match % is relative to the best candidate; placeholder vote splits (e.g. 100/100/100) are normalised and confidence-weighted.
