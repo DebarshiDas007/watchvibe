@@ -2391,7 +2391,38 @@
     })();
 
     // ---- Official title artwork (TMDB logos) and age certification (TMDB release_dates / content_ratings, which come from each country's rating board) ----
-    const EXTRAS = { cache: new Map(), inflight: new Map() };
+    const EXTRAS = { cache: new Map(), inflight: new Map(), KEY: 'watchvibe_extras_v1', saveT: 0, warm: new Set() };
+    try {
+      const o = JSON.parse(localStorage.getItem(EXTRAS.KEY) || '{}'), now = Date.now();
+      Object.entries(o).forEach(([k, v]) => { if (v && now - v.t < 30 * 864e5) EXTRAS.cache.set(k, v); });
+    } catch (e) {}
+    function extrasSaveSoon() {
+      clearTimeout(EXTRAS.saveT);
+      EXTRAS.saveT = setTimeout(() => {
+        try {
+          const all = [...EXTRAS.cache.entries()].sort((a, b) => (b[1].t || 0) - (a[1].t || 0)).slice(0, 500);   // newest 500 titles
+          localStorage.setItem(EXTRAS.KEY, JSON.stringify(Object.fromEntries(all)));
+        } catch (e) {}
+      }, 1500);
+    }
+    const extrasKeyOf = item => { const r = tmdbRef(item); return r ? (r.isTv ? 'tv:' : 'movie:') + r.n : ''; };
+    function preloadImage(url) { return new Promise(res => { const i = new Image(); i.onload = i.onerror = () => res(); i.src = url; if (i.decode) i.decode().then(res, res); setTimeout(res, 1200); }); }
+    // warm the logo as soon as someone points at a title, so the window opens already showing it
+    function warmTitle(item) {
+      const k = item && extrasKeyOf(item);
+      if (!k || EXTRAS.warm.has(k)) return;
+      EXTRAS.warm.add(k);
+      getTitleExtras(item).then(ex => { if (ex && ex.logo) preloadImage(ex.logo); });
+    }
+    function warmFromEvent(e) {
+      const b = e.target && e.target.closest && e.target.closest('[onclick^="openDetails("]');
+      if (!b) return;
+      const m = /openDetails\('([^']+)'/.exec(b.getAttribute('onclick') || '');
+      if (!m) return;
+      const id = m[1].replace(/&#39;/g, "'");
+      warmTitle(mediaDatabase.find(x => x.id === id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]));
+    }
+    ['mouseover', 'touchstart', 'focusin'].forEach(ev => document.addEventListener(ev, warmFromEvent, { passive: true }));
     async function getTitleExtras(item) {
       const ref = tmdbRef(item); if (!ref) return null;
       const key = (ref.isTv ? 'tv:' : 'movie:') + ref.n;
@@ -2414,8 +2445,8 @@
             const pick = rel.find(x => x.type === 3) || rel.find(x => x.type === 2) || rel[0];   // theatrical first
             certs[r.iso_3166_1] = pick.certification.trim();
           });
-          const out = { logo: logos.length ? `https://image.tmdb.org/t/p/w500${logos[0].file_path}` : null, certs, imdbId: (d.external_ids && d.external_ids.imdb_id) || null };
-          EXTRAS.cache.set(key, out);
+          const out = { logo: logos.length ? `https://image.tmdb.org/t/p/w500${logos[0].file_path}` : null, certs, imdbId: (d.external_ids && d.external_ids.imdb_id) || null, t: Date.now() };
+          EXTRAS.cache.set(key, out); extrasSaveSoon();
           return out;
         } catch (e) { return null; } finally { EXTRAS.inflight.delete(key); }
       })();
@@ -2432,21 +2463,52 @@
       if (!c) return '';
       return `<span class="mr-2.5 inline-flex items-center gap-1 whitespace-nowrap rounded-[3px] px-1.5 py-px align-middle text-[11px] font-semibold leading-snug text-white/85 ring-1 ring-white/50" title="Age rating (${esc(regionName(c.cc))})">${c.own ? '' : `<span class="font-normal text-white/50">${esc(c.cc)}</span>`}${esc(c.label)}</span>`;
     }
+    const HERO_LOGO_CLS = 'max-h-[clamp(64px,13vw,120px)] max-w-[min(100%,440px)] object-contain object-left drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]';
+    // The title is shown once in its final look: the official logo when we already know it, the plain title when we know there is none,
+    // and nothing for a moment (never the wrong font) while we ask. fillTitleExtras settles it within 0.7 s at the latest.
+    function heroTitleInner(item) {
+      const ex = EXTRAS.cache.get(extrasKeyOf(item));
+      const name = esc(item.title);
+      if (ex && ex.logo) return `<img src="${esc(ex.logo)}" alt="" decoding="async" class="${HERO_LOGO_CLS}"><span data-t class="sr-only">${name}</span>`;
+      const st = fallbackTitleLook(item);
+      if (ex || !extrasKeyOf(item)) return `<span data-t class="${st.cls}" style="${st.style}">${name}</span>`;
+      return `<span data-t class="opacity-0 ${st.cls}" style="${st.style}">${name}</span>`;
+    }
+    // Titles without official artwork (about 8% of the catalogue) still get a look that fits their genre instead of one font for everything.
+    function fallbackTitleLook(item) {
+      const g = (item.genres || []).join(' ').toLowerCase() + ' ' + String(item.type || '').toLowerCase();
+      const has = re => re.test(g);
+      if (has(/horror/)) return { cls: 'uppercase tracking-[0.1em] font-semibold', style: 'text-shadow:0 0 22px rgba(244,63,94,.55),0 2px 10px rgba(0,0,0,.6)' };
+      if (has(/science fiction|sci-?fi|fantasy/)) return { cls: 'uppercase tracking-[0.3em] font-bold text-xl sm:text-3xl', style: "font-family:Inter,sans-serif;text-shadow:0 0 24px rgba(6,182,212,.6),0 2px 10px rgba(0,0,0,.6)" };
+      if (has(/action|adventure|war|western/)) return { cls: 'uppercase italic tracking-[-0.01em] font-bold', style: "font-family:Inter,sans-serif;text-shadow:0 3px 0 rgba(251,146,60,.55),0 2px 12px rgba(0,0,0,.6)" };
+      if (has(/comedy|family|animation|stand-?up/)) return { cls: 'font-semibold tracking-[-0.01em]', style: 'text-shadow:2px 2px 0 rgba(245,158,11,.55),0 2px 10px rgba(0,0,0,.5)' };
+      if (has(/romance|music/)) return { cls: 'italic font-medium', style: 'text-shadow:0 0 22px rgba(244,114,182,.55),0 2px 10px rgba(0,0,0,.5)' };
+      if (has(/documentary|history/)) return { cls: 'uppercase tracking-[0.06em] font-semibold', style: "font-family:Inter,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.6)" };
+      return { cls: 'uppercase tracking-[0.2em] font-medium', style: 'text-shadow:0 0 22px rgba(168,85,247,.5),0 2px 10px rgba(0,0,0,.6)' };   // crime, drama, mystery and the rest
+    }
     async function fillTitleExtras(item) {
       imdbApply(imdbKey(item));   // IMDb vote count from the saved ratings, when we already have them
-      const ex = await getTitleExtras(item);
+      const h0 = document.getElementById('detailTitle');
+      const pending = h0 && h0.querySelector('[data-t].opacity-0');   // look not decided yet
+      const exP = getTitleExtras(item);
+      let ex = await Promise.race([exP.then(async e => { if (e && e.logo && pending) await preloadImage(e.logo); return e; }), new Promise(r => setTimeout(() => r(undefined), pending ? 700 : 4000))]);
       const c = document.getElementById('modalContent');
-      if (!ex || !c || c.dataset.itemId !== item.id) return;
+      if (!c || c.dataset.itemId !== item.id) return;
+      const h = document.getElementById('detailTitle');
+      if (ex === undefined) {   // too slow: keep the plain title; the logo is cached for next time
+        if (pending && h) { const t = h.querySelector('[data-t]'); if (t) t.classList.remove('opacity-0'); }
+        ex = await exP;
+        if (!ex || c.dataset.itemId !== item.id) return;
+      }
+      if (!ex) { if (h) { const t = h.querySelector('[data-t]'); if (t) t.classList.remove('opacity-0'); } return; }
       const slot = document.getElementById('detailCert');
       if (slot) slot.innerHTML = certBadgeHtml(certFor(ex, selectedCountry));
-      const h = document.getElementById('detailTitle');
-      if (h && ex.logo && !h.querySelector('img')) {
-        const img = new Image();
-        img.alt = ''; img.decoding = 'async';
-        img.className = 'max-h-[clamp(64px,13vw,120px)] max-w-[min(100%,440px)] object-contain object-left drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]';
-        img.onload = () => { if (h.isConnected && c.dataset.itemId === item.id) { h.insertBefore(img, h.firstChild); const t = h.querySelector('[data-t]'); if (t) t.className = 'sr-only'; } };
-        img.src = ex.logo;   // the plain title stays in place (hidden from view, still readable) until the artwork has loaded
-      }
+      if (!h || !pending) return;
+      const t = h.querySelector('[data-t]');
+      if (ex.logo && t && t.classList.contains('opacity-0')) {
+        const img = new Image(); img.alt = ''; img.decoding = 'async'; img.className = HERO_LOGO_CLS; img.src = ex.logo;
+        h.insertBefore(img, h.firstChild); t.className = 'sr-only';
+      } else if (t) t.classList.remove('opacity-0');
     }
 
     // Tidy TMDB's provider variants ("Amazon Prime Video with Ads", "Disney Plus", ...) into one entry per service.
@@ -4387,7 +4449,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <button type="button" onclick="closeDetails()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
           <div class="relative z-[1] flex w-full flex-col gap-4 p-5 pt-20 sm:flex-row sm:items-end sm:justify-between sm:p-8 sm:pt-24">
             <div class="min-w-0 flex-1">
-              <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl"><span data-t>${esc(item.title)}</span></h2>
+              <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
               <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
             </div>
             <div id="previewControls" class="flex shrink-0 flex-wrap items-center gap-2">
