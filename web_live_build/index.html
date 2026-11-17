@@ -2732,6 +2732,7 @@
             watchlist: userWatchlistIds,
             watchlist_meta: userWatchlistMeta,
             watched_history: userWatchedHistory,
+            modified_at: localStorage.getItem(getUserStoragePrefix() + '_lastmod') || new Date().toISOString(),
             last_active: new Date().toISOString()
           };
           await window.supabaseClient
@@ -2760,21 +2761,32 @@
         if (data && data.watchlist_data) {
           const cloud = data.watchlist_data;
           const prefix = getUserStoragePrefix();
-          if (Array.isArray(cloud.watchlist) && cloud.watchlist.length > 0) {
-            const mergedWl = Array.from(new Set([...userWatchlistIds, ...cloud.watchlist]));
-            userWatchlistIds = mergedWl;
-            localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
-          }
-          if (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') {
-            Object.keys(cloud.watchlist_meta).forEach(k => { if (!userWatchlistMeta[k]) userWatchlistMeta[k] = cloud.watchlist_meta[k]; });
-            localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
-          }
-          if (Array.isArray(cloud.watched_history) && cloud.watched_history.length > 0) {
+          const cloudMod = String(cloud.modified_at || '');
+          const localMod = localStorage.getItem(prefix + '_lastmod') || '';
+          const cloudList = Array.isArray(cloud.watchlist) ? cloud.watchlist : [];
+          const cloudWatched = Array.isArray(cloud.watched_history) ? cloud.watched_history : [];
+          if (cloudMod && localMod && cloudMod > localMod) {
+            // changed on another device more recently: take that copy as it is, so removals carry over too
+            userWatchlistIds = cloudList.slice();
+            userWatchlistMeta = (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') ? { ...cloud.watchlist_meta } : {};
+            userWatchedHistory = cloudWatched.slice();
+            try {
+              localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
+              localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
+              localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
+              localStorage.setItem(prefix + '_lastmod', cloudMod);
+            } catch (e) {}
+          } else if (cloudMod && localMod) {
+            // this device has the newest copy: keep it and make sure the cloud has it too
+            if (localMod > cloudMod) syncUserDataToSupabaseCloud();
+          } else {
+            // first sync on this device (or an older cloud copy with no timestamp): combine both once,
+            // then save so every later sync can use "newest copy wins"
+            userWatchlistIds = Array.from(new Set([...userWatchlistIds, ...cloudList]));
+            if (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') Object.keys(cloud.watchlist_meta).forEach(k => { if (!userWatchlistMeta[k]) userWatchlistMeta[k] = cloud.watchlist_meta[k]; });
             const existingIds = new Set(userWatchedHistory.map(h => h.id));
-            cloud.watched_history.forEach(item => {
-              if (!existingIds.has(item.id)) userWatchedHistory.push(item);
-            });
-            localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
+            cloudWatched.forEach(item => { if (!existingIds.has(item.id)) userWatchedHistory.push(item); });
+            saveWatchlistStore();
           }
           if (typeof updateProfileUiState === 'function') updateProfileUiState();
           if (typeof refreshViews === 'function') refreshViews();
@@ -2828,6 +2840,7 @@
         localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
         localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
         localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
+        localStorage.setItem(prefix + '_lastmod', new Date().toISOString());   // lets the newest copy win when syncing between devices
       } catch(e) {}
       if (typeof updateProfileUiState === 'function') updateProfileUiState();
       syncUserDataToSupabaseCloud();
@@ -4787,6 +4800,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       let extra = '', actions;
       if (mode === 'want') {
         badge = '';
+        extra = wantInfoHtml(m);
         actions = `<button type="button" onclick="markSeen('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">Seen it</button>
             <button type="button" onclick="toggleWatchlist('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watchlist">Remove</button>`;
       } else {
@@ -4952,13 +4966,13 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     // ---- Watchlist page: view state, taste summary, filters and the My reviews tab
     const WL = (() => {
-      const s = { sort: 'recent', verdict: 'all', feeling: 'all', type: 'all', view: 'grid' };
-      try { const o = JSON.parse(localStorage.getItem('watchvibe_wl_ui') || '{}'); ['sort', 'verdict', 'feeling', 'type', 'view'].forEach(k => { if (typeof o[k] === 'string') s[k] = o[k]; }); } catch (e) {}
+      const s = { sort: 'recent', verdict: 'all', feeling: 'all', type: 'all', view: 'grid', avail: 'all', wsort: 'added' };
+      try { const o = JSON.parse(localStorage.getItem('watchvibe_wl_ui') || '{}'); ['sort', 'verdict', 'feeling', 'type', 'view', 'avail', 'wsort'].forEach(k => { if (typeof o[k] === 'string') s[k] = o[k]; }); } catch (e) {}
       return s;
     })();
     let wlArmed = null;
     function wlSet(k, v) { WL[k] = v; try { localStorage.setItem('watchvibe_wl_ui', JSON.stringify(WL)); } catch (e) {} refreshViews(); }
-    function wlReset() { Object.assign(WL, { verdict: 'all', feeling: 'all', type: 'all' }); try { localStorage.setItem('watchvibe_wl_ui', JSON.stringify(WL)); } catch (e) {} refreshViews(); }
+    function wlReset() { Object.assign(WL, { verdict: 'all', feeling: 'all', type: 'all', avail: 'all' }); try { localStorage.setItem('watchvibe_wl_ui', JSON.stringify(WL)); } catch (e) {} refreshViews(); }
     function libType(rec) { const it = findLibItem(rec.id) || rec; return it.type || (/^tmdb-tv-/.test(rec.id) ? 'Series' : 'Movie'); }
     const libChip = (tr, small) => `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 ${small ? 'text-[11px]' : 'text-xs'} font-medium" style="background:${tr.color}22;color:${tr.color}">${tr.n === 1 ? '<i class="fa-solid fa-star text-[9px]"></i>' : `<span class="h-1.5 w-1.5 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}</span>`;
     const libFeelChip = f => `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}</span>`;
@@ -5069,6 +5083,134 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       showToast('Review deleted.'); refreshViews();
     }
 
+    // ---- Want to watch: where each title streams in your region, what the community thinks, and "Pick one for tonight"
+    const COMM = new Map();                       // title key -> { total, tiers[6] } (community verdict totals)
+    const WANT = { token: 0, tried: new Set() };
+    async function commLoad(keys) {
+      const todo = keys.filter(k => !COMM.has(k)); if (!todo.length || !sbc()) return;
+      todo.forEach(k => COMM.set(k, { total: 0, tiers: [0, 0, 0, 0, 0, 0] }));          // so a title with no votes is not asked about again
+      for (let i = 0; i < todo.length; i += 150) {
+        try {
+          const { data, error } = await sbc().rpc('title_verdicts', { p_keys: todo.slice(i, i + 150) });
+          if (!error && Array.isArray(data)) data.forEach(x => COMM.set(x.key, { total: x.total, tiers: x.tiers }));
+        } catch (e) {}
+      }
+    }
+    async function loadWantData(list) {
+      const jobs = [];
+      const need = list.filter(m => { const it = findLibItem(m.id) || m; const ref = tmdbRef(it); return ref && cachedWatchProviders(it) === undefined && !WANT.tried.has(it.id); });
+      if (need.length) {
+        need.forEach(m => WANT.tried.add(m.id));
+        let i = 0;
+        const worker = async () => { while (i < need.length) { const m = need[i++]; await getWatchProviders(findLibItem(m.id) || m); } };
+        jobs.push(Promise.all(Array.from({ length: Math.min(6, need.length) }, worker)));
+      }
+      jobs.push(commLoad(list.map(m => vsKey(findLibItem(m.id) || m))));
+      await Promise.all(jobs);
+    }
+    async function hydrateWant(list) {
+      const token = ++WANT.token, cc = selectedCountry;
+      const before = list.length;
+      const pending = list.some(m => { const it = findLibItem(m.id) || m; return (tmdbRef(it) && cachedWatchProviders(it) === undefined && !WANT.tried.has(it.id)) || !COMM.has(vsKey(it)); });
+      if (!pending) return;
+      await loadWantData(list);
+      if (token !== WANT.token || cc !== selectedCountry || typeof activeTab === 'undefined' || activeTab !== 'watchlist' || currentWatchlistSubTab !== 'want') return;
+      refreshViews();
+    }
+    // 'stream' (subscription or free), 'rent', 'none', 'loading' or 'unknown'
+    function wantAvail(m) {
+      const it = findLibItem(m.id) || m;
+      if (!tmdbRef(it)) return { state: 'unknown' };
+      const all = cachedWatchProviders(it);
+      if (all === undefined) return { state: WANT.tried.has(it.id) ? 'unknown' : 'loading' };
+      if (all === null) return { state: 'unknown' };
+      const av = availabilityFor(all, selectedCountry);
+      if (av.stream.length) return { state: 'stream', av, name: av.stream[0].name, more: av.stream.length - 1, it };
+      if (av.rentbuy.length) return { state: 'rent', av, name: av.rentbuy[0].name, it };
+      return { state: 'none', av, it };
+    }
+    function commInfo(m) { const c = COMM.get(vsKey(findLibItem(m.id) || m)); if (!c || c.total < VS_MIN_PUBLIC) return null; let best = 0; c.tiers.forEach((n, i) => { if (n > c.tiers[best]) best = i; }); return { total: c.total, top: TIERS[best], loved: vsPct((c.tiers[0] || 0) + (c.tiers[1] || 0), c.total) }; }
+    function wantInfoHtml(m) {
+      const a = wantAvail(m), c = commInfo(m), cname = regionName(selectedCountry);
+      let html = '';
+      if (a.state === 'loading') html += '<div class="mt-1.5 h-4 w-28 animate-pulse rounded-full bg-white/[0.06]"></div>';
+      else if (a.state === 'stream') html += `<div class="mt-1.5 flex items-start gap-1.5 px-0.5 text-[11px] leading-snug text-emerald-300"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"></span><span class="min-w-0 break-words">On ${esc(a.name)}${a.more ? ` +${a.more}` : ''}</span></div>`;
+      else if (a.state === 'rent') html += '<div class="mt-1.5 flex items-start gap-1.5 px-0.5 text-[11px] leading-snug text-amber-300"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span><span>Rent or buy only</span></div>';
+      else if (a.state === 'none') html += `<div class="mt-1.5 flex items-start gap-1.5 px-0.5 text-[11px] leading-snug text-white/40"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/30"></span><span class="min-w-0 break-words">Not streaming in ${esc(cname)}</span></div>`;
+      if (c) html += `<div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5">${libChip(c.top, true)}<span class="text-[11px] text-white/40">${c.loved}% loved it · ${c.total}</span></div>`;
+      return html;
+    }
+    function wlResetWant() { Object.assign(WL, { avail: 'all' }); try { localStorage.setItem('watchvibe_wl_ui', JSON.stringify(WL)); } catch (e) {} refreshViews(); }
+
+    // ---- Pick one for tonight
+    const TN = { open: false, seen: new Set(), cur: null, only: true };
+    function tonightList() { return userWatchlistIds.map(id => findLibItem(id)).filter(Boolean).map(libCard); }
+    async function openTonight() {
+      if (TN.open) return;
+      TN.open = true; TN.seen = new Set(); TN.cur = null; TN.only = true;
+      tonightRender('loading');
+      await loadWantData(tonightList());
+      if (TN.open) tonightNext();
+    }
+    function tonightNext() {
+      const list = tonightList();
+      if (!list.length) { tonightRender('empty'); return; }
+      let pool = list.filter(m => !TN.seen.has(m.id));
+      const streaming = pool.filter(m => wantAvail(m).state === 'stream');
+      if (TN.only && streaming.length) pool = streaming;                    // lean towards what you can watch right now
+      if (!pool.length) { TN.seen = new Set(); pool = list; }               // went through everything: start the round again
+      const weight = m => { const a = wantAvail(m), c = commInfo(m); return 1 + (a.state === 'stream' ? 1.5 : 0) + (c && c.loved >= 70 ? 1 : 0) + ((Number(m.rating) || 0) >= 8 ? 0.5 : 0); };
+      let r = Math.random() * pool.reduce((s, m) => s + weight(m), 0), pick = pool[pool.length - 1];
+      for (const m of pool) { r -= weight(m); if (r <= 0) { pick = m; break; } }
+      TN.seen.add(pick.id); TN.cur = pick;
+      tonightRender('pick');
+    }
+    function tonightClose(instant) {
+      const el = document.getElementById('tonightSheet'); TN.open = false;
+      if (!el) return;
+      if (instant) { el.remove(); return; }
+      el.classList.add('rs-out'); setTimeout(() => el.remove(), 200);
+    }
+    function tonightDetails() { const id = TN.cur && TN.cur.id; tonightClose(); if (id) openDetails(id); }
+    function tonightRender(mode) {
+      let el = document.getElementById('tonightSheet');
+      if (!el) { el = document.createElement('div'); el.id = 'tonightSheet'; document.body.appendChild(el); }
+      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 backdrop-blur-md sm:items-center sm:p-5';
+      el.onclick = e => { if (e.target === el) tonightClose(); };
+      const shell = inner => `<div class="rs-card relative max-h-[94vh] w-full max-w-[520px] overflow-y-auto overflow-x-hidden rounded-t-[28px] bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10 sm:rounded-[28px] sm:p-7" role="dialog" aria-modal="true" aria-label="Pick one for tonight">
+          <button type="button" onclick="tonightClose()" aria-label="Close" class="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>${inner}</div>`;
+      if (mode === 'loading') { el.innerHTML = shell('<div class="py-14 text-center text-sm text-white/50"><i class="fa-solid fa-spinner fa-spin mb-3 block text-xl text-purple-300"></i>Finding something for tonight…</div>'); return; }
+      if (mode === 'empty') { el.innerHTML = shell('<div class="py-12 text-center"><div class="font-display text-xl text-white">Nothing saved yet</div><p class="mx-auto mt-2 max-w-xs text-sm text-white/50">Save a few titles to Want to watch and I\'ll pick one for you.</p></div>'); return; }
+      const m = TN.cur, it = findLibItem(m.id) || m, a = wantAvail(m), c = commInfo(m), cc = selectedCountry;
+      const best = a.state === 'stream' ? a.av.stream[0] : a.state === 'rent' ? a.av.rentbuy[0] : null;
+      const isTv = it.type === 'Series';
+      const href = best ? buildProviderLink(best.raws[0], it.title, isTv, cc, a.av.link) : '';
+      const verb = a.state === 'stream' ? (best.kinds.has('stream') ? 'Watch on ' : 'Watch free on ') : 'Rent or buy on ';
+      const where = a.state === 'stream' ? `<div class="mt-3 flex flex-wrap gap-1.5">${a.av.stream.slice(0, 4).map(e => `<span class="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] text-emerald-300 ring-1 ring-emerald-400/20">${esc(e.name)}</span>`).join('')}</div>`
+        : a.state === 'rent' ? `<p class="mt-3 text-[13px] text-amber-300">Not on a subscription in ${esc(regionName(cc))}, but you can rent or buy it.</p>`
+        : a.state === 'none' ? `<p class="mt-3 text-[13px] text-white/45">Not available to watch in ${esc(regionName(cc))} right now.</p>` : '';
+      const anyStreaming = tonightList().some(x => wantAvail(x).state === 'stream');
+      el.innerHTML = shell(`
+          <div class="text-xs uppercase tracking-[0.14em] text-white/40">Tonight's pick</div>
+          <div class="mt-4 flex gap-5">
+            <div class="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/10">${it.poster ? `<img src="${esc(it.poster)}" alt="" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : ''}</div>
+            <div class="min-w-0 flex-1 pr-6">
+              <h2 class="break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2>
+              <div class="mt-1 text-sm text-white/50">${esc([it.year, it.rating ? '★ ' + it.rating : '', it.type].filter(Boolean).join(' · '))}</div>
+              ${c ? `<div class="mt-2.5 flex flex-wrap items-center gap-2">${libChip(c.top, true)}<span class="text-[11px] text-white/40">${c.loved}% loved it</span></div>` : ''}
+              ${where}
+            </div>
+          </div>
+          <div class="mt-6 flex flex-wrap items-center gap-2.5">
+            ${best ? `<a id="tnGo" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-ott="${esc(best.name)}" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-play text-xs"></i>${esc(verb + best.name)}</a>` : '<span class="rounded-full px-5 py-2.5 text-sm text-white/45 ring-1 ring-white/10">Not available to watch here</span>'}
+            <button type="button" onclick="tonightNext()" class="rounded-full px-5 py-2.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/[0.07] hover:text-white"><i class="fa-solid fa-shuffle mr-2 text-xs"></i>Another pick</button>
+            <button type="button" onclick="tonightDetails()" class="rounded-full px-4 py-2.5 text-sm text-white/55 transition hover:text-white">Details</button>
+          </div>
+          ${anyStreaming ? `<label class="mt-5 flex cursor-pointer items-center gap-2 text-[13px] text-white/60"><input type="checkbox" ${TN.only ? 'checked' : ''} onchange="TN.only=this.checked" class="h-4 w-4 accent-purple-500">Prefer titles I can stream right now</label>` : ''}`);
+      if (best) getDirectOffers(it, cc).then(offers => { const u = directUrlFor(offers, best.name), g = document.getElementById('tnGo'); if (u && g && TN.cur && TN.cur.id === m.id) { g.href = u; g.dataset.direct = '1'; } });
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && TN.open) tonightClose(); });
+
     function renderWatchlist() {
       const wantList = userWatchlistIds.map(id => { const it = findLibItem(id); return it ? libCard(it) : { id, title: libGuessTitle(id), poster: '', year: '', rating: '', __pending: /^tmdb-(m|tv)-\d+$/.test(id) }; });
       const watchedList = userWatchedHistory || [];
@@ -5085,8 +5227,25 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const grid = 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
       let body = '';
       if (currentWatchlistSubTab === 'want') {
-        body = wantList.length === 0 ? empty('Nothing saved yet', 'Open any title and tap Watchlist to save it for later.', 'Browse titles')
-          : `<div class="${grid}">${wantList.map(m => libraryCard(m, 'want')).join('')}</div>`;
+        if (wantList.length === 0) body = empty('Nothing saved yet', 'Open any title and tap Watchlist to save it for later.', 'Browse titles');
+        else {
+          setTimeout(() => hydrateWant(wantList.filter(m => !m.__pending)), 0);
+          let rows = wantList.map((m, idx) => ({ m, idx, a: wantAvail(m) }));
+          if (WL.avail !== 'all') rows = rows.filter(x => x.a.state === WL.avail);
+          if (WL.wsort === 'rating') rows.sort((a, b) => (Number(b.m.rating) || 0) - (Number(a.m.rating) || 0) || b.idx - a.idx);
+          else if (WL.wsort === 'year') rows.sort((a, b) => (Number(b.m.year) || 0) - (Number(a.m.year) || 0) || b.idx - a.idx);
+          else if (WL.wsort === 'title') rows.sort((a, b) => String(a.m.title).localeCompare(String(b.m.title)));
+          else rows.sort((a, b) => b.idx - a.idx);                                  // recently added first
+          const checking = wantList.some(m => wantAvail(m).state === 'loading');
+          const cname = regionName(selectedCountry);
+          const controls = `<div class="flex flex-wrap items-center gap-2">
+              ${wlSelect('avail', 'Filter by availability', WL.avail, [['all', 'All titles'], ['stream', 'Streaming now'], ['rent', 'Rent or buy only'], ['none', 'Not available']])}
+              ${wlSelect('wsort', 'Sort', WL.wsort, [['added', 'Recently added'], ['rating', 'Highest rated'], ['year', 'Newest release'], ['title', 'Title A to Z']])}
+              <button type="button" onclick="openTonight()" class="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-[13px] font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-shuffle text-xs"></i>Pick one for tonight</button>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-white/45">${checking ? `Checking what's streaming in ${esc(cname)}…` : `Availability for ${esc(cname)}`}${rows.length !== wantList.length ? `<span>Showing ${rows.length} of ${wantList.length}</span><button type="button" onclick="wlResetWant()" class="text-white/70 underline underline-offset-2 hover:text-white">Clear filter</button>` : ''}</div>`;
+          body = `${controls}${rows.length === 0 ? empty('Nothing matches', 'Try a different filter.', null) : `<div class="${grid}">${rows.map(x => libraryCard(x.m, 'want')).join('')}</div>`}`;
+        }
       } else if (currentWatchlistSubTab === 'reviews') {
         const revs = [...LIB.reviews.values()].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
         body = !LIB.loaded ? '<div class="space-y-3"><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div></div>'
