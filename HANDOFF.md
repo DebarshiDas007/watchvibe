@@ -105,3 +105,16 @@ Still open:
 - (SW v59) PROTOTYPE: Watch together (replaces the old local Movie Night). Supabase Realtime broadcast + presence only, no tables: room code (6 chars), invite link /?room=CODE, WhatsApp share (no numbers collected), longest-present = host, late joiner gets state from host. Phases: choose (vote, host adds titles) > lobby (host countdown 10s/1/3/5 min, 'where to watch' + availability in viewer's region) > live (press play, reactions, chat, elapsed timer, tab title flashes) > ended (reaction summary, verdict sheet). Chat 200 chars, 0.7 s rate limit, 12 people cap. Tested with two sessions on live. NOT built yet: admit-guests, per-person service ticks, own-time mode. Easy to remove if it does not fit: it is one block in index.html (// ===== WATCH TOGETHER) plus the modal markup.
 
 - (SW v61) Watch together: 'Which streaming apps do you have?' step (localStorage wt_services / wt_services_set, shared through presence only), who-can-watch markers per title (wtCanWatch/wtWhoHtml: free/ads counts for everyone, subscription needs a ticked app matching the provider name, member's own country), 'Find films everyone can watch' (host, scans top 40 rated films, adds up to 4), 'My apps' button, main view re-renders on presence changes.
+
+## Progress snapshot (service worker v61, last commit a9324b8)
+Live at https://watchvibe-b92.pages.dev/ . Everything below is deployed and pushed.
+
+Done this stretch: IMDb ratings (OMDb via /api/imdb, edge cached; sorts use IMDb), title logos + age certification, no font flash, SEO (title, social cards, robots, sitemap, icons), top navigation bar (sidebar removed), full-width home with full-bleed featured banner, featured carousel (15 s clock-driven bar, arrows, pause button, trailers, logos), daily featured picks (/api/featured, refreshed daily at midnight IST, no repeats, stable all day), Watch together prototype (live rooms, invite link, voting, countdown, reactions, chat, apps step, who-can-watch, find films everyone can watch).
+
+Open / next, in the order we discussed:
+1. Watch together: admit-before-entering for guests; "watch at your own time" mode (needs a small saved table); test with real phones and several people. It is easy to remove if it does not fit (one block, see its HANDOFF entry).
+2. Daily Challenge (Guess the Film): 5 clues, streak, WhatsApp share text, leaderboard (new Supabase table + RPC).
+3. Taste Duel (two friends, 10 swipes, compatibility score), then finish Taste Match.
+4. Retention ideas not started: watchlist "now streaming" alerts (web push/email), weekly OTT digest, per-title SEO pages with share cards, "Tonight" shortcut.
+5. Custom domain: watchvibe.app (about $9/yr) or watchvibe.co.in looked free by DNS check; nothing bought. When chosen, replace the pages.dev address in index.html (canonical, og, JSON-LD), robots.txt, sitemap.xml.
+6. Known: OMDb free key allows 1,000 lookups a day (non-commercial); Movie Night rooms are now live, not device-local; TMDB key is public.
