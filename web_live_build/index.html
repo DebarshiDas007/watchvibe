@@ -742,7 +742,7 @@
       </div>
 
       <div id="swipeCardContainer" class="relative h-80 rounded-2xl overflow-hidden border border-[#2C2C3A] bg-[#1D1D25] shadow-xl flex flex-col justify-end p-4">
-        <img id="swipePoster" src="" class="absolute inset-0 w-full h-full object-cover" alt="Poster">
+        <img id="swipePoster" class="absolute inset-0 w-full h-full object-cover" alt="Poster">
         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
         <div id="swipeFeedbackStamp" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 rounded-xl px-4 py-2 font-black text-lg tracking-wider uppercase hidden rotate-[-12deg] z-20"></div>
 
@@ -2904,43 +2904,6 @@
         refreshViews();
       }
       if (item && document.getElementById('detailModal') && !document.getElementById('detailModal').classList.contains('hidden')) {
-        renderMovieDetailsModal(item);
-      }
-    }
-
-    function castUserVibe(mediaId, vibeId) {
-      if (!mediaId || !vibeId) return;
-      Track.event('vibe_vote', { v: vibeId });
-      const item = (mediaDatabase || []).find(m => m.id === mediaId) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[mediaId]);
-      if (item) {
-        if (!item.vibeVotes) item.vibeVotes = {};
-        item.vibeVotes[vibeId] = (item.vibeVotes[vibeId] || 0) + 1;
-        item.totalVotes = (item.totalVotes || 0) + 1;
-
-        // Auto-mark as Watched with this personal vibe rating
-        const existingIdx = userWatchedHistory.findIndex(h => h.id === mediaId);
-        const record = {
-          id: item.id,
-          title: item.title,
-          poster: item.poster,
-          year: item.year,
-          duration: item.duration,
-          rating: item.rating,
-          dominantVibe: item.dominantVibe || 'must_watch',
-          myVibe: vibeId,
-          watchedDate: 'Just now'
-        };
-        if (existingIdx !== -1) {
-          userWatchedHistory[existingIdx] = record;
-        } else {
-          // Remove from want-to-watch
-          const wlIdx = userWatchlistIds.indexOf(mediaId);
-          if (wlIdx !== -1) userWatchlistIds.splice(wlIdx, 1);
-          userWatchedHistory.unshift(record);
-        }
-        saveWatchlistStore();
-
-        showToast(`🎉 Vibe recorded! Saved ${item.title} to your Watched history as ${VIBES[vibeId]?.label || 'Must Watch'}!`);
         renderMovieDetailsModal(item);
       }
     }

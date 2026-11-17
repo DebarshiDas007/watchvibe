@@ -5,7 +5,6 @@
 - `index.html` — the whole app (HTML + CSS + JS in one file)
 - `sw.js`, `manifest.json` — PWA service worker and manifest
 - `_headers` — Cloudflare Pages security headers incl. Content-Security-Policy
-- `media_database.json` — local title catalog (not currently fetched by `index.html`)
 
 ## Deploy (Cloudflare Pages)
 
