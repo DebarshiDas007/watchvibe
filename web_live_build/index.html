@@ -2256,6 +2256,64 @@
       return OTT.cache.has((ref.isTv ? 'tv:' : 'movie:') + ref.n) ? OTT.cache.get((ref.isTv ? 'tv:' : 'movie:') + ref.n) : undefined;
     }
 
+    // ---- Official title artwork (TMDB logos) and age certification (TMDB release_dates / content_ratings, which come from each country's rating board) ----
+    const EXTRAS = { cache: new Map(), inflight: new Map() };
+    async function getTitleExtras(item) {
+      const ref = tmdbRef(item); if (!ref) return null;
+      const key = (ref.isTv ? 'tv:' : 'movie:') + ref.n;
+      if (EXTRAS.cache.has(key)) return EXTRAS.cache.get(key);
+      if (EXTRAS.inflight.has(key)) return EXTRAS.inflight.get(key);
+      const p = (async () => {
+        try {
+          const langs = ['en', 'null'].concat(item.language ? [item.language] : []).join(',');
+          const res = await fetch(`${TMDB_BASE_URL}/${ref.isTv ? 'tv' : 'movie'}/${ref.n}?api_key=${getActiveTmdbKey()}&append_to_response=images,${ref.isTv ? 'content_ratings' : 'release_dates'},external_ids&include_image_language=${encodeURIComponent(langs)}`);
+          if (!res.ok) return null;
+          const d = await res.json();
+          const logos = ((d.images && d.images.logos) || []).filter(l => l.file_path && !/\.svg$/i.test(l.file_path));
+          const rank = l => (l.iso_639_1 === 'en' ? 0 : !l.iso_639_1 ? 1 : 2);
+          logos.sort((a, b) => rank(a) - rank(b) || (b.vote_average || 0) - (a.vote_average || 0) || (b.width || 0) - (a.width || 0));
+          const certs = {};
+          if (ref.isTv) ((d.content_ratings && d.content_ratings.results) || []).forEach(r => { if (r.rating && r.rating.trim()) certs[r.iso_3166_1] = r.rating.trim(); });
+          else ((d.release_dates && d.release_dates.results) || []).forEach(r => {
+            const rel = (r.release_dates || []).filter(x => x.certification && x.certification.trim());
+            if (!rel.length) return;
+            const pick = rel.find(x => x.type === 3) || rel.find(x => x.type === 2) || rel[0];   // theatrical first
+            certs[r.iso_3166_1] = pick.certification.trim();
+          });
+          const out = { logo: logos.length ? `https://image.tmdb.org/t/p/w500${logos[0].file_path}` : null, certs, imdbId: (d.external_ids && d.external_ids.imdb_id) || null };
+          EXTRAS.cache.set(key, out);
+          return out;
+        } catch (e) { return null; } finally { EXTRAS.inflight.delete(key); }
+      })();
+      EXTRAS.inflight.set(key, p);
+      return p;
+    }
+    // The certification for the viewer's region; falls back to India, then the US, then the UK (the badge names the country when it isn't the viewer's own).
+    function certFor(ex, cc) {
+      if (!ex || !ex.certs) return null;
+      for (const c of [cc, 'IN', 'US', 'GB']) if (ex.certs[c]) return { label: ex.certs[c], cc: c, own: c === cc };
+      return null;
+    }
+    function certBadgeHtml(c) {
+      if (!c) return '';
+      return `<span class="mr-2.5 inline-flex items-center gap-1 whitespace-nowrap rounded-[3px] px-1.5 py-px align-middle text-[11px] font-semibold leading-snug text-white/85 ring-1 ring-white/50" title="Age rating (${esc(regionName(c.cc))})">${c.own ? '' : `<span class="font-normal text-white/50">${esc(c.cc)}</span>`}${esc(c.label)}</span>`;
+    }
+    async function fillTitleExtras(item) {
+      const ex = await getTitleExtras(item);
+      const c = document.getElementById('modalContent');
+      if (!ex || !c || c.dataset.itemId !== item.id) return;
+      const slot = document.getElementById('detailCert');
+      if (slot) slot.innerHTML = certBadgeHtml(certFor(ex, selectedCountry));
+      const h = document.getElementById('detailTitle');
+      if (h && ex.logo && !h.querySelector('img')) {
+        const img = new Image();
+        img.alt = ''; img.decoding = 'async';
+        img.className = 'max-h-[clamp(64px,13vw,120px)] max-w-[min(100%,440px)] object-contain object-left drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]';
+        img.onload = () => { if (h.isConnected && c.dataset.itemId === item.id) { h.insertBefore(img, h.firstChild); const t = h.querySelector('[data-t]'); if (t) t.className = 'sr-only'; } };
+        img.src = ex.logo;   // the plain title stays in place (hidden from view, still readable) until the artwork has loaded
+      }
+    }
+
     // Tidy TMDB's provider variants ("Amazon Prime Video with Ads", "Disney Plus", ...) into one entry per service.
     function tidyProvider(name, kind) {
       let n = String(name || '').trim(); let k = kind;
@@ -2451,7 +2509,7 @@
       const id = c && c.dataset.itemId;
       if (!id) return;
       const item = mediaDatabase.find(m => m.id === id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]);
-      if (item) fillAvailability(item);
+      if (item) { fillAvailability(item); fillTitleExtras(item); }
     }
 
     // ---- Home row "Streaming now": only titles TMDB says can be streamed (subscription / free) in the user's region ----
@@ -4193,8 +4251,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <button type="button" onclick="closeDetails()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
           <div class="relative z-[1] flex w-full flex-col gap-4 p-5 pt-20 sm:flex-row sm:items-end sm:justify-between sm:p-8 sm:pt-24">
             <div class="min-w-0 flex-1">
-              <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${esc(item.title)}</h2>
-              <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60">${esc(meta)}<span class="ml-3 whitespace-nowrap text-amber-300">★ ${esc(item.rating)}</span></p>
+              <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl"><span data-t>${esc(item.title)}</span></h2>
+              <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}<span class="ml-3 whitespace-nowrap text-amber-300">★ ${esc(item.rating)}</span></p>
             </div>
             <div id="previewControls" class="flex shrink-0 flex-wrap items-center gap-2">
               <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25 backdrop-blur">
@@ -4207,6 +4265,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         </div>
         <div id="detailBody">${detailBodyHtml(item)}</div>`;
       fillAvailability(item);
+      fillTitleExtras(item);
       fillSimilar(item);
       fillVibes(item);
       scrollDetailsToTop(); // opened from "More like this" while scrolled down: always land at the top
