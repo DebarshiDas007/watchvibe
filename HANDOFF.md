@@ -49,6 +49,7 @@ Still open:
 
 ## 6. Testing
 
+ - **Where to watch** is live per-region data from TMDB (JustWatch), fetched when a title opens. The old embedded per-title streaming/ottPlatform fields were fabricated and have been removed. Region = user choice > Cloudflare /cdn-cgi/trace (real IP country) > ipapi.co > country.is > time zone. tests/ott-audit.js (await runOttAudit()) checks every title x 15 regions (no phantom or dropped services, valid links). Providers are normalised in tidyProvider(); per-service links are built in buildProviderLink() (unknown services fall back to the TMDB/JustWatch page for the region).
 - Paste 	ests/content-sweep.js into the browser console on the site: renders every title (details window + card) and ~1,000 home/filter views and reports errors, bad text and missing fields. Last run (Nov 2026): 2,059 titles, 1,032 views, 0 errors; 4,118/4,118 poster+backdrop images load; 1,920/2,059 titles have a TMDB trailer (the other 139 show the backdrop only).
 
 ## 7. Known gaps / roadmap
