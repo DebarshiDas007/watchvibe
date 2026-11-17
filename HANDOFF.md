@@ -47,7 +47,11 @@ Still open:
 - Sidebar user card and Profile page show the real signed-in user and real watched/watchlist stats (the hardcoded fake persona is gone).
 - Login page: green success state, 30s resend cooldown, optional display name, expired-link error handling. Google/Discord show SOON until you flip `OAUTH_ENABLED` in `index.html` after enabling the provider in Supabase.
 
-## 6. Known gaps / roadmap
+## 6. Testing
+
+- Paste 	ests/content-sweep.js into the browser console on the site: renders every title (details window + card) and ~1,000 home/filter views and reports errors, bad text and missing fields. Last run (Nov 2026): 2,059 titles, 1,032 views, 0 errors; 4,118/4,118 poster+backdrop images load; 1,920/2,059 titles have a TMDB trailer (the other 139 show the backdrop only).
+
+## 7. Known gaps / roadmap
 
 - Admin Studio analytics are local-only (localStorage); only the user list comes from Supabase (`profiles`, admin-only via RLS).
 - Watchlist cloud merge is union-only (removals on one device don't propagate).
