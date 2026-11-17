@@ -694,8 +694,8 @@
 
 
     <!-- FULL SCREEN MAIN CONTENT VIEWPORT (RESPONSIVE) -->
-    <main class="min-h-screen w-full min-w-0 max-w-full flex-1 px-4 py-6 pb-24 sm:px-8 xl:px-10 md:pb-14">
-      <div id="mainViewport" class="mx-auto max-w-[1440px]"></div>
+    <main class="min-h-screen w-full min-w-0 max-w-full flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-9 md:pb-14">
+      <div id="mainViewport" class="mx-auto w-full max-w-[2400px]"></div>
     </main>
 
   </div>
@@ -3488,7 +3488,7 @@ function posterCard(item, opts) {
       opts = opts || {};
       const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
       const sub = [item.year, item.__platform || item.type].filter(Boolean).join(' · ');
-      const sizing = opts.wide ? 'w-full' : 'w-[150px] sm:w-[170px] shrink-0';
+      const sizing = opts.wide ? 'w-full' : 'w-[150px] shrink-0 sm:w-[180px] lg:w-[210px] xl:w-[235px] 2xl:w-[270px]';
       return `
         <button type="button" onclick="openDetails('${item.id}')" class="group self-start ${sizing} text-left focus:outline-none">
           <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
@@ -3499,7 +3499,7 @@ function posterCard(item, opts) {
             </div>
           </div>
           <div class="mt-2.5 px-0.5">
-            <div class="min-h-[2.25rem] break-words text-[13px] font-medium leading-snug text-white/90">${esc(item.title)}</div>
+            <div class="min-h-[2.25rem] break-words text-[13px] font-medium leading-snug text-white/90 lg:text-sm xl:text-[15px]">${esc(item.title)}</div>
             <div class="mt-0.5 flex items-start justify-between gap-2 text-xs text-white/45"><span class="min-w-0 break-words">${esc(sub)}</span>${rtHtml(item, 'shrink-0 text-amber-300/90')}</div>
           </div>
         </button>`;
@@ -3511,7 +3511,7 @@ function posterCard(item, opts) {
         <section>
           <div class="mb-4 flex items-end justify-between gap-4">
             <div class="min-w-0">
-              <h2 class="font-display text-[22px] font-medium leading-tight text-white">${title}</h2>
+              <h2 class="font-display text-[22px] font-medium leading-tight text-white lg:text-2xl xl:text-[28px]">${title}</h2>
               ${subtitle ? `<p class="mt-1 text-sm text-white/45">${subtitle}</p>` : ''}
             </div>
             <div class="flex shrink-0 items-center gap-1">
@@ -3588,7 +3588,7 @@ function posterCard(item, opts) {
                 <div class="text-white/80">Nothing matches these filters.</div>
                 <button type="button" onclick="goHome()" class="mt-3 text-sm text-purple-300 hover:text-white">Clear filters</button>
               </div>` : `
-              <div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              <div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9">
                 ${gridItems.slice(0, limit).map(i => posterCard(i, { wide: true })).join('')}
               </div>
               ${gridItems.length > limit ? `<div class="pt-4 text-center"><button type="button" onclick="loadMoreFeed()" class="rounded-full bg-white/[0.06] px-6 py-2.5 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">Show more <span class="text-white/40">(${limit} of ${gridItems.length})</span></button></div>` : ''}`}
@@ -3671,7 +3671,7 @@ function posterCard(item, opts) {
       const ex = EXTRAS.cache.get(extrasKeyOf(item));
       const name = esc(item.title);
       const st = fallbackTitleLook(item);
-      const logoCls = 'max-h-[clamp(70px,16vw,130px)] max-w-[min(100%,460px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
+      const logoCls = 'max-h-[clamp(72px,16vw,130px)] lg:max-h-[clamp(120px,10vw,200px)] max-w-[min(100%,460px)] lg:max-w-[min(100%,620px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
       if (ex && ex.logo) return `<img src="${esc(ex.logo)}" alt="" decoding="async" ${i === 0 ? '' : 'loading="lazy"'} class="${logoCls}"><span data-t class="sr-only">${name}</span>`;
       const hide = (!ex && extrasKeyOf(item)) ? ' opacity-0' : '';
       return `<span data-t class="block break-words font-display text-4xl leading-[1.1] text-white sm:text-5xl ${st.cls}${hide}" style="${st.style}">${name}</span>`;
@@ -3686,12 +3686,12 @@ function posterCard(item, opts) {
           <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
-          <div class="relative max-w-2xl px-14 pb-9 pt-6 sm:px-16 sm:pb-11 sm:pt-10">
+          <div class="relative max-w-3xl px-14 pb-9 pt-6 sm:px-16 sm:pb-11 sm:pt-10 lg:pb-14 lg:pl-20">
             <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>Featured · ${esc(dom.label)}</div>
             <h2 class="mt-3" data-hero-title>${heroTitleHtml(item, i)}</h2>
-            <p class="mt-3 text-sm text-white/60"><span data-hero-cert>${cert}</span>${esc(meta)}${rtHtml(item, 'ml-3 text-amber-300')}</p>
+            <p class="mt-3 text-sm text-white/70 lg:text-base"><span data-hero-cert>${cert}</span>${esc(meta)}${rtHtml(item, 'ml-3 text-amber-300')}</p>
             <div class="mt-5 flex flex-wrap gap-3">
-              <button type="button" onclick="openDetails('${item.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
+              <button type="button" onclick="openDetails('${item.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90 lg:px-8 lg:py-3 lg:text-base">View details</button>
             </div>
           </div>
         </div>`;
@@ -3700,12 +3700,12 @@ function posterCard(item, opts) {
       const arrow = (dir, icon, label) => `<button type="button" onclick="${dir}" aria-label="${label}" class="absolute ${dir === 'heroPrev()' ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 sm:h-11 sm:w-11"><i class="fa-solid ${icon} text-sm"></i></button>`;
       const segs = pool.map((m, i) => `<button type="button" onclick="heroGo(${i}, true)" aria-label="Show featured title ${i + 1} of ${pool.length}: ${esc(m.title)}" class="hero-seg group flex-1 py-2.5 ${i < HERO.idx ? 'is-done' : i === HERO.idx ? 'is-active' : ''}"><span class="block h-[3px] overflow-hidden rounded-full bg-white/25 transition-all group-hover:h-[5px]"><span class="hero-fill block h-full bg-white" onanimationend="heroEnd(event)"></span></span></button>`).join('');
       return `
-        <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative grid overflow-hidden rounded-3xl ring-1 ring-white/[0.07] sm:aspect-[16/8] lg:aspect-[16/7] sm:max-h-[640px]" onmouseenter="heroSetPause('hover', true)" onmouseleave="heroSetPause('hover', false)" onfocusin="if(event.target.matches(':focus-visible'))heroSetPause('focus', true)" onfocusout="heroSetPause('focus', false)">
+        <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative -mx-4 grid overflow-hidden rounded-none sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" onmouseenter="heroSetPause('hover', true)" onmouseleave="heroSetPause('hover', false)" onfocusin="if(event.target.matches(':focus-visible'))heroSetPause('focus', true)" onfocusout="heroSetPause('focus', false)">
           ${pool.map(heroSlideHtml).join('')}
           ${arrow('heroPrev()', 'fa-chevron-left', 'Previous featured title')}
           ${arrow('heroNext()', 'fa-chevron-right', 'Next featured title')}
           <div id="heroControls" class="absolute bottom-9 right-4 z-10 hidden sm:right-8"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
-          <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10">${segs}</div>
+          <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10 lg:inset-x-16">${segs}</div>
         </section>`;
     }
     function heroEls(i) { return HERO.el ? { slide: HERO.el.querySelector(`[data-slide="${i}"]`), seg: HERO.el.querySelectorAll('.hero-seg')[i] } : {}; }
@@ -3716,7 +3716,7 @@ function posterCard(item, opts) {
       if (!t) return;
       if (ex && ex.logo && !h.querySelector('img')) {
         const img = new Image(); img.alt = ''; img.decoding = 'async'; img.src = ex.logo;
-        img.className = 'max-h-[clamp(70px,16vw,130px)] max-w-[min(100%,460px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
+        img.className = 'max-h-[clamp(72px,16vw,130px)] lg:max-h-[clamp(120px,10vw,200px)] max-w-[min(100%,460px)] lg:max-w-[min(100%,620px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
         h.insertBefore(img, h.firstChild); t.className = 'sr-only'; t.removeAttribute('style');
       } else t.classList.remove('opacity-0');
       const c = slide.querySelector('[data-hero-cert]'); if (c && ex) c.innerHTML = certBadgeHtml(certFor(ex, selectedCountry));
@@ -5060,7 +5060,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               <h2 class="font-display text-[22px] font-medium text-white">Titles <span class="ml-1 text-sm font-normal text-white/40">${matchedMovies.length}</span></h2>
               ${isLiveSyncing ? '<span class="text-xs text-white/40">Searching more…</span>' : ''}
             </div>
-            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9">
               ${matchedMovies.map(item => posterCard(item, { wide: true })).join('')}
             </div>
           </section>`;
@@ -5568,7 +5568,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <p class="mx-auto mt-2 max-w-sm text-sm text-white/45">${text}</p>
           ${cta ? `<button type="button" onclick="goHome()" class="mt-5 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${cta}</button>` : ''}
         </div>`;
-      const grid = 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+      const grid = 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9';
       let body = '';
       if (currentWatchlistSubTab === 'want') {
         if (wantList.length === 0) body = empty('Nothing saved yet', 'Open any title and tap Watchlist to save it for later.', 'Browse titles');
@@ -5765,6 +5765,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       else if (activeTab === 'profile') content = renderProfile();
 
       const viewport = document.getElementById('mainViewport');
+      viewport.classList.toggle('max-w-[2400px]', activeTab === 'discover'); viewport.classList.toggle('max-w-[1440px]', activeTab !== 'discover');
       viewport.innerHTML = content;
       // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
       viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
