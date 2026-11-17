@@ -44,9 +44,10 @@
   const SUPABASE_URL = 'https://lbtuikgpgcgrizijfiyl.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxidHVpa2dwZ2Nncml6aWpmaXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NjQxMzgsImV4cCI6MjExMDM0MDEzOH0.y7PrOnBUjIBnT6N2vnOV9qkGgcKX1F_epMqBMoPKejU';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
-  const TABS = [['overview', 'Overview'], ['users', 'Users'], ['content', 'Content health'], ['streaming', 'Streaming'], ['system', 'System']];
+  const TABS = [['overview', 'Overview'], ['users', 'Users'], ['content', 'Content health'], ['reviews', 'Reviews'], ['streaming', 'Streaming'], ['system', 'System']];
+  const TIER_NAMES = { t1: 'Absolute Cinema', t2: 'Standing Ovation', t3: 'Paisa Vasool', t4: 'Worth a Watch', t5: 'Timepass', t6: 'Left at Interval' };
   const app = document.getElementById('app');
-  const state = { tab: (location.hash || '#overview').slice(1), days: 30, cache: {}, userFilter: '', userSort: 'created' };
+  const state = { tab: (location.hash || '#overview').slice(1), days: 30, cache: {}, userFilter: '', userSort: 'created', revFilter: 'reported', armed: null };
   if (!TABS.some(t => t[0] === state.tab)) state.tab = 'overview';
 
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,9 +100,9 @@
     return data;
   }
   async function load(kind, force) {
-    const key = kind + ':' + state.days;
+    const key = kind + ':' + state.days + ':' + state.revFilter;
     if (!force && state.cache[key]) return state.cache[key];
-    const d = kind === 'users' ? await rpc('admin_users') : kind === 'system' ? await rpc('admin_system') : await rpc('admin_' + kind, { p_days: state.days });
+    const d = kind === 'users' ? await rpc('admin_users') : kind === 'system' ? await rpc('admin_system') : kind === 'reviews' ? await rpc('admin_reviews', { p_status: state.revFilter }) : await rpc('admin_' + kind, { p_days: state.days });
     state.cache[key] = d; return d;
   }
 
@@ -183,8 +184,29 @@
         ${card(h('Posters that failed to load', 'Fix or replace these') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.poster_fail, 'No broken posters reported.'))}
         ${card(h('Trailers that would not play') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.trailer_fail, 'No trailer failures reported.'))}
         ${card(h('Not available to watch', 'Visitors opened these where nothing streams, rents or sells') + table([{ h: 'Title', html: ti }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Times', r: 1, v: r => num(r.n) }], c.avail_none, 'Nothing reported.'))}
-        ${card(h('Vibe votes') + bars(c.vibes, x => x.k.replace(/_/g, ' '), 'n', { share: true }) + '<div class="mt-6"></div>' + h('Actor pages opened') + bars(c.actors, x => x.k, 'n', { color: 'bg-sky-400' }))}
+        ${card(h('Verdicts given') + bars(c.vibes, x => TIER_NAMES[x.k] || x.k.replace(/_/g, ' '), 'n', { share: true }) + '<div class="mt-6"></div>' + h('Actor pages opened') + bars(c.actors, x => x.k, 'n', { color: 'bg-sky-400' }))}
       </div>`;
+  }
+
+  async function viewReviews(force) {
+    const r = await load('reviews', force);
+    const opt = (v, l) => `<option value="${v}" class="bg-[#14141A]" ${state.revFilter === v ? 'selected' : ''}>${l}</option>`;
+    const badge = (t, cls) => `<span class="rounded-full px-2.5 py-0.5 text-[11px] ${cls}">${esc(t)}</span>`;
+    const items = r.items || [];
+    const cards = items.map(x => `<div class="rise rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
+        <div class="flex flex-wrap items-center gap-2 text-[12px] text-white/45"><span class="text-white/80">${esc(x.title_name)}</span><span>by ${esc(x.author_name)}</span><span>${esc(when(x.created_at))}</span>
+          ${x.reports ? badge(x.reports + (x.reports === 1 ? ' report' : ' reports'), 'bg-rose-500/15 text-rose-200') : ''}${x.status === 'hidden' ? badge('Hidden', 'bg-amber-500/15 text-amber-200') : ''}${x.spoiler ? badge('Spoiler', 'bg-white/10 text-white/60') : ''}${x.felt ? badge(x.felt + ' felt this', 'bg-purple-500/15 text-purple-200') : ''}</div>
+        <p class="mt-2 break-words text-[15px] font-medium text-white">${esc(x.headline)}</p>
+        ${x.body ? `<p class="mt-1 whitespace-pre-line break-words text-[13px] leading-relaxed text-white/60">${esc(x.body.length > 700 ? x.body.slice(0, 700) + '…' : x.body)}</p>` : ''}
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" data-act="${x.status === 'hidden' ? 'show' : 'hide'}" data-id="${esc(x.id)}" class="cursor-pointer rounded-full px-4 py-1.5 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">${x.status === 'hidden' ? 'Restore' : 'Hide'}</button>
+          <button type="button" data-act="del" data-id="${esc(x.id)}" class="cursor-pointer rounded-full px-4 py-1.5 text-[13px] text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/10">${state.armed === x.id ? 'Click again to delete' : 'Delete'}</button>
+        </div></div>`).join('');
+    return `
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">${kpi('Verdicts', num(r.votes))}${kpi('Reviews', num(r.reviews))}${kpi('Reported', num(r.reported), 'need a look')}${kpi('Hidden', num(r.hidden))}</div>
+      <div class="mt-4 flex flex-wrap items-center gap-3"><select id="revFilter" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none" aria-label="Filter reviews">${opt('reported', 'Reported')}${opt('all', 'All reviews')}${opt('hidden', 'Hidden')}${opt('visible', 'Visible')}</select>
+        <p class="text-xs text-white/35">A review is hidden automatically once 3 different people report it. Hiding is reversible; deleting is not.</p></div>
+      <div class="mt-4 space-y-3">${cards || card(empty(state.revFilter === 'reported' ? 'No reported reviews. All quiet.' : 'No reviews here yet.'))}</div>`;
   }
 
   async function viewStreaming(force) {
@@ -227,7 +249,7 @@
       <div class="mt-4">${card(h('Privacy') + '<p class="text-[13px] leading-relaxed text-white/55">Analytics store no emails, names or IP addresses, only a random anonymous visitor id, country, device type, browser and what was clicked. Visitors with Do Not Track or Global Privacy Control turned on are not tracked, and neither is the admin.</p>')}</div>`;
   }
 
-  const VIEWS = { overview: viewOverview, users: viewUsers, content: viewContent, streaming: viewStreaming, system: viewSystem };
+  const VIEWS = { overview: viewOverview, users: viewUsers, content: viewContent, reviews: viewReviews, streaming: viewStreaming, system: viewSystem };
 
   function drawTabs() {
     document.getElementById('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" data-tab="${id}" class="cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ${state.tab === id ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'}">${label}</button>`).join('');
@@ -253,6 +275,15 @@
     const uf = document.getElementById('userFilter');
     if (uf) uf.oninput = () => { state.userFilter = uf.value; clearTimeout(window.__uft); window.__uft = setTimeout(async () => { const pos = uf.selectionStart; await render(false); const n = document.getElementById('userFilter'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); };
     const us = document.getElementById('userSort'); if (us) us.onchange = () => { state.userSort = us.value; render(false); };
+    const rf = document.getElementById('revFilter'); if (rf) rf.onchange = () => { state.revFilter = rf.value; state.armed = null; render(false); };
+    document.querySelectorAll('[data-act]').forEach(b => b.onclick = async () => {
+      const id = b.dataset.id, act = b.dataset.act;
+      try {
+        if (act === 'del') { if (state.armed !== id) { state.armed = id; b.textContent = 'Click again to delete'; return; } await rpc('admin_review_delete', { p_id: id }); }
+        else await rpc('admin_review_status', { p_id: id, p_status: act === 'hide' ? 'hidden' : 'visible' });
+        state.armed = null; state.cache = {}; render(true);
+      } catch (e) { alert('Could not update: ' + e.message); }
+    });
     const csv = document.getElementById('csv');
     if (csv) csv.onclick = () => {
       const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/^([=+\-@])/, "'$1") + '"';

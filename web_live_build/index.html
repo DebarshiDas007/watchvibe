@@ -3830,13 +3830,276 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       renderMovieDetailsModal(item);
     }
 
+    // ===== Verdicts (6-tier ladder + feelings) and reviews: real, shared, saved in Supabase =====
+    const TIERS = [
+      { n: 1, label: 'Absolute Cinema', hint: 'Perfect. Watch it now.', color: '#F5C518' },
+      { n: 2, label: 'Standing Ovation', hint: 'Loved every minute.', color: '#22C55E' },
+      { n: 3, label: 'Paisa Vasool', hint: 'Worth every rupee.', color: '#14B8A6' },
+      { n: 4, label: 'Worth a Watch', hint: 'Good, if you have the time.', color: '#38BDF8' },
+      { n: 5, label: 'Timepass', hint: 'Fine for a lazy evening.', color: '#FB923C' },
+      { n: 6, label: 'Left at Interval', hint: 'Not for me.', color: '#EF4444' }
+    ];
+    const FEELING_IDS = ['mind_blown', 'emotional_damage', 'hidden_gem', 'fun_time'];
+    const VS = { item: null, key: '', summary: null, reviews: null, mine: null, sort: 'felt', formOpen: false, draft: null, delArmed: false, reported: new Set(), revealed: new Set() };
+    const VS_MIN_PUBLIC = 3, VS_PAGE = 5;
+    const vsPct = (a, b) => b ? Math.round(a / b * 100) : 0;
+    const sbc = () => window.supabaseClient;
+    const vsStar = '<i class="fa-solid fa-star mr-1.5 text-[10px]" style="color:#F5C518"></i>';
+
+    function vsKey(item) { const ref = tmdbRef(item); return ref ? (ref.isTv ? 'tv:' : 'movie:') + ref.n : 'id:' + String(item.id).slice(0, 50); }
+    function vsAuth(msg) { if (currentAuthUser && sbc()) return true; showToast(msg || 'Sign in to join in.'); openAuthModal(); return false; }
+    function vsAgo(iso) { const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); if (s < 90) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; if (s < 86400 * 30) return Math.round(s / 86400) + ' d ago'; return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    function vsAuthorName() { const n = (currentUserSession && currentUserSession.name) || ''; return (n.trim().split(/\s+/)[0] || 'Viewer').slice(0, 40); }
+
+    async function vsLoadSummary(key) { try { const { data, error } = await sbc().rpc('title_vote_summary', { p_key: key }); return error ? null : data; } catch (e) { return null; } }
+    async function vsLoadReviews(key, sort, offset) { try { const { data, error } = await sbc().rpc('title_reviews_list', { p_key: key, p_sort: sort, p_limit: VS_PAGE, p_offset: offset }); return error ? null : data; } catch (e) { return null; } }
+    async function vsLoadMine(key) {
+      if (!currentAuthUser) return null;
+      try { const { data } = await sbc().from('title_reviews').select('id,headline,body,spoiler,status').eq('user_id', currentAuthUser.id).eq('title_key', key).maybeSingle(); return data || null; } catch (e) { return null; }
+    }
+
+    function vibeSectionSkeleton() {
+      return `<h3 class="font-display text-lg font-medium text-white">How did it feel?</h3>
+        <div id="vsSummary" class="mt-4"></div>
+        <div id="vsRevHead" class="mt-10"></div>
+        <div id="vsForm"></div>
+        <div id="vsList" class="mt-4 space-y-3"></div>
+        <div id="vsMore" class="mt-3"></div>`;
+    }
+
+    async function fillVibes(item) {
+      const sec = document.getElementById('vibeSection');
+      if (!sec || !item) return;
+      sec.dataset.item = item.id;
+      const key = vsKey(item);
+      if (VS.key !== key) { Object.assign(VS, { key, summary: null, reviews: null, mine: null, sort: 'felt', formOpen: false, draft: null, delArmed: false }); }
+      VS.item = item;
+      vsRenderAll();
+      if (!sbc()) return;
+      const [sum, rev, mine] = await Promise.all([vsLoadSummary(key), vsLoadReviews(key, VS.sort, 0), vsLoadMine(key)]);
+      const cur = document.getElementById('vibeSection');
+      if (VS.key !== key || !cur || cur.dataset.item !== item.id) return;
+      VS.summary = sum; VS.reviews = rev; VS.mine = mine;
+      vsRenderAll();
+    }
+    function vsRenderAll() { vsRenderSummary(); vsRenderHead(); vsRenderForm(); vsRenderList(); vsTopRow(); }
+    const vsEl = id => document.getElementById(id);
+
+    function vsTopRow() {
+      const row = vsEl('topVibeRow'), val = vsEl('topVibeVal'); if (!row || !val) return;
+      const s = VS.summary;
+      if (!s || s.total < VS_MIN_PUBLIC) { row.classList.add('hidden'); return; }
+      let best = 0; s.tiers.forEach((c, i) => { if (c > s.tiers[best]) best = i; });
+      const tr = TIERS[best];
+      val.innerHTML = `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>${esc(tr.label)} <span class="text-white/35">· ${vsPct(s.tiers[best], s.total)}% of ${s.total}</span>`;
+      row.classList.remove('hidden');
+    }
+
+    function vsRenderSummary() {
+      const box = vsEl('vsSummary'); if (!box) return;
+      const s = VS.summary, mine = s && s.mine, total = s ? s.total : 0;
+      let html = '';
+      if (!sbc()) html += '<p class="text-sm text-white/40">Verdicts are unavailable right now.</p>';
+      else if (!s) html += '<p class="text-sm text-white/40">Loading what people felt…</p>';
+      else if (total < VS_MIN_PUBLIC) html += `<p class="text-sm text-white/50">${total ? `${total} ${total === 1 ? 'person has' : 'people have'} shared a verdict so far.` : 'Be the first to share how it felt.'}</p>`;
+      else {
+        html += `<div class="space-y-2.5">${TIERS.map((tr, i) => { const c = s.tiers[i] || 0, p = vsPct(c, total);
+          return `<div class="flex items-center gap-3 text-[13px]" title="${c} ${c === 1 ? 'verdict' : 'verdicts'}"><span class="w-32 shrink-0 truncate sm:w-36 ${i === 0 ? 'text-amber-200' : 'text-white/65'}">${i === 0 ? vsStar : ''}${esc(tr.label)}</span><div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><div class="h-full rounded-full transition-all duration-500" style="width:${p}%;background:${tr.color}"></div></div><span class="w-10 shrink-0 text-right text-white/45">${p}%</span></div>`; }).join('')}</div>
+          <p class="mt-3 text-xs text-white/35">Based on ${total.toLocaleString()} verdicts</p>`;
+        const feel = FEELING_IDS.map(id => [id, s.feelings && s.feelings[id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+        if (feel.length) html += `<div class="mt-4 flex flex-wrap gap-2">${feel.map(([id, c]) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[id].color}"></span>${esc(VIBES[id].label)} <span class="text-white/40">${vsPct(c, total)}%</span></span>`).join('')}</div>`;
+      }
+      // your own verdict
+      const tierBtn = tr => { const sel = mine && mine.tier === tr.n;
+        return `<button type="button" onclick="vsSetTier(${tr.n})" aria-pressed="${!!sel}" class="rounded-xl px-3 py-2.5 text-left ring-1 transition duration-200 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'}" style="${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}</span><span class="mt-0.5 block text-[11px] text-white/40">${esc(tr.hint)}</span></button>`; };
+      const feelBtn = id => { const v = VIBES[id], sel = mine && (mine.feelings || []).includes(id);
+        return `<button type="button" onclick="vsToggleFeeling('${id}')" aria-pressed="${!!sel}" class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 transition duration-200 ${sel ? 'text-white' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'}" style="${sel ? `background:${v.color}26;--tw-ring-color:${v.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</button>`; };
+      const same = mine && total >= VS_MIN_PUBLIC ? vsPct(s.tiers[mine.tier - 1] || 0, total) : null;
+      html += `<div class="mt-6 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] sm:p-5">
+          <div class="flex items-center justify-between gap-3"><div class="text-sm font-medium text-white">Your verdict</div>${mine ? '<button type="button" onclick="vsRemoveVote()" class="text-xs text-white/45 transition hover:text-white">Remove</button>' : ''}</div>
+          <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">${TIERS.map(tierBtn).join('')}</div>
+          <div class="mt-4 text-xs text-white/40">What did it make you feel? Pick up to two.</div>
+          <div class="mt-2 flex flex-wrap gap-2">${FEELING_IDS.map(feelBtn).join('')}</div>
+          ${same !== null ? `<p class="mt-3 text-xs text-white/50">You and ${same}% of viewers chose ${esc(TIERS[mine.tier - 1].label)}.</p>` : ''}
+          ${!currentAuthUser ? '<p class="mt-3 text-xs text-white/45">Sign in to save your verdict and write a review.</p>' : ''}
+        </div>`;
+      box.innerHTML = html;
+    }
+
+    async function vsSaveVote(tier, feelings) {
+      if (!vsAuth('Sign in to share your verdict.')) return;
+      const prev = VS.summary && VS.summary.mine;
+      if (VS.summary) VS.summary.mine = { tier, feelings };   // instant feedback
+      vsRenderSummary();
+      const { error } = await sbc().from('title_votes').upsert({ user_id: currentAuthUser.id, title_key: VS.key, tier, feelings }, { onConflict: 'user_id,title_key' });
+      if (error) { if (VS.summary) VS.summary.mine = prev || null; vsRenderSummary(); showToast('Could not save your verdict. Try again.'); return; }
+      Track.event('vibe_vote', { v: 't' + tier });
+      vsMirrorWatched(tier, feelings);
+      const fresh = await vsLoadSummary(VS.key);
+      if (fresh) { VS.summary = fresh; vsRenderSummary(); vsTopRow(); vsRenderList(); }
+    }
+    function vsSetTier(n) { const m = VS.summary && VS.summary.mine; vsSaveVote(n, m ? (m.feelings || []) : []); }
+    function vsToggleFeeling(id) {
+      const m = VS.summary && VS.summary.mine;
+      if (!m) { if (vsAuth('Sign in to share your verdict.')) showToast('Choose your verdict first, then add a feeling.'); return; }
+      let f = (m.feelings || []).slice();
+      if (f.includes(id)) f = f.filter(x => x !== id); else { if (f.length >= 2) f.shift(); f.push(id); }
+      vsSaveVote(m.tier, f);
+    }
+    async function vsRemoveVote() {
+      if (!vsAuth()) return;
+      const prev = VS.summary && VS.summary.mine;
+      if (VS.summary) VS.summary.mine = null; vsRenderSummary();
+      const { error } = await sbc().from('title_votes').delete().eq('user_id', currentAuthUser.id).eq('title_key', VS.key);
+      if (error) { if (VS.summary) VS.summary.mine = prev; vsRenderSummary(); showToast('Could not remove your verdict.'); return; }
+      const fresh = await vsLoadSummary(VS.key); if (fresh) { VS.summary = fresh; vsRenderSummary(); vsTopRow(); vsRenderList(); }
+    }
+    // keep the viewer's watched history and taste persona in step with their verdict
+    function vsMirrorWatched(tier, feelings) {
+      const item = VS.item; if (!item || !findItemById(item.id)) return;
+      const vibe = (feelings && feelings[0]) || (tier <= 2 ? 'must_watch' : tier <= 4 ? 'fun_time' : tier === 5 ? 'time_pass' : 'skip_it');
+      const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
+      const i = userWatchedHistory.findIndex(h => h.id === item.id);
+      if (i !== -1) userWatchedHistory[i] = rec; else { const w = userWatchlistIds.indexOf(item.id); if (w !== -1) userWatchlistIds.splice(w, 1); userWatchedHistory.unshift(rec); }
+      saveWatchlistStore();
+    }
+
+    // ---- reviews
+    function vsRenderHead() {
+      const box = vsEl('vsRevHead'); if (!box) return;
+      const total = VS.reviews ? VS.reviews.total : 0;
+      box.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="font-display text-lg font-medium text-white">What people felt <span class="ml-1 text-sm font-normal text-white/40">${total}</span></h3>
+          <div class="flex items-center gap-2">
+            ${total > 1 ? `<select onchange="vsSort(this.value)" class="rounded-full bg-white/[0.05] px-3 py-1.5 text-[13px] text-white/80 ring-1 ring-white/10 focus:outline-none" aria-label="Sort reviews"><option value="felt" class="bg-[#14141A]" ${VS.sort === 'felt' ? 'selected' : ''}>Most felt</option><option value="new" class="bg-[#14141A]" ${VS.sort === 'new' ? 'selected' : ''}>Newest</option></select>` : ''}
+            <button type="button" onclick="vsToggleForm()" class="rounded-full bg-white px-4 py-1.5 text-[13px] font-semibold text-black transition hover:bg-white/90">${VS.mine ? (VS.formOpen ? 'Close' : 'Edit your review') : (VS.formOpen ? 'Close' : 'Write a review')}</button>
+          </div></div>`;
+    }
+    function vsReviewHtml(r) {
+      const tr = r.tier ? TIERS[r.tier - 1] : null;
+      const ic = typeof AVATARS !== 'undefined' ? AVATARS.find(a => a.id === r.author_icon) : null;
+      const avatar = ic ? `<img src="${avatarUri(ic)}" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover">` : `<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/25 text-xs font-medium text-white">${esc((r.author_name || '?')[0].toUpperCase())}</span>`;
+      const chips = [tr ? `<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium" style="background:${tr.color}22;color:${tr.color}">${tr.n === 1 ? vsStar : ''}${esc(tr.label)}</span>` : '']
+        .concat((r.feelings || []).filter(f => VIBES[f]).map(f => `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] text-white/65 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[f].color}"></span>${esc(VIBES[f].label)}</span>`)).join('');
+      const hidden = r.spoiler && !VS.revealed.has(r.id);
+      const long = (r.body || '').length > 280;
+      const text = hidden
+        ? `<button type="button" onclick="vsReveal('${esc(r.id)}')" class="mt-3 rounded-xl bg-white/[0.04] px-4 py-3 text-left text-[13px] text-white/60 ring-1 ring-white/10 transition hover:bg-white/[0.07]"><i class="fa-solid fa-eye-slash mr-2 text-xs"></i>Contains spoilers. Tap to read.</button>`
+        : `<p class="mt-3 break-words text-[15px] font-medium leading-snug text-white">${esc(r.headline)}</p>${r.body ? `<p id="rb-${esc(r.id)}" class="mt-1.5 break-words text-[14px] leading-relaxed text-white/70 ${long ? 'line-clamp-4' : ''}">${esc(r.body).replace(/\n/g, '<br>')}</p>${long ? `<button type="button" onclick="vsExpand('${esc(r.id)}', this)" class="mt-1 text-xs text-white/50 underline underline-offset-2 hover:text-white">Read more</button>` : ''}` : ''}`;
+      const reported = VS.reported.has(r.id);
+      return `<article class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
+          <div class="flex items-center gap-3">${avatar}<div class="min-w-0 flex-1"><div class="truncate text-[13px] font-medium text-white">${esc(r.author_name)}${r.mine ? ' <span class="ml-1 text-[11px] font-normal text-white/40">(you)</span>' : ''}</div><div class="text-[11px] text-white/35">${esc(vsAgo(r.created_at))}</div></div></div>
+          ${chips ? `<div class="mt-3 flex flex-wrap gap-1.5">${chips}</div>` : ''}
+          ${text}
+          <div class="mt-3 flex items-center gap-4 text-xs">
+            ${r.mine ? `<span class="text-white/40">${r.felt} felt this too</span><button type="button" onclick="vsToggleForm()" class="text-white/55 transition hover:text-white">Edit</button>`
+              : `<button type="button" onclick="vsFelt('${esc(r.id)}')" aria-pressed="${!!r.felt_by_me}" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 ring-1 transition ${r.felt_by_me ? 'bg-purple-500/20 text-white ring-purple-400/50' : 'text-white/60 ring-white/12 hover:bg-white/[0.07] hover:text-white'}"><i class="fa-solid fa-heart text-[10px]"></i>Felt this too${r.felt ? ` · ${r.felt}` : ''}</button>
+                 <button type="button" onclick="vsReport('${esc(r.id)}')" ${reported ? 'disabled' : ''} class="text-white/35 transition hover:text-white disabled:pointer-events-none">${reported ? 'Reported' : 'Report'}</button>`}
+          </div>
+        </article>`;
+    }
+    function vsRenderList() {
+      const box = vsEl('vsList'), more = vsEl('vsMore'); if (!box) return;
+      const rv = VS.reviews;
+      if (!sbc()) { box.innerHTML = ''; return; }
+      if (!rv) { box.innerHTML = '<div class="h-20 animate-pulse rounded-2xl bg-white/[0.04]"></div>'; if (more) more.innerHTML = ''; return; }
+      box.innerHTML = rv.items.length ? rv.items.map(vsReviewHtml).join('') : '<p class="rounded-2xl bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45 ring-1 ring-white/[0.06]">No reviews yet. Tell people how it made you feel.</p>';
+      if (more) more.innerHTML = rv.items.length < rv.total ? '<button type="button" onclick="vsLoadMore()" class="w-full rounded-full py-2.5 text-[13px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">Show more reviews</button>' : '';
+    }
+    async function vsSort(v) { VS.sort = v === 'new' ? 'new' : 'felt'; VS.reviews = null; vsRenderList(); VS.reviews = await vsLoadReviews(VS.key, VS.sort, 0); vsRenderHead(); vsRenderList(); }
+    async function vsLoadMore() {
+      const rv = VS.reviews; if (!rv) return;
+      const next = await vsLoadReviews(VS.key, VS.sort, rv.items.length);
+      if (next && next.items.length) { rv.items = rv.items.concat(next.items); rv.total = next.total; vsRenderList(); }
+    }
+    function vsReveal(id) { VS.revealed.add(id); vsRenderList(); }
+    function vsExpand(id, btn) { const p = document.getElementById('rb-' + id); if (!p) return; const clamped = p.classList.toggle('line-clamp-4'); btn.textContent = clamped ? 'Read more' : 'Show less'; }
+    async function vsFelt(id) {
+      if (!vsAuth('Sign in to react.')) return;
+      const r = VS.reviews && VS.reviews.items.find(x => x.id === id); if (!r || r.mine) return;
+      const had = !!r.felt_by_me; r.felt_by_me = !had; r.felt = Math.max(0, (r.felt || 0) + (had ? -1 : 1)); vsRenderList();
+      const q = had ? sbc().from('review_reactions').delete().eq('review_id', id).eq('user_id', currentAuthUser.id) : sbc().from('review_reactions').insert({ review_id: id, user_id: currentAuthUser.id });
+      const { error } = await q;
+      if (error) { r.felt_by_me = had; r.felt = Math.max(0, r.felt + (had ? 1 : -1)); vsRenderList(); showToast('Could not save that. Try again.'); }
+    }
+    async function vsReport(id) {
+      if (!vsAuth('Sign in to report a review.')) return;
+      const { error } = await sbc().from('review_reports').insert({ review_id: id, reporter: currentAuthUser.id });
+      if (error && error.code !== '23505') { showToast('Could not send your report. Try again.'); return; }
+      VS.reported.add(id); vsRenderList(); showToast('Thanks. We will take a look.');
+    }
+
+    // ---- write / edit your review
+    function vsDraftNow() { const g = id => vsEl(id); return { headline: g('vsHeadline') ? g('vsHeadline').value : '', body: g('vsBody') ? g('vsBody').value : '', spoiler: g('vsSpoiler') ? g('vsSpoiler').checked : false }; }
+    function vsDraftSave() { VS.draft = vsDraftNow(); vsCount(); }
+    function vsWords(s) { const x = String(s || '').trim(); return x ? x.split(/\s+/).length : 0; }
+    function vsCount() { const c = vsEl('vsCount'), b = vsEl('vsBody'); if (!c || !b) return; const n = vsWords(b.value); c.textContent = `${n} / 500 words`; c.className = 'text-xs ' + (n > 500 ? 'text-rose-300' : 'text-white/35'); }
+    function vsToggleForm() {
+      if (!VS.formOpen && !vsAuth('Sign in to write a review.')) return;
+      VS.formOpen = !VS.formOpen; VS.delArmed = false;
+      if (VS.formOpen && !VS.draft) VS.draft = VS.mine ? { headline: VS.mine.headline, body: VS.mine.body || '', spoiler: !!VS.mine.spoiler } : { headline: '', body: '', spoiler: false };
+      vsRenderHead(); vsRenderForm();
+      if (VS.formOpen) setTimeout(() => { const h = vsEl('vsHeadline'); if (h) h.focus(); }, 50);
+    }
+    function vsRenderForm() {
+      const box = vsEl('vsForm'); if (!box) return;
+      if (!VS.formOpen) { box.innerHTML = ''; return; }
+      const d = VS.draft || { headline: '', body: '', spoiler: false };
+      const hiddenNote = VS.mine && VS.mine.status === 'hidden' ? '<p class="mb-3 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-400/25">Your review is hidden by moderators, so it can\'t be edited.</p>' : '';
+      box.innerHTML = `<div class="mt-4 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08] sm:p-5">
+          ${hiddenNote}
+          <label for="vsHeadline" class="block text-[13px] font-medium text-white/80">In a few words, how did it feel?</label>
+          <input id="vsHeadline" type="text" maxlength="140" value="${esc(d.headline)}" oninput="vsDraftSave()" placeholder="e.g. I walked out silent, then cried in the car" class="mt-2 w-full rounded-xl bg-white/[0.05] px-4 py-3 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30">
+          <label for="vsBody" class="mt-4 block text-[13px] font-medium text-white/80">Tell the full story <span class="font-normal text-white/35">(optional, up to 500 words)</span></label>
+          <textarea id="vsBody" rows="6" oninput="vsDraftSave()" placeholder="What stayed with you? A scene, a line, how it changed your day…" class="mt-2 w-full resize-y rounded-xl bg-white/[0.05] px-4 py-3 text-[15px] leading-relaxed text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30">${esc(d.body)}</textarea>
+          <div class="mt-2 flex flex-wrap items-center justify-between gap-3"><label class="flex cursor-pointer items-center gap-2 text-[13px] text-white/70"><input id="vsSpoiler" type="checkbox" ${d.spoiler ? 'checked' : ''} onchange="vsDraftSave()" class="h-4 w-4 accent-purple-500">Contains spoilers</label><span id="vsCount" class="text-xs text-white/35">0 / 500 words</span></div>
+          <p id="vsFormErr" role="alert" class="mt-3 hidden rounded-xl bg-rose-500/10 px-3 py-2 text-[13px] text-rose-300 ring-1 ring-rose-400/25"></p>
+          <div class="mt-4 flex flex-wrap items-center gap-2.5">
+            <button id="vsPost" type="button" onclick="vsPostReview()" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:opacity-50">${VS.mine ? 'Update review' : 'Post review'}</button>
+            <button type="button" onclick="vsToggleForm()" class="rounded-full px-5 py-2.5 text-sm text-white/65 ring-1 ring-white/12 transition hover:bg-white/[0.06] hover:text-white">Cancel</button>
+            ${VS.mine ? `<button type="button" onclick="vsDeleteReview()" class="ml-auto text-sm text-rose-300/80 transition hover:text-rose-200">${VS.delArmed ? 'Click again to delete' : 'Delete'}</button>` : ''}
+          </div>
+          <p class="mt-3 text-[11px] text-white/30">Your first name and icon show next to your review. No links, please.</p>
+        </div>`;
+      vsCount();
+    }
+    function vsFormError(msg) { const e = vsEl('vsFormErr'); if (!e) return; e.textContent = msg; e.classList.toggle('hidden', !msg); }
+    async function vsPostReview() {
+      if (!vsAuth('Sign in to write a review.')) return;
+      const d = vsDraftNow(); const headline = d.headline.trim(), body = d.body.trim();
+      if (headline.length < 2) { vsFormError('Add a few words about how it felt.'); return; }
+      if (vsWords(body) > 500) { vsFormError('Please keep it to 500 words or fewer.'); return; }
+      if (/(https?:\/\/|www\.|\.com\/|\.in\/|\.net\/)/i.test(headline + ' ' + body)) { vsFormError('Links are not allowed in reviews.'); return; }
+      vsFormError('');
+      const btn = vsEl('vsPost'); if (btn) btn.disabled = true;
+      const row = { user_id: currentAuthUser.id, title_key: VS.key, title_name: String(VS.item.title || '').slice(0, 120), author_name: vsAuthorName(), author_icon: (currentUserSession && currentUserSession.character) || null, headline, body, spoiler: !!d.spoiler };
+      const { error } = await sbc().from('title_reviews').upsert(row, { onConflict: 'user_id,title_key' });
+      if (btn) btn.disabled = false;
+      if (error) {
+        const m = String(error.message || '');
+        vsFormError(/500 words|Links are not|too fast/.test(m) ? m : /row-level security/i.test(m) ? 'This review was hidden by moderators and can\'t be edited.' : 'Could not post your review. Try again.');
+        return;
+      }
+      VS.formOpen = false; VS.draft = null; VS.sort = 'new';
+      const [rev, mine] = await Promise.all([vsLoadReviews(VS.key, 'new', 0), vsLoadMine(VS.key)]);
+      VS.reviews = rev; VS.mine = mine; vsRenderHead(); vsRenderForm(); vsRenderList();
+      showToast('Thanks for sharing how it felt.');
+    }
+    async function vsDeleteReview() {
+      if (!VS.mine) return;
+      if (!VS.delArmed) { VS.delArmed = true; vsRenderForm(); setTimeout(() => { VS.delArmed = false; vsRenderForm(); }, 4000); return; }
+      const { error } = await sbc().from('title_reviews').delete().eq('id', VS.mine.id);
+      if (error) { vsFormError('Could not delete your review. Try again.'); return; }
+      VS.mine = null; VS.formOpen = false; VS.draft = null; VS.delArmed = false;
+      VS.reviews = await vsLoadReviews(VS.key, VS.sort, 0); vsRenderHead(); vsRenderForm(); vsRenderList();
+      showToast('Review deleted.');
+    }
+
     function detailBodyHtml(item) {
-      const pcts = getVibePercentages(item);
       const saved = userWatchlistIds.includes(item.id);
       const seen = userWatchedHistory.some(h => h.id === item.id);
       const pill = 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition';
       const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
-      const sortedVibes = Object.entries(VIBES).map(([k, v]) => [v, pcts[k] || 0]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0).slice(0, 4);
       const similar = getSimilarVibeRecommendations(item);
       const realVotes = item.totalVotes && item.totalVotes > 50 ? item.totalVotes.toLocaleString() : null;
 
@@ -3855,26 +4118,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <dl class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
             ${item.director ? `<div><dt class="text-white/40">Director</dt><dd class="break-words text-white/85">${esc(item.director)}</dd></div>` : ''}
             ${item.cast && item.cast.length ? `<div><dt class="text-white/40">Cast</dt><dd class="break-words text-white/85">${esc(item.cast.slice(0, 5).join(', '))}</dd></div>` : ''}
-            <div><dt class="text-white/40">Top vibe</dt><dd class="flex items-center gap-2 break-words text-white/85"><span class="h-2 w-2 rounded-full" style="background:${dom.color}"></span>${esc(dom.label)}</dd></div>
-            ${realVotes ? `<div><dt class="text-white/40">Votes</dt><dd class="break-words text-white/85">${realVotes}</dd></div>` : ''}
+            <div id="topVibeRow" class="hidden"><dt class="text-white/40">Community verdict</dt><dd id="topVibeVal" class="flex flex-wrap items-center gap-2 break-words text-white/85"></dd></div>
+            ${realVotes ? `<div><dt class="text-white/40">TMDB votes</dt><dd class="break-words text-white/85">${realVotes}</dd></div>` : ''}
           </dl>
 
-          <section>
-            <h3 class="font-display text-lg font-medium text-white">How did it feel?</h3>
-            <p class="mt-1 text-sm text-white/45">Tap a vibe to add your vote.</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-              ${Object.values(VIBES).map(v => `<button type="button" onclick="castUserVibe('${item.id}', '${v.id}')" class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] text-white/80 ring-1 ring-white/[0.12] transition hover:bg-white/[0.07] hover:text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</button>`).join('')}
-            </div>
-            ${sortedVibes.length ? `
-              <div class="mt-5 space-y-2.5">
-                ${sortedVibes.map(([v, pct]) => `
-                  <div class="flex items-center gap-3 text-[13px]">
-                    <span class="w-32 shrink-0 text-white/65">${esc(v.label)}</span>
-                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><div class="h-full rounded-full" style="width:${pct}%;background:${v.color}"></div></div>
-                    <span class="w-10 text-right text-white/45">${pct}%</span>
-                  </div>`).join('')}
-              </div>` : ''}
-          </section>
+          <section id="vibeSection" data-item="${esc(item.id)}">${vibeSectionSkeleton()}</section>
 
           <div id="simSection" data-item="${esc(item.id)}">${similarSectionHtml({ franchise: null, items: similar })}</div>
         </div>`;
@@ -3893,6 +4141,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         document.getElementById('detailBody').innerHTML = detailBodyHtml(item);
         fillAvailability(item);
         fillSimilar(item);
+        fillVibes(item);
         return;
       }
       contentEl.dataset.itemId = item.id;
@@ -3920,6 +4169,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         <div id="detailBody">${detailBodyHtml(item)}</div>`;
       fillAvailability(item);
       fillSimilar(item);
+      fillVibes(item);
       scrollDetailsToTop(); // opened from "More like this" while scrolled down: always land at the top
       requestAnimationFrame(scrollDetailsToTop);
       Preview.volume = getSavedVolume();
