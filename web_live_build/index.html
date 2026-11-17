@@ -1109,8 +1109,8 @@
   </div>
 
   <!-- TITLE DETAIL MODAL -->
-  <div id="detailModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[60] hidden flex items-center justify-center p-3 sm:p-6">
-    <div class="bg-[#16161E] border border-[#2C2C3A] w-full max-w-2xl max-h-[92vh] rounded-3xl overflow-y-auto shadow-2xl relative">
+  <div id="detailModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-6" onclick="if(event.target === this) closeDetails();" role="dialog" aria-modal="true" aria-label="Title details">
+    <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="modalContent"></div>
     </div>
   </div>
@@ -1158,26 +1158,6 @@
     </div>
   </div>
 
-  <!-- OFFICIAL VIDEO TRAILER MODAL -->
-  <div id="trailerModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] hidden flex items-center justify-center p-3 sm:p-6" onclick="if(event.target === this) closeTrailer();">
-    <div class="relative w-full max-w-4xl bg-[#16161E] rounded-3xl overflow-hidden border border-[#2C2C3A] shadow-2xl flex flex-col">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#2C2C3A] bg-[#12121A]">
-        <div class="flex items-center gap-2.5">
-          <i class="fa-solid fa-film text-red-500"></i>
-          <h3 id="trailerModalTitle" class="text-sm font-bold text-white truncate">Official Trailer</h3>
-          <span class="text-[10px] text-slate-400 bg-[#1D1D25] px-2 py-0.5 rounded border border-[#2C2C3A]">TMDB HD</span>
-        </div>
-        <button onclick="closeTrailer()" class="w-8 h-8 rounded-full bg-[#1D1D25] text-slate-400 hover:text-white flex items-center justify-center transition">
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
-      <!-- Trailer Container -->
-      <div id="trailerContainer" class="relative w-full aspect-video bg-black flex items-center justify-center"></div>
-    </div>
-  </div>
-
-  
   <!-- GROUP MOVIE NIGHT "TASTE BATTLE" MODAL -->
   <div id="movieNightModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5" onclick="if(event.target === this) closePartyModal();">
     <div class="bg-[#16161E] border border-purple-500/40 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in">
@@ -2749,99 +2729,179 @@
       'past-lives': 'kA244xewjcI'
     };
 
-    async function openTrailer(mediaId, title, isTv) {
-      const modal = document.getElementById('trailerModal');
-      const container = document.getElementById('trailerContainer');
-      const titleEl = document.getElementById('trailerModalTitle');
-      if (!modal || !container) return;
+    // ---------------- Background trailer preview (30 s highlight, with a volume toggle) ----------------
+    const PREVIEW_SECONDS = 30;
+    const Preview = { itemId: null, iframe: null, key: null, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
 
-      if (!title) {
-        const item = (mediaDatabase || []).find(m => m.id === mediaId) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[mediaId]);
-        if (item) {
-          title = item.title;
-          if (isTv === undefined) isTv = (item.type === 'Series');
-        }
-      }
+    function prefersNoAutoplay() {
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+        if (navigator.connection && navigator.connection.saveData) return true;
+      } catch (e) {}
+      return false;
+    }
 
-      if (titleEl) titleEl.innerText = `${title || 'Title'} — Official Trailer`;
-      modal.classList.remove('hidden');
+    function getSavedMute() { try { return localStorage.getItem('watchvibe_preview_muted') === '1'; } catch (e) { return false; } }
+    function saveMute(v) { try { localStorage.setItem('watchvibe_preview_muted', v ? '1' : '0'); } catch (e) {} }
 
-      container.innerHTML = `
-        <div class="flex flex-col items-center gap-3 text-slate-400">
-          <i class="fa-solid fa-spinner fa-spin text-3xl text-red-500"></i>
-          <span class="text-xs">Fetching official HD trailer from TMDB...</span>
-        </div>
-      `;
-
-      
-
-      let youtubeKey = TRAILER_FALLBACKS[mediaId] || null;
-
+    async function resolveTrailerKey(item) {
+      let key = (typeof TRAILER_FALLBACKS !== 'undefined' && TRAILER_FALLBACKS[item.id]) || null;
       try {
         const apiKey = getActiveTmdbKey();
-        let tmdbNumericId = null;
-
-        if (mediaId && (mediaId.startsWith('tmdb-m-') || mediaId.startsWith('tmdb-live-') || mediaId.startsWith('tmdb-search-'))) {
-          tmdbNumericId = mediaId.replace(/^tmdb-[a-z]+-/, '');
-        } else if (mediaId && mediaId.startsWith('tmdb-tv-')) {
-          tmdbNumericId = mediaId.replace('tmdb-tv-', '');
-          isTv = true;
-        } else {
-          const knownIds = {
-            'interstellar': 157336,
-            'dune-2': 693134,
-            'fallout': 106379,
-            'shogun': 126308,
-            'severance': 95396,
-            'arcane': 94605,
-            'oppenheimer': 872585,
-            'challengers': 937287,
-            'glass-onion': 661374,
-            'past-lives': 666277
-          };
-          tmdbNumericId = knownIds[mediaId];
+        const mediaId = item.id || '';
+        let isTv = item.type === 'Series';
+        let numeric = null;
+        if (/^tmdb-(m|live|search)-/.test(mediaId)) numeric = mediaId.replace(/^tmdb-[a-z]+-/, '');
+        else if (mediaId.startsWith('tmdb-tv-')) { numeric = mediaId.replace('tmdb-tv-', ''); isTv = true; }
+        else if (item.tmdbId) numeric = item.tmdbId;
+        else {
+          const known = { 'interstellar': 157336, 'dune-2': 693134, 'fallout': 106379, 'shogun': 126308, 'severance': 95396, 'arcane': 94605, 'oppenheimer': 872585, 'challengers': 937287, 'glass-onion': 661374, 'past-lives': 666277 };
+          numeric = known[mediaId];
         }
-
-        if (tmdbNumericId) {
-          const endpoint = isTv ? 'tv' : 'movie';
-          const res = await fetch(`${TMDB_BASE_URL}/${endpoint}/${tmdbNumericId}/videos?api_key=${apiKey}`);
+        if (numeric) {
+          const res = await fetch(`${TMDB_BASE_URL}/${isTv ? 'tv' : 'movie'}/${numeric}/videos?api_key=${apiKey}`);
           if (res.ok) {
             const data = await res.json();
-            if (data && data.results && data.results.length) {
-              const trailer = data.results.find(v => v.site === 'YouTube' && v.type === 'Trailer') ||
-                              data.results.find(v => v.site === 'YouTube' && v.type === 'Teaser') ||
-                              data.results.find(v => v.site === 'YouTube');
-              if (trailer && trailer.key) {
-                youtubeKey = trailer.key;
-              }
-            }
+            const list = (data && data.results) || [];
+            const pick = list.find(v => v.site === 'YouTube' && v.type === 'Trailer') || list.find(v => v.site === 'YouTube' && v.type === 'Teaser') || list.find(v => v.site === 'YouTube');
+            if (pick && pick.key) key = pick.key;
           }
         }
-      } catch (e) {
-        console.warn('TMDB video fetch error, using fallback trailer:', e);
-      }
-
-      if (!youtubeKey) {
-        youtubeKey = '0srwuYOgXsk'; // Interstellar trailer fallback
-      }
-
-      container.innerHTML = `
-        <iframe class="w-full h-full" 
-          src="https://www.youtube-nocookie.com/embed/${youtubeKey}?autoplay=1&rel=0&modestbranding=1" 
-          title="${title || 'Movie Trailer'}" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          allowfullscreen>
-        </iframe>
-      `;
+      } catch (e) { console.warn('Trailer lookup failed:', e); }
+      return key;
     }
 
-    function closeTrailer() {
-      const modal = document.getElementById('trailerModal');
-      const container = document.getElementById('trailerContainer');
-      if (container) container.innerHTML = '';
-      if (modal) modal.classList.add('hidden');
+    function previewCmd(func, args) {
+      if (!Preview.iframe || !Preview.iframe.contentWindow) return;
+      try { Preview.iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*'); } catch (e) {}
     }
+
+    function setPreviewUi() {
+      const btn = document.getElementById('previewMuteBtn');
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid ${Preview.muted ? 'fa-volume-xmark' : 'fa-volume-high'}"></i>`;
+        btn.setAttribute('aria-label', Preview.muted ? 'Unmute trailer' : 'Mute trailer');
+        btn.setAttribute('aria-pressed', String(!Preview.muted));
+      }
+    }
+
+    function showPreviewControls(show) {
+      const bar = document.getElementById('previewControls');
+      if (bar) bar.classList.toggle('hidden', !show);
+    }
+
+    function endPreview() {
+      previewCmd('pauseVideo');
+      Preview.playing = false;
+      const wrap = document.getElementById('previewSlot');
+      if (wrap) wrap.style.opacity = '0';
+      const replay = document.getElementById('previewReplayBtn');
+      if (replay) replay.classList.remove('hidden');
+      const mute = document.getElementById('previewMuteBtn');
+      if (mute) mute.classList.add('hidden');
+      clearTimeout(Preview.fallbackTimer);
+    }
+
+    function onPreviewMessage(e) {
+      if (!Preview.iframe || e.source !== Preview.iframe.contentWindow) return;
+      let msg = e.data;
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (err) { return; } }
+      if (!msg || msg.event !== 'infoDelivery' || !msg.info) return;
+      const info = msg.info;
+      if (typeof info.muted === 'boolean' && info.muted !== Preview.muted) { Preview.muted = info.muted; setPreviewUi(); }
+      if (Preview.retry) { clearInterval(Preview.retry); Preview.retry = null; }
+
+      // 1) pick the highlight start once we know the duration (about 40% in, never in the last 32 s)
+      if (!Preview.seeked && info.duration > 0) {
+        Preview.seeked = true;
+        const d = info.duration;
+        Preview.startAt = Math.max(0, Math.min(Math.round(d * 0.4), Math.floor(d - PREVIEW_SECONDS - 2)));
+        if (Preview.startAt > 5) previewCmd('seekTo', [Preview.startAt, true]);
+      }
+      if (info.playerState === 1) {
+        Preview.playing = true;
+        clearTimeout(Preview.fallbackTimer);
+        if (Preview.seeked && (info.currentTime || 0) >= Preview.startAt - 1) {
+          const slot = document.getElementById('previewSlot');
+          if (slot) slot.style.opacity = '1';
+          showPreviewControls(true);
+          const mb = document.getElementById('previewMuteBtn');
+          if (mb) { mb.classList.remove('hidden'); mb.classList.add('flex'); }
+        }
+      }
+      // 2) stop after 30 s of highlight
+      if (Preview.seeked && typeof info.currentTime === 'number' && info.currentTime >= Preview.startAt + PREVIEW_SECONDS) endPreview();
+      if (info.playerState === 0) endPreview();
+    }
+    window.addEventListener('message', onPreviewMessage);
+
+    function mountPreviewIframe(startMuted) {
+      const slot = document.getElementById('previewSlot');
+      if (!slot || !Preview.key) return;
+      Preview.seeked = false; Preview.playing = false; Preview.muted = !!startMuted;
+      slot.style.opacity = '0';
+      const params = `autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
+      slot.innerHTML = `<iframe class="pointer-events-none absolute inset-0 h-full w-full scale-[1.35]" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
+      Preview.iframe = slot.querySelector('iframe');
+      setPreviewUi();
+      const token = Preview.token;
+      Preview.iframe.addEventListener('load', () => {
+        if (token !== Preview.token) return;
+        // ask YouTube to stream player info (duration, time, state) to us
+        let tries = 0;
+        clearInterval(Preview.retry);
+        Preview.retry = setInterval(() => {
+          if (token !== Preview.token || ++tries > 20) { clearInterval(Preview.retry); return; }
+          try { Preview.iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'wv', channel: 'widget' }), '*'); } catch (e) {}
+        }, 400);
+      });
+      // Browsers may block autoplay with sound: if nothing is playing shortly, retry muted
+      clearTimeout(Preview.fallbackTimer);
+      Preview.fallbackTimer = setTimeout(() => {
+        if (token !== Preview.token || Preview.playing) return;
+        if (!startMuted) { mountPreviewIframe(true); }
+      }, 4500);
+    }
+
+    async function startTrailerPreview(item) {
+      stopTrailerPreview();
+      if (!item || prefersNoAutoplay()) return;
+      const token = Preview.token;
+      Preview.itemId = item.id;
+      const key = await resolveTrailerKey(item);
+      if (token !== Preview.token || !key) return; // closed/changed meanwhile, or no trailer found
+      Preview.key = key;
+      mountPreviewIframe(getSavedMute());
+    }
+
+    function stopTrailerPreview() {
+      Preview.token++;
+      clearInterval(Preview.retry); clearTimeout(Preview.fallbackTimer);
+      Preview.retry = null; Preview.fallbackTimer = null;
+      const slot = document.getElementById('previewSlot');
+      if (slot) { slot.innerHTML = ''; slot.style.opacity = '0'; }
+      Preview.iframe = null; Preview.key = null; Preview.playing = false; Preview.seeked = false;
+    }
+
+    function toggleTrailerMute() {
+      if (!Preview.iframe) return;
+      Preview.muted = !Preview.muted;
+      previewCmd(Preview.muted ? 'mute' : 'unMute');
+      saveMute(Preview.muted);
+      setPreviewUi();
+    }
+
+    function replayTrailerPreview() {
+      if (!Preview.key) return;
+      const replay = document.getElementById('previewReplayBtn');
+      if (replay) replay.classList.add('hidden');
+      const mute = document.getElementById('previewMuteBtn');
+      if (mute) mute.classList.remove('hidden');
+      Preview.token++;
+      mountPreviewIframe(Preview.muted);
+    }
+
+    function closeTrailer() { stopTrailerPreview(); }
 
     function filterByVibe(vibeId) {
       activeMood = (activeMood === vibeId) ? null : vibeId;
@@ -3639,7 +3699,6 @@ function posterCard(item, opts) {
             <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-white/70">${esc(hero.synopsis || '')}</p>
             <div class="mt-6 flex flex-wrap gap-3">
               <button type="button" onclick="openDetails('${hero.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
-              <button type="button" onclick="openTrailer('${hero.id}')" class="rounded-full bg-white/10 px-6 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15"><i class="fa-solid fa-play mr-2 text-xs"></i>Trailer</button>
             </div>
           </div>
         </section>` : '';
@@ -4095,264 +4154,111 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
       renderMovieDetailsModal(item);
     }
 
-    function renderMovieDetailsModal(item) {
+    function detailBodyHtml(item) {
       const pcts = getVibePercentages(item);
       const userRegion = selectedCountry || 'IN';
       const streamingList = (item.streaming && item.streaming[userRegion]) || (item.streaming && item.streaming.IN) || (item.streaming && item.streaming.US) || [];
+      const saved = userWatchlistIds.includes(item.id);
+      const seen = userWatchedHistory.some(h => h.id === item.id);
+      const primary = streamingList[0];
+      const primaryLink = getProviderDirectLink(primary ? primary.name : 'google', item.title, item.type === 'Series', selectedCountry);
+      const pill = 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition';
+      const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
+      const sortedVibes = Object.entries(VIBES).map(([k, v]) => [v, pcts[k] || 0]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0).slice(0, 4);
+      const similar = getSimilarVibeRecommendations(item).slice(0, 8);
+      const realVotes = item.totalVotes && item.totalVotes > 50 ? item.totalVotes.toLocaleString() : null;
 
-      const html = `
-        <div class="relative">
-          <div class="relative h-64 sm:h-72">
-            <img src="${item.backdrop}" class="w-full h-full object-cover" alt="${item.title}" onerror="this.src='${item.poster}'">
-            <div class="absolute inset-0 bg-gradient-to-t from-[#16161E] via-[#16161E]/60 to-transparent"></div>
-            
-            <button onclick="closeDetails()" class="absolute top-4 right-4 bg-black/70 text-white w-9 h-9 rounded-full flex items-center justify-center hover:bg-black transition">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
-
-            <div class="absolute bottom-5 left-6 right-6 flex items-end gap-5">
-              <img src="${item.poster}" class="w-24 sm:w-28 h-36 sm:h-40 rounded-2xl object-cover border-2 border-[#2C2C3A] shadow-2xl shrink-0" alt="${item.title}" onerror="handleMediaPosterError(this)">
-              <div class="flex-1 min-w-0">
-                <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight truncate">${item.title}</h2>
-                <p class="text-xs sm:text-sm text-slate-300 mt-1">${item.year} • ${item.duration} • ${(item.genres || []).join(', ')}</p>
-                ${item.director ? `<div class="text-[11px] text-purple-300 font-semibold mt-1 truncate">Directed by <span class="text-white font-bold">${item.director}</span></div>` : ''}
-                ${item.cast && item.cast.length > 0 ? `<div class="text-[11px] text-slate-400 truncate mt-0.5">Starring: <span class="text-slate-200">${item.cast.join(', ')}</span></div>` : ''}
-                <div class="mt-2 text-amber-400 font-black text-base flex items-center gap-1.5">
-                  ★ ${item.rating} <span class="text-slate-400 font-normal text-xs">/ 10</span>
-                  <span class="text-[11px] text-slate-400 font-normal ml-2">(${item.totalVotes ? item.totalVotes.toLocaleString() : '5,000'} votes)</span>
-                </div>
-                <!-- Interactive Action Buttons with Clickable Streaming & Watched/Watchlist -->
-                <div class="flex flex-wrap gap-2 pt-2.5">
-                  ${streamingList.length > 0 ? streamingList.map(prov => {
-                    const isIndia = (selectedCountry === 'IN');
-                    let displayName = prov.name;
-                    if (isIndia && prov.name.toLowerCase().includes('prime')) displayName = 'Prime Video (IN)';
-                    if (isIndia && prov.name.toLowerCase().includes('hotstar')) displayName = 'Disney+ Hotstar';
-                    const link = getProviderDirectLink(prov.name, item.title, item.type === 'Series', selectedCountry);
-                    return `
-                      <a href="${link}" target="_blank" rel="noopener noreferrer" 
-                        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
-                        <i class="fa-solid fa-play"></i> Watch on ${displayName}
-                      </a>
-                    `;
-                  }).join('') : `
-                    <a href="${getProviderDirectLink('google', item.title, item.type === 'Series', selectedCountry)}" target="_blank" rel="noopener noreferrer" 
-                      class="bg-[#1D1D25] hover:bg-[#282834] text-slate-300 hover:text-white border border-[#2C2C3A] text-xs font-bold px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
-                      <i class="fa-solid fa-magnifying-glass"></i> Watch Options (${selectedCountry})
-                    </a>
-                  `}
-                  <button onclick="openTrailer('${item.id}')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-film"></i> Trailer
-                  </button>
-                  <button onclick="toggleWatchlist('${item.id}')" class="${userWatchlistIds.includes(item.id) ? 'bg-purple-600 text-white' : 'bg-[#1D1D25] text-purple-300 hover:text-white'} border border-purple-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-bookmark"></i> ${userWatchlistIds.includes(item.id) ? 'Saved' : 'Watchlist'}
-                  </button>
-                  <button onclick="toggleWatched('${item.id}')" class="${userWatchedHistory.some(h => h.id === item.id) ? 'bg-emerald-600 text-white' : 'bg-[#1D1D25] text-emerald-400 hover:text-white'} border border-emerald-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition shadow flex items-center gap-1.5 cursor-pointer">
-                    <i class="fa-solid fa-eye"></i> ${userWatchedHistory.some(h => h.id === item.id) ? 'Watched' : 'Mark Seen'}
-                  </button>
-                </div>
-              </div>
-            </div>
+      return `
+        <div class="space-y-8 p-6 sm:p-8">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <a href="${primaryLink}" target="_blank" rel="noopener noreferrer" class="${pill} bg-white text-black ring-white hover:bg-white/90"><i class="fa-solid fa-play text-xs"></i>${primary ? 'Watch on ' + esc(primary.name) : 'Find where to watch'}</a>
+            <button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill} ${saved ? 'bg-purple-500/25 text-white ring-purple-400/50' : 'text-white/80 ring-white/15 hover:bg-white/[0.07]'}"><i class="fa-solid fa-bookmark text-xs"></i>${saved ? 'Saved' : 'Watchlist'}</button>
+            <button type="button" onclick="toggleWatched('${item.id}')" class="${pill} ${seen ? 'bg-emerald-500/20 text-white ring-emerald-400/40' : 'text-white/80 ring-white/15 hover:bg-white/[0.07]'}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>
           </div>
 
-          <div class="p-6 space-y-6">
+          ${item.synopsis ? `<p class="max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(item.synopsis)}</p>` : ''}
 
-            <!-- WHERE TO WATCH IN DETECTED REGION -->
-            <div class="bg-[#1D1D25] p-4 rounded-2xl border border-[#2C2C3A] space-y-2.5">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <i class="fa-solid fa-tv text-blue-400"></i> Where to Watch in Your Region
-                </span>
-                <span class="text-xs text-slate-400 flex items-center gap-1.5">
-                  <i class="fa-solid fa-location-dot text-purple-400 text-[11px]"></i>
-                  Detected Region: <b class="text-white">${selectedCountry === 'IN' ? '🇮🇳 India' : selectedCountry === 'US' ? '🇺🇸 United States' : selectedCountry}</b>
-                  <span class="text-[9px] text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20 font-bold">Auto IP</span>
-                </span>
-              </div>
-              <div class="text-[11px] text-slate-400">Available across ${streamingList.length} streaming platform${streamingList.length === 1 ? '' : 's'} in your area:</div>
-              <div class="flex flex-wrap gap-2.5 pt-1">
-                ${streamingList.map(prov => {
-                  const link = getProviderDirectLink(prov.name, item.title, item.type === 'Series', selectedCountry);
-                  const isIndia = (selectedCountry === 'IN');
-                  let labelName = prov.name;
-                  if (isIndia && prov.name.toLowerCase().includes('prime')) labelName = 'Prime Video India';
-                  if (isIndia && prov.name.toLowerCase().includes('hotstar')) labelName = 'Disney+ Hotstar';
-                  return `
-                    <a href="${link}" target="_blank" rel="noopener noreferrer"
-                      class="bg-[#16161E] hover:bg-[#20202C] border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 font-bold transition shadow group cursor-pointer">
-                      <span class="text-base">${prov.logo || '📺'}</span>
-                      <span>${labelName}</span>
-                      <span class="bg-blue-500/20 group-hover:bg-blue-500 group-hover:text-white text-blue-400 text-[10px] px-1.5 py-0.5 rounded font-black transition flex items-center gap-1 ml-1">
-                        ${prov.price ? prov.price : 'WATCH'} <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-                      </span>
-                    </a>
-                  `;
-                }).join('')}
-              </div>
+          <dl class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            ${item.director ? `<div><dt class="text-white/40">Director</dt><dd class="text-white/85">${esc(item.director)}</dd></div>` : ''}
+            ${item.cast && item.cast.length ? `<div><dt class="text-white/40">Cast</dt><dd class="text-white/85">${esc(item.cast.slice(0, 5).join(', '))}</dd></div>` : ''}
+            <div><dt class="text-white/40">Top vibe</dt><dd class="flex items-center gap-2 text-white/85"><span class="h-2 w-2 rounded-full" style="background:${dom.color}"></span>${esc(dom.label)}</dd></div>
+            ${realVotes ? `<div><dt class="text-white/40">Votes</dt><dd class="text-white/85">${realVotes}</dd></div>` : ''}
+          </dl>
+
+          <section>
+            <h3 class="font-display text-lg font-medium text-white">How did it feel?</h3>
+            <p class="mt-1 text-sm text-white/45">Tap a vibe to add your vote.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              ${Object.values(VIBES).map(v => `<button type="button" onclick="castUserVibe('${item.id}', '${v.id}')" class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] text-white/80 ring-1 ring-white/[0.12] transition hover:bg-white/[0.07] hover:text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</button>`).join('')}
             </div>
+            ${sortedVibes.length ? `
+              <div class="mt-5 space-y-2.5">
+                ${sortedVibes.map(([v, pct]) => `
+                  <div class="flex items-center gap-3 text-[13px]">
+                    <span class="w-32 shrink-0 text-white/65">${esc(v.label)}</span>
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><div class="h-full rounded-full" style="width:${pct}%;background:${v.color}"></div></div>
+                    <span class="w-10 text-right text-white/45">${pct}%</span>
+                  </div>`).join('')}
+              </div>` : ''}
+          </section>
 
-            <!-- RATE THE VIBE (INTERACTIVE AUDIENCE VOTING) -->
-            <div class="bg-[#1D1D25] p-4 sm:p-5 rounded-2xl border border-purple-500/30 space-y-3">
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                  <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> Rate the Vibe: How did this make you feel?
-                </span>
-                <span class="text-xs text-purple-300 font-bold">Tap a vibe to vote</span>
+          ${streamingList.length > 1 ? `
+            <section>
+              <h3 class="font-display text-lg font-medium text-white">Where to watch</h3>
+              <div class="mt-3 flex flex-wrap gap-2">
+                ${streamingList.map(prov => `<a href="${getProviderDirectLink(prov.name, item.title, item.type === 'Series', selectedCountry)}" target="_blank" rel="noopener noreferrer" class="rounded-full px-3.5 py-1.5 text-[13px] text-white/80 ring-1 ring-white/[0.12] transition hover:bg-white/[0.07] hover:text-white">${esc(prov.name)}${prov.price ? ' · ' + esc(prov.price) : ''}</a>`).join('')}
               </div>
-              <div class="flex flex-wrap gap-2 pt-1">
-                ${Object.values(VIBES).map(v => `
-                  <button onclick="castUserVibe('${item.id}', '${v.id}')" 
-                    class="px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition hover:scale-105 active:scale-95 shadow cursor-pointer" 
-                    style="background-color: ${v.color}20; color: ${v.color}; border-color: ${v.color}50">
-                    <i class="fa-solid ${v.icon}"></i> ${v.label}
-                  </button>
-                `).join('')}
-              </div>
+            </section>` : ''}
+
+          ${similar.length ? `
+            <section>
+              <h3 class="font-display text-lg font-medium text-white">More like this</h3>
+              <div class="no-scrollbar -mx-1 mt-3 flex gap-4 overflow-x-auto px-1 pb-1">${similar.map(r => posterCard(r)).join('')}</div>
+            </section>` : ''}
+        </div>`;
+    }
+
+    function renderMovieDetailsModal(item) {
+      const contentEl = document.getElementById('modalContent');
+      if (!contentEl) return;
+      // Re-render only the body when the same title is already open, so the trailer preview isn't interrupted
+      if (contentEl.dataset.itemId === item.id && document.getElementById('detailBody')) {
+        document.getElementById('detailBody').innerHTML = detailBodyHtml(item);
+        return;
+      }
+      contentEl.dataset.itemId = item.id;
+      const meta = [item.year, (item.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), item.duration].filter(Boolean).join('  ·  ');
+      contentEl.innerHTML = `
+        <div class="relative aspect-video max-h-[420px] w-full overflow-hidden bg-[#14141A]">
+          <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
+          <div id="previewSlot" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0F0F14] via-[#0F0F14]/35 to-transparent"></div>
+          <button type="button" onclick="closeDetails()" class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+          <div class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-8">
+            <div class="min-w-0">
+              <h2 class="font-display text-3xl font-medium leading-tight text-white sm:text-4xl">${esc(item.title)}</h2>
+              <p class="mt-1.5 text-sm text-white/60">${esc(meta)}<span class="ml-3 text-amber-300">★ ${esc(item.rating)}</span></p>
             </div>
-
-            <!-- CRITIC VS. VIBE REALITY CHECK -->
-            <div class="bg-gradient-to-br from-[#1E1B2E] via-[#1D1D25] to-[#171F2C] p-5 rounded-2xl border border-purple-500/30 space-y-3.5 shadow-xl">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-2">
-                  <i class="fa-solid fa-scale-balanced text-purple-400"></i> Critic vs. Vibe Reality Check
-                </span>
-                <span class="text-[10px] bg-purple-500/20 text-purple-300 font-bold px-2.5 py-0.5 rounded-full border border-purple-500/30">
-                  WatchVibe Reality Index
-                </span>
-              </div>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <!-- Critic Aggregators -->
-                <div class="bg-[#14141B] p-3.5 rounded-xl border border-[#2A2A38] space-y-2">
-                  <div class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 uppercase">
-                    <i class="fa-solid fa-newspaper text-slate-400"></i> Professional Critics
-                  </div>
-                  <div class="flex items-center justify-around py-1">
-                    <div class="text-center">
-                      <div class="text-[11px] text-slate-400">Rotten Tomatoes</div>
-                      <div class="text-lg font-black text-rose-400 flex items-center justify-center gap-1">
-                        🍅 ${item.rottenTomatoes || Math.round((item.rating || 8.0) * 10) + '%'}
-                      </div>
-                    </div>
-                    <div class="h-8 w-px bg-[#2A2A38]"></div>
-                    <div class="text-center">
-                      <div class="text-[11px] text-slate-400">IMDb Rating</div>
-                      <div class="text-lg font-black text-amber-400 flex items-center justify-center gap-1">
-                        ★ ${item.rating || '8.5'}<span class="text-[10px] text-slate-500">/10</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="text-[10px] text-slate-500 text-center">Calculated from verified media reviews</div>
-                </div>
-
-                <!-- Audience Emotional Vibe Reality -->
-                <div class="bg-[#14141B] p-3.5 rounded-xl border border-purple-500/30 space-y-2">
-                  <div class="text-[11px] font-bold text-purple-300 flex items-center gap-1.5 uppercase">
-                    <i class="fa-solid fa-heart-pulse text-purple-400"></i> Audience Emotional Reality
-                  </div>
-                  <div class="flex items-center justify-around py-1">
-                    <div class="text-center">
-                      <div class="text-[11px] text-slate-400">Primary Emotion</div>
-                      <div class="text-base font-black text-emerald-400">
-                        ${VIBES[item.dominantVibe]?.label || 'Must Watch'}
-                      </div>
-                    </div>
-                    <div class="h-8 w-px bg-[#2A2A38]"></div>
-                    <div class="text-center">
-                      <div class="text-[11px] text-slate-400">Vibe Consensus</div>
-                      <div class="text-lg font-black text-purple-300">
-                        ${pcts[item.dominantVibe] || 88}%
-                      </div>
-                    </div>
-                  </div>
-                  <div class="text-[10px] text-purple-300/80 text-center font-medium">
-                    ${(item.totalVotes || 15000).toLocaleString()} audience emotional vibe votes
-                  </div>
-                </div>
-              </div>
-
-              <!-- The Reality Verdict -->
-              <div class="bg-black/40 p-3 rounded-xl border border-purple-500/20 text-xs text-slate-300 leading-relaxed">
-                <b class="text-white flex items-center gap-1.5 mb-1">
-                  <i class="fa-solid fa-comment-dots text-purple-400"></i> The Vibe Reality Verdict:
-                </b>
-                ${item.vibeReality || `Audiences celebrate ${item.title} as a standout ${VIBES[item.dominantVibe]?.label || 'Must Watch'} experience with memorable cinematic depth.`}
-              </div>
+            <div id="previewControls" class="flex shrink-0 items-center gap-2">
+              <button id="previewMuteBtn" type="button" onclick="toggleTrailerMute()" class="hidden h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Mute trailer"><i class="fa-solid fa-volume-high"></i></button>
+              <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
             </div>
-
-            <!-- SIMILAR VIBES & NEXT WATCH RECOMMENDATIONS CAROUSEL -->
-            <div class="bg-[#1D1D25] p-5 rounded-2xl border border-purple-500/30 space-y-3 shadow-xl">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid fa-sparkles text-purple-400"></i>
-                  <h3 class="text-xs font-black text-white uppercase tracking-wider">Similar Vibes: If You Liked This</h3>
-                </div>
-                <span class="text-[10px] text-purple-300 font-semibold">Matched by Vibe DNA & Genre</span>
-              </div>
-              <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                ${getSimilarVibeRecommendations(item).map(rec => {
-                  const recVibe = VIBES[rec.dominantVibe] || VIBES.must_watch;
-                  return `
-                    <div onclick="openDetails('${rec.id}')" 
-                      class="shrink-0 w-36 sm:w-40 bg-[#16161E] rounded-xl p-2.5 border border-[#2A2A38] hover:border-purple-400/60 cursor-pointer transition flex flex-col justify-between group shadow">
-                      <div class="relative overflow-hidden rounded-lg mb-2 h-44 bg-slate-900">
-                        <img src="${rec.poster}" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="handleMediaPosterError(this)">
-                        <span class="absolute top-1.5 right-1.5 bg-black/80 text-amber-400 text-[9px] font-black px-1.5 py-0.5 rounded shadow">
-                          ★ ${rec.rating}
-                        </span>
-                      </div>
-                      <div class="text-xs font-bold text-white truncate">${rec.title}</div>
-                      <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1">
-                        <span>${rec.year}</span>
-                        <span class="font-bold px-1.5 py-0.5 rounded" style="color: ${recVibe.color}; background-color: ${recVibe.color}20">
-                          ${recVibe.label}
-                        </span>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
-            <!-- COMMUNITY VIBE PERCENTAGES -->
-            <div class="bg-[#1D1D25] p-5 rounded-2xl border border-[#2C2C3A] space-y-3">
-              <div class="flex items-center justify-between text-xs font-bold text-white">
-                <span>Community Vibes Breakdown</span>
-                <span class="text-slate-400 text-xs font-mono">${(item.totalVotes || 15000).toLocaleString()} votes</span>
-              </div>
-              <div class="space-y-2.5 pt-1">
-                ${Object.entries(VIBES).map(([key, v]) => {
-                  const pct = pcts[key] || 0;
-                  return `
-                    <div class="space-y-1">
-                      <div class="flex justify-between text-xs">
-                        <span class="flex items-center gap-2 font-semibold text-slate-200">
-                          <i class="fa-solid ${v.icon}" style="color: ${v.color}"></i> ${v.label}
-                        </span>
-                        <span class="font-bold" style="color: ${v.color}">${pct}%</span>
-                      </div>
-                      <div class="h-2.5 w-full bg-[#16161E] rounded-full overflow-hidden">
-                        <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${v.color}"></div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
-            <!-- Synopsis -->
-            <div>
-              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Synopsis</span>
-              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${item.synopsis}</p>
-            </div>
-
           </div>
         </div>
-      `;
-
-      document.getElementById('modalContent').innerHTML = html;
+        <div id="detailBody">${detailBodyHtml(item)}</div>`;
+      // the mute button only appears once the preview is actually playing
+      const mb = document.getElementById('previewMuteBtn');
+      if (mb) { mb.classList.remove('hidden'); mb.classList.add('hidden'); }
+      startTrailerPreview(item);
     }
-        function closeDetails() { document.getElementById('detailModal').classList.add('hidden'); }
+
+    function closeDetails() {
+      stopTrailerPreview();
+      const m = document.getElementById('detailModal');
+      if (m) m.classList.add('hidden');
+      const c = document.getElementById('modalContent');
+      if (c) { delete c.dataset.itemId; }
+    }
 
     // --- SWIPE DECK SIMULATOR ---
     function openSwipeDeck() {
