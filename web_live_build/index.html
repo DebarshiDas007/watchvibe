@@ -1028,7 +1028,7 @@
     </nav>
 
     <div class="ml-auto flex items-center gap-3">
-      <button type="button" onclick="goSearch()" class="hidden items-center gap-2.5 rounded-full bg-white/[0.05] px-4 py-2 text-sm text-white/45 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white/70 md:flex md:w-64" aria-label="Search">
+      <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden items-center gap-2.5 rounded-full bg-white/[0.05] px-4 py-2 text-sm text-white/45 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white/70 md:flex md:w-64" aria-label="Search">
         <i class="fa-solid fa-magnifying-glass text-xs"></i><span>Search titles, actors, moods</span>
       </button>
       <button id="cloudAuthBtn" type="button" onclick="openAuthModal()" class="flex items-center gap-2.5 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-4 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10" title="Account">
@@ -1103,7 +1103,7 @@
 
   <!-- ACTOR PROFILE MODAL -->
   <div id="actorModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-6">
-    <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
+    <div class="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="actorModalContent"></div>
     </div>
   </div>
@@ -3909,6 +3909,25 @@ function posterCard(item, opts) {
       </footer>`;
     }
 
+    window.__filmPosterCache = window.__filmPosterCache || {};
+    async function fixFilmPoster(img, title, year) {
+      if (!img || img.dataset.fixing) return;
+      img.dataset.fixing = '1';
+      const key = title + '|' + year;
+      try {
+        let url = window.__filmPosterCache[key];
+        if (url === undefined) {
+          const r = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${getActiveTmdbKey()}&query=${encodeURIComponent(title)}`);
+          const j = await r.json();
+          const hits = (j.results || []).filter(x => x.poster_path && (x.media_type === 'movie' || x.media_type === 'tv'));
+          const best = hits.find(x => String(x.release_date || x.first_air_date || '').slice(0, 4) === String(year)) || hits[0];
+          url = best ? TMDB_IMG_URL + best.poster_path : null;
+          window.__filmPosterCache[key] = url;
+        }
+        if (url) { img.onerror = () => handleMediaPosterError(img, title); img.src = url; return; }
+      } catch (e) {}
+      handleMediaPosterError(img, title);
+    }
     function openActorProfile(actorId) {
       let actor = ACTORS[actorId];
       if (!actor) {
@@ -3941,127 +3960,79 @@ function posterCard(item, opts) {
         list.sort((a, b) => a.year - b.year);
       }
 
+      const chipOn = 'bg-white text-black ring-white';
+      const chipOff = 'bg-white/[0.04] text-white/70 ring-white/10 hover:bg-white/10 hover:text-white';
+      const sorts = [['boxOffice', 'Highest box office'], ['rating', 'Highest rating'], ['popularity', 'Most popular here'], ['releaseDateNew', 'Newest first'], ['releaseDateOld', 'Oldest first']];
       const html = `
-        <div class="p-6 sm:p-8 space-y-6">
-          <button onclick="closeActorProfile()" class="absolute top-5 right-5 bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center hover:bg-black transition">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
+        <div class="relative">
+          <button type="button" onclick="closeActorProfile()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/80 ring-1 ring-white/10 backdrop-blur transition hover:bg-black hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
 
-          <!-- Header -->
-          <div class="flex flex-col sm:flex-row gap-6 items-start">
-            <img src="${actor.img}" class="w-28 sm:w-36 h-36 sm:h-44 rounded-2xl object-cover border-2 border-purple-500 shadow-2xl shrink-0" alt="${actor.name}">
-            <div class="flex-1">
-              <div class="inline-block bg-purple-500/20 text-purple-300 text-xs font-bold px-2.5 py-0.5 rounded-full mb-1.5">
-                ${actor.role}
-              </div>
-              <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight">${actor.name}</h2>
-              <p class="text-xs text-slate-400 mt-1">${actor.born}</p>
-
-              <div class="flex flex-wrap gap-2.5 mt-4">
-                <div class="bg-amber-500/15 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <i class="fa-solid fa-sack-dollar text-amber-400"></i> Career Box Office: ${actor.boxOfficeTotal}
-                </div>
-                <div class="bg-[#1D1D25] border border-[#2C2C3A] text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <i class="fa-solid fa-star text-amber-400"></i> ★ ${actor.avgRating} Avg Rating
+          <div class="relative overflow-hidden px-5 pb-6 pt-8 sm:px-8 sm:pt-10">
+            <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-purple-500/[0.12] via-transparent to-transparent"></div>
+            <div class="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:gap-7 sm:text-left">
+              <img src="${esc(actor.img)}" alt="${esc(actor.name)}" class="h-36 w-36 shrink-0 rounded-full object-cover ring-1 ring-white/15 sm:h-40 sm:w-40" onerror="handleActorImageError(this)">
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-medium uppercase tracking-[0.14em] text-purple-300/90">${esc(actor.role || '')}</div>
+                <h2 class="mt-1.5 break-words font-display text-3xl font-medium leading-tight text-white sm:text-4xl">${esc(actor.name)}</h2>
+                <p class="mt-1 text-sm text-white/45">${esc(actor.born || '')}</p>
+                <div class="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-2 sm:justify-start">
+                  <div><div class="text-[11px] uppercase tracking-wider text-white/40">Career box office</div><div class="text-base font-medium text-white">${esc(actor.boxOfficeTotal || '')}</div></div>
+                  <div><div class="text-[11px] uppercase tracking-wider text-white/40">Average rating</div><div class="text-base font-medium text-white"><span class="text-amber-300">★</span> ${esc(actor.avgRating || '')}</div></div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Bio -->
-          <div class="bg-[#1D1D25] p-4 rounded-2xl border border-[#2C2C3A]">
-            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">About ${actor.name}</h4>
-            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${actor.bio}</p>
-          </div>
+          <div class="space-y-9 px-5 pb-8 sm:px-8">
+            <section>
+              <h3 class="text-xs font-medium uppercase tracking-[0.14em] text-white/40">About</h3>
+              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(actor.bio || '')}</p>
+            </section>
 
-          <!-- Actor Vibe DNA -->
-          <div class="bg-[#1D1D25] p-5 rounded-2xl border border-[#2C2C3A] space-y-3">
-            <div class="flex items-center justify-between text-xs">
-              <span class="font-bold text-white flex items-center gap-2 uppercase tracking-wider">
-                <i class="fa-solid fa-dna text-purple-400"></i> Actor Vibe DNA (Audience Perception)
-              </span>
-              <span class="text-slate-400 text-xs">Aggregated from audience reviews</span>
-            </div>
-            <div class="h-3.5 w-full rounded-full overflow-hidden flex">
-              ${Object.entries(actor.vibeBreakdown).map(([vibeId, pct]) => `
-                <div style="width: ${pct}%; background-color: ${VIBES[vibeId].color}" title="${VIBES[vibeId].label}: ${pct}%"></div>
-              `).join('')}
-            </div>
-            <div class="flex flex-wrap gap-2 pt-1">
-              ${Object.entries(actor.vibeBreakdown).map(([vibeId, pct]) => {
-                const v = VIBES[vibeId];
-                return `
-                  <span class="text-xs font-semibold px-2.5 py-1 rounded-lg border flex items-center gap-1.5" style="background-color: ${v.color}20; color: ${v.color}; border-color: ${v.color}40">
-                    <i class="fa-solid ${v.icon}"></i> ${v.label} (${pct}%)
-                  </span>
-                `;
-              }).join('')}
-            </div>
-          </div>
+            <section>
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4">
+                <h3 class="text-xs font-medium uppercase tracking-[0.14em] text-white/40">How audiences see them</h3>
+              </div>
+              <div class="mt-3 flex h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                ${Object.entries(actor.vibeBreakdown || {}).map(([vibeId, pct]) => `<div style="width:${pct}%;background:${(VIBES[vibeId] || VIBES.must_watch).color}" title="${esc((VIBES[vibeId] || VIBES.must_watch).label)}: ${pct}%"></div>`).join('')}
+              </div>
+              <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+                ${Object.entries(actor.vibeBreakdown || {}).map(([vibeId, pct]) => { const v = VIBES[vibeId] || VIBES.must_watch; return `<span class="inline-flex items-center gap-2 text-[13px] text-white/70"><span class="h-2 w-2 rounded-full" style="background:${v.color}"></span>${esc(v.label)} <span class="text-white/40">${pct}%</span></span>`; }).join('')}
+              </div>
+            </section>
 
-          <!-- SEQUENCE SORTING CONTROLLER -->
-          <div class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2C2C3A] pb-3">
-              <div>
-                <h3 class="text-lg font-black text-white">Filmography (${list.length} Titles)</h3>
-                <p class="text-xs text-slate-400">Re-ordered in sequence by your preferred metric</p>
+            <section>
+              <div class="flex flex-wrap items-end justify-between gap-3">
+                <h3 class="font-display text-2xl font-medium text-white">Filmography <span class="ml-1 text-sm font-normal text-white/40">${list.length}</span></h3>
+                <label class="flex items-center gap-2 text-sm text-white/45">Sort
+                  <select onchange="currentActorSort=this.value; openActorProfile('${esc(actor.id)}');" class="rounded-full bg-white/[0.05] px-3.5 py-1.5 text-[13px] text-white ring-1 ring-white/10 focus:outline-none focus:ring-white/30">
+                    ${sorts.map(([v, l]) => `<option value="${v}" ${currentActorSort === v ? 'selected' : ''} class="bg-[#14141A]">${l}</option>`).join('')}
+                  </select>
+                </label>
               </div>
 
-              <div class="flex items-center gap-2 text-xs">
-                <span class="text-slate-400 font-medium">Sort by:</span>
-                <select onchange="currentActorSort=this.value; openActorProfile('${actor.id}');" class="bg-[#1D1D25] border border-purple-500/40 text-white rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none cursor-pointer">
-                  <option value="boxOffice" ${currentActorSort==='boxOffice'?'selected':''}>💰 Highest Box Office</option>
-                  <option value="rating" ${currentActorSort==='rating'?'selected':''}>⭐ Highest Rating</option>
-                  <option value="popularity" ${currentActorSort==='popularity'?'selected':''}>🔥 Popularity in App</option>
-                  <option value="releaseDateNew" ${currentActorSort==='releaseDateNew'?'selected':''}>📅 Newest First</option>
-                  <option value="releaseDateOld" ${currentActorSort==='releaseDateOld'?'selected':''}>⏳ Chronological</option>
-                </select>
+              <div class="no-scrollbar mt-4 flex gap-2 overflow-x-auto">
+                <button type="button" onclick="currentActorVibeFilter=null; openActorProfile('${esc(actor.id)}');" class="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] ring-1 transition ${currentActorVibeFilter === null ? chipOn : chipOff}">All</button>
+                ${Object.values(VIBES).map(v => `<button type="button" onclick="currentActorVibeFilter='${v.id}'; openActorProfile('${esc(actor.id)}');" class="inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 transition ${currentActorVibeFilter === v.id ? chipOn : chipOff}"><span class="h-1.5 w-1.5 rounded-full" style="background:${v.color}"></span>${esc(v.label)}</button>`).join('')}
               </div>
-            </div>
 
-            <!-- Vibe Filter Chips on Actor Profile -->
-            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              <button onclick="currentActorVibeFilter=null; openActorProfile('${actor.id}');" 
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 border transition ${currentActorVibeFilter===null ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-[#1D1D25] border-[#2C2C3A] text-slate-400 hover:text-white'}">
-                All Roles
-              </button>
-              ${Object.values(VIBES).map(v => `
-                <button onclick="currentActorVibeFilter='${v.id}'; openActorProfile('${actor.id}');" 
-                  class="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 border transition flex items-center gap-1.5 ${currentActorVibeFilter===v.id ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-[#1D1D25] border-[#2C2C3A] text-slate-400 hover:text-white'}">
-                  <i class="fa-solid ${v.icon}" style="color: ${v.color}"></i> ${v.label}
-                </button>
-              `).join('')}
-            </div>
-
-            <!-- Aligned List of Movies in Sequence -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              ${list.map(movie => {
-                const dominant = VIBES[movie.dominantVibe] || VIBES.fun_time;
-                return `
-                  <div onclick="openDetails('${movie.id}')" 
-                    class="bg-[#1D1D25] p-3 rounded-2xl border border-[#2C2C3A] flex items-center gap-3.5 hover:border-purple-500/50 cursor-pointer transition shadow-md">
-                    <img src="${movie.poster}" class="w-16 h-24 rounded-xl object-cover shrink-0" alt="${movie.title}">
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-bold text-white truncate max-w-[180px]">${movie.title}</h4>
-                        <span class="text-xs font-black text-amber-400">★ ${movie.rating}</span>
-                      </div>
-                      <div class="text-[11px] text-slate-400 mt-0.5">as <b>${movie.char}</b> • ${movie.year}</div>
-
-                      <div class="flex items-center gap-2 mt-2">
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1" style="background-color: ${dominant.color}20; color: ${dominant.color}; border-color: ${dominant.color}40">
-                          <i class="fa-solid ${dominant.icon}"></i> ${dominant.label}
-                        </span>
-                        <span class="text-[10px] font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-                          💰 ${movie.boxOffice}
-                        </span>
-                      </div>
+              ${list.length ? `<div class="mt-5 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4">
+                ${list.map(movie => {
+                  const dominant = VIBES[movie.dominantVibe] || VIBES.fun_time;
+                  return `
+                  <button type="button" onclick="openDetails('${esc(movie.id)}')" class="group block w-full text-left focus:outline-none">
+                    <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
+                      <img src="${esc(movie.poster)}" alt="${esc(movie.title)}" class="h-full w-full object-cover" onerror="fixFilmPoster(this, ${esc(JSON.stringify(movie.title))}, ${esc(JSON.stringify(String(movie.year)))})">
+                      <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
                     </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-
+                    <div class="mt-2.5 break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
+                    <div class="px-0.5 text-xs text-white/45">${esc(movie.year)} · <span class="text-amber-300">★</span> ${esc(movie.rating)}</div>
+                    <div class="break-words px-0.5 text-xs text-white/35">as ${esc(movie.char || '')}</div>
+                    ${movie.boxOffice ? `<div class="px-0.5 text-xs text-white/35">${esc(movie.boxOffice)}</div>` : ''}
+                  </button>`;
+                }).join('')}
+              </div>` : `<div class="mt-5 rounded-2xl bg-white/[0.03] py-10 text-center text-sm text-white/50 ring-1 ring-white/[0.06]">No titles with this vibe.</div>`}
+            </section>
           </div>
         </div>
       `;
@@ -5028,6 +4999,7 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
     }
 
     function refreshViews() {
+      const hs = document.getElementById('headerSearchBtn'); if (hs) hs.style.visibility = activeTab === 'explore' ? 'hidden' : '';
       let content = '';
       if (activeTab === 'discover') content = renderDiscover();
       else if (activeTab === 'explore') content = renderExplore();
