@@ -2129,7 +2129,11 @@
       Preview.seeked = false; Preview.playing = false; Preview.muted = !!startMuted;
       slot.style.opacity = '0';
       const params = `autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
-      slot.innerHTML = `<iframe class="pointer-events-none absolute inset-0 h-full w-full scale-[1.35]" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
+      // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
+      const box = slot.getBoundingClientRect();
+      const cw = Math.max(box.width, (box.height * 16) / 9) * 1.25, ch = (cw * 9) / 16;
+      const fit = box.width > 0 && box.height > 0 ? `style="left:50%;top:50%;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translate(-50%,-50%)"` : '';
+      slot.innerHTML = `<iframe class="pointer-events-none absolute ${fit ? '' : 'inset-0 h-full w-full scale-[1.35]'}" ${fit} src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
       Preview.iframe = slot.querySelector('iframe');
       setPreviewUi();
       const token = Preview.token;

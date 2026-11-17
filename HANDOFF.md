@@ -95,3 +95,5 @@ Still open:
 - (SW v53) Featured banner: synopsis removed, text lowered, banner uses a 16:8 / 16:7 ratio (max 640 px tall) instead of a fixed min-height; page content capped at 1440 px.
 
 - (SW v54) Home is full width like Prime: main padding 16/24/36 px, home viewport max 2400 px (other tabs stay 1440), banner full-bleed (-mx), 21:8 ratio on lg (max 760 px), bigger logo/buttons, home-row posters 150/180/210/235/270 px by breakpoint, grids up to 7 columns at 2xl and 9 at 2200 px.
+
+- (SW v55) Trailer iframe is sized in pixels to always cover its frame (fixes black bars above/below the trailer in the tall phone banner).
