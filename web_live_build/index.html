@@ -77,6 +77,14 @@
     .eq-bar-2 { animation: equalizer 0.6s ease-in-out infinite 0.2s; }
     .eq-bar-3 { animation: equalizer 0.9s ease-in-out infinite 0.4s; }
 
+    /* Featured carousel: each segment fills over 15 s, then the next title shows */
+    @keyframes heroFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .hero-fill { transform: scaleX(0); transform-origin: left center; }
+    .hero-seg.is-done .hero-fill { transform: scaleX(1); }
+    .hero-seg.is-active .hero-fill { animation: heroFill 15s linear forwards; }
+    .hero-seg.is-active.is-static .hero-fill { animation: none; transform: scaleX(1); }
+    #heroCarousel[data-paused="1"] .hero-seg.is-active .hero-fill { animation-play-state: paused; }
+    .hero-slide { transition: opacity .7s ease; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -2003,7 +2011,9 @@
 
     // ---------------- Background trailer preview (30 s highlight, with a volume toggle) ----------------
     const PREVIEW_SECONDS = 30;
-    const Preview = { volume: 70, itemId: null, iframe: null, key: null, keys: null, keyIdx: 0, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
+    const PV_DEFAULT = { slot: 'previewSlot', controls: 'previewControls', mute: 'previewMuteBtn', vol: 'previewVolume', volWrap: 'previewVolumeWrap', replay: 'previewReplayBtn' };
+    const pv = k => document.getElementById(Preview.ids[k]);
+    const Preview = { ids: PV_DEFAULT, startMuted: false, silent: false, volume: 70, itemId: null, iframe: null, key: null, keys: null, keyIdx: 0, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
 
     function prefersNoAutoplay() {
       try {
@@ -2068,7 +2078,7 @@
     }
 
     function setPreviewUi() {
-      const btn = document.getElementById('previewMuteBtn');
+      const btn = pv('mute');
       const silent = Preview.muted || Preview.volume <= 0;
       if (btn) {
         const icon = silent ? 'fa-volume-xmark' : (Preview.volume < 40 ? 'fa-volume-low' : 'fa-volume-high');
@@ -2076,23 +2086,23 @@
         btn.setAttribute('aria-label', silent ? 'Unmute trailer' : 'Mute trailer');
         btn.setAttribute('aria-pressed', String(!silent));
       }
-      const slider = document.getElementById('previewVolume');
+      const slider = pv('vol');
       if (slider) slider.value = String(silent ? 0 : Preview.volume);
     }
 
     function showPreviewControls(show) {
-      const bar = document.getElementById('previewControls');
+      const bar = pv('controls');
       if (bar) bar.classList.toggle('hidden', !show);
     }
 
     function endPreview() {
       previewCmd('pauseVideo');
       Preview.playing = false;
-      const wrap = document.getElementById('previewSlot');
+      const wrap = pv('slot');
       if (wrap) wrap.style.opacity = '0';
-      const replay = document.getElementById('previewReplayBtn');
+      const replay = pv('replay');
       if (replay) replay.classList.remove('hidden');
-      const vw = document.getElementById('previewVolumeWrap');
+      const vw = pv('volWrap');
       if (vw) { vw.classList.add('hidden'); vw.classList.remove('flex'); }
       clearTimeout(Preview.fallbackTimer);
     }
@@ -2120,10 +2130,10 @@
         Preview.playing = true;
         clearTimeout(Preview.fallbackTimer);
         if (Preview.seeked && (info.currentTime || 0) >= Preview.startAt - 1) {
-          const slot = document.getElementById('previewSlot');
+          const slot = pv('slot');
           if (slot) slot.style.opacity = '1';
           showPreviewControls(true);
-          const vw = document.getElementById('previewVolumeWrap');
+          const vw = pv('volWrap');
           if (vw) { vw.classList.remove('hidden'); vw.classList.add('flex'); }
         }
       }
@@ -2134,7 +2144,7 @@
     window.addEventListener('message', onPreviewMessage);
 
     function mountPreviewIframe(startMuted) {
-      const slot = document.getElementById('previewSlot');
+      const slot = pv('slot');
       if (!slot || !Preview.key) return;
       Preview.seeked = false; Preview.playing = false; Preview.muted = !!startMuted;
       slot.style.opacity = '0';
@@ -2163,31 +2173,36 @@
     }
 
     function nextTrailerCandidate() {
-      if (!Preview.keys || Preview.keyIdx + 1 >= Preview.keys.length) { if (!Preview.reported) { const ti = trackTitleInfo(Preview.itemId); Track.once('tf:' + ti.id, 'trailer_fail', ti); } stopTrailerPreview(); return; }
+      if (!Preview.keys || Preview.keyIdx + 1 >= Preview.keys.length) { if (!Preview.reported && !Preview.silent) { const ti = trackTitleInfo(Preview.itemId); Track.once('tf:' + ti.id, 'trailer_fail', ti); } stopTrailerPreview(); return; }
       Preview.token++;
       Preview.keyIdx++;
       Preview.key = Preview.keys[Preview.keyIdx];
-      mountPreviewIframe(getSavedMute());
+      mountPreviewIframe(Preview.startMuted);
     }
 
-    async function startTrailerPreview(item) {
+    async function startTrailerPreview(item, opts) {
       stopTrailerPreview();
+      Preview.ids = (opts && opts.ids) || PV_DEFAULT;
+      Preview.startMuted = opts && opts.muted !== undefined ? !!opts.muted : getSavedMute();
+      Preview.silent = !!(opts && opts.silent);
       if (!item || prefersNoAutoplay()) return;
       const token = Preview.token;
-      Preview.itemId = item.id; Preview.reported = false;
+      Preview.itemId = item.id; Preview.reported = Preview.silent;
       const keys = await resolveTrailerKeys(item);
       if (token !== Preview.token) return; // closed/changed meanwhile
       if (!keys.length) { Track.once('tf:' + item.id, 'trailer_fail', { id: String(item.id).slice(0, 80), t: item.title || '', w: 'none' }); return; } // no trailer found
       Preview.keys = keys; Preview.keyIdx = 0; Preview.key = keys[0];
-      mountPreviewIframe(getSavedMute());
+      mountPreviewIframe(Preview.startMuted);
     }
 
     function stopTrailerPreview() {
       Preview.token++;
       clearInterval(Preview.retry); clearTimeout(Preview.fallbackTimer);
       Preview.retry = null; Preview.fallbackTimer = null;
-      const slot = document.getElementById('previewSlot');
+      const slot = pv('slot');
       if (slot) { slot.innerHTML = ''; slot.style.opacity = '0'; }
+      showPreviewControls(Preview.ids !== PV_DEFAULT ? false : !document.getElementById('previewControls')?.classList.contains('hidden'));
+      Preview.itemId = null;
       Preview.iframe = null; Preview.key = null; Preview.keys = null; Preview.keyIdx = 0; Preview.playing = false; Preview.seeked = false;
     }
 
@@ -2203,6 +2218,7 @@
         previewCmd('mute');
       }
       saveMute(Preview.muted); saveVolume(Preview.volume);
+      if (Preview.ids !== PV_DEFAULT && typeof HERO !== 'undefined') HERO.sound = !(Preview.muted || Preview.volume <= 0);
       setPreviewUi();
     }
 
@@ -2222,7 +2238,7 @@
 
     function replayTrailerPreview() {
       if (!Preview.key) return;
-      const replay = document.getElementById('previewReplayBtn');
+      const replay = pv('replay');
       if (replay) replay.classList.add('hidden');
       Preview.token++;
       mountPreviewIframe(Preview.muted);
@@ -3593,25 +3609,13 @@ function posterCard(item, opts) {
       }
 
       // ---------- Curated home ----------
-      const heroPool = ottAll.filter(m => m.type === 'Movie' && m.backdrop && (m.totalVotes || 0) > 200).sort(byRating).slice(0, 5);
-      const dayIdx = Math.floor(Date.now() / 86400000);
-      const hero = heroPool.length ? heroPool[dayIdx % heroPool.length] : null;
-      const heroDom = hero ? (VIBES[hero.dominantVibe] || VIBES.must_watch) : null;
-      const heroHtml = hero ? `
-        <section class="relative flex min-h-[360px] items-end overflow-hidden rounded-3xl ring-1 ring-white/[0.07] sm:min-h-[440px]">
-          <img src="${esc(hero.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
-          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
-          <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
-          <div class="relative max-w-2xl p-6 sm:p-10">
-            <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${heroDom.color}"></span>Featured · ${esc(heroDom.label)}</div>
-            <h1 class="mt-3 break-words font-display text-4xl font-medium leading-[1.1] text-white sm:text-5xl">${esc(hero.title)}</h1>
-            <p class="mt-3 text-sm text-white/60">${esc([hero.year, (hero.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), hero.duration].filter(Boolean).join('  ·  '))}${rtHtml(hero, 'ml-3 text-amber-300')}</p>
-            <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-white/70">${esc(hero.synopsis || '')}</p>
-            <div class="mt-6 flex flex-wrap gap-3">
-              <button type="button" onclick="openDetails('${hero.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
-            </div>
-          </div>
-        </section>` : '';
+      // Featured carousel: the 5 best recent films, started at a different one each day
+      const heroTop = ottAll.filter(m => m.type === 'Movie' && m.backdrop && (m.totalVotes || 0) > 200).sort(byRating).slice(0, HERO_COUNT);
+      const heroShift = heroTop.length ? Math.floor(Date.now() / 86400000) % heroTop.length : 0;
+      const heroPool = heroTop.slice(heroShift).concat(heroTop.slice(0, heroShift));
+      if (!(HERO.pool.length === heroPool.length && HERO.pool.every((m, i) => m.id === heroPool[i].id)) || HERO.idx >= heroPool.length) HERO.idx = 0;
+      const heroHtml = heroPool.length ? heroCarouselHtml(heroPool) : '';
+      if (heroPool.length) setTimeout(() => heroMount(heroPool), 0);
 
       const moodChips = AI_MOODS.map(mo => {
         const on = aiMoods.includes(mo.id);
@@ -3670,6 +3674,133 @@ function posterCard(item, opts) {
         </div>`;
     }
 
+    // ================= Featured carousel =================
+    const HERO_COUNT = 5;          // 5 titles x 15 s = a 75 s loop: enough variety, and every title still gets its turn
+    const HERO_SECONDS = 15;
+    const HERO = { pool: [], idx: 0, el: null, pause: new Set(), sound: false, io: null, mounted: 0, touchX: null };
+
+    function heroTitleHtml(item, i) {
+      const ex = EXTRAS.cache.get(extrasKeyOf(item));
+      const name = esc(item.title);
+      const st = fallbackTitleLook(item);
+      const logoCls = 'max-h-[clamp(70px,16vw,130px)] max-w-[min(100%,460px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
+      if (ex && ex.logo) return `<img src="${esc(ex.logo)}" alt="" decoding="async" ${i === 0 ? '' : 'loading="lazy"'} class="${logoCls}"><span data-t class="sr-only">${name}</span>`;
+      const hide = (!ex && extrasKeyOf(item)) ? ' opacity-0' : '';
+      return `<span data-t class="block break-words font-display text-4xl leading-[1.1] text-white sm:text-5xl ${st.cls}${hide}" style="${st.style}">${name}</span>`;
+    }
+    function heroSlideHtml(item, i) {
+      const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
+      const meta = [item.year, (item.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), item.duration].filter(Boolean).join('  ·  ');
+      const cert = certBadgeHtml(certFor(EXTRAS.cache.get(extrasKeyOf(item)), selectedCountry));
+      return `
+        <div class="hero-slide relative col-start-1 row-start-1 flex min-h-[380px] items-end sm:min-h-[460px] ${i === HERO.idx ? '' : 'pointer-events-none opacity-0'}" data-slide="${i}" ${i === HERO.idx ? '' : 'aria-hidden="true"'}>
+          <img src="${esc(item.backdrop)}" alt="" ${i === 0 ? '' : 'loading="lazy"'} class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
+          <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
+          <div class="relative max-w-2xl px-14 pb-14 pt-6 sm:px-16 sm:pb-16 sm:pt-10">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>Featured · ${esc(dom.label)}</div>
+            <h2 class="mt-3" data-hero-title>${heroTitleHtml(item, i)}</h2>
+            <p class="mt-3 text-sm text-white/60"><span data-hero-cert>${cert}</span>${esc(meta)}${rtHtml(item, 'ml-3 text-amber-300')}</p>
+            <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-white/70">${esc(item.synopsis || '')}</p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <button type="button" onclick="openDetails('${item.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
+            </div>
+          </div>
+        </div>`;
+    }
+    function heroCarouselHtml(pool) {
+      const arrow = (dir, icon, label) => `<button type="button" onclick="${dir}" aria-label="${label}" class="absolute ${dir === 'heroPrev()' ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 sm:h-11 sm:w-11"><i class="fa-solid ${icon} text-sm"></i></button>`;
+      const segs = pool.map((m, i) => `<button type="button" onclick="heroGo(${i}, true)" aria-label="Show featured title ${i + 1} of ${pool.length}: ${esc(m.title)}" class="hero-seg group flex-1 py-2.5 ${i < HERO.idx ? 'is-done' : i === HERO.idx ? 'is-active' : ''}"><span class="block h-[3px] overflow-hidden rounded-full bg-white/25 transition-all group-hover:h-[5px]"><span class="hero-fill block h-full bg-white" onanimationend="heroEnd(event)"></span></span></button>`).join('');
+      return `
+        <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative grid overflow-hidden rounded-3xl ring-1 ring-white/[0.07]" onmouseenter="heroSetPause('hover', true)" onmouseleave="heroSetPause('hover', false)" onfocusin="if(event.target.matches(':focus-visible'))heroSetPause('focus', true)" onfocusout="heroSetPause('focus', false)">
+          ${pool.map(heroSlideHtml).join('')}
+          ${arrow('heroPrev()', 'fa-chevron-left', 'Previous featured title')}
+          ${arrow('heroNext()', 'fa-chevron-right', 'Next featured title')}
+          <div id="heroControls" class="absolute bottom-9 right-4 z-10 hidden sm:right-8"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
+          <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10">${segs}</div>
+        </section>`;
+    }
+    function heroEls(i) { return HERO.el ? { slide: HERO.el.querySelector(`[data-slide="${i}"]`), seg: HERO.el.querySelectorAll('.hero-seg')[i] } : {}; }
+    function heroSettleTitle(item, i) {
+      const ex = EXTRAS.cache.get(extrasKeyOf(item));
+      const { slide } = heroEls(i); if (!slide) return;
+      const h = slide.querySelector('[data-hero-title]'); const t = h && h.querySelector('[data-t]');
+      if (!t) return;
+      if (ex && ex.logo && !h.querySelector('img')) {
+        const img = new Image(); img.alt = ''; img.decoding = 'async'; img.src = ex.logo;
+        img.className = 'max-h-[clamp(70px,16vw,130px)] max-w-[min(100%,460px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
+        h.insertBefore(img, h.firstChild); t.className = 'sr-only'; t.removeAttribute('style');
+      } else t.classList.remove('opacity-0');
+      const c = slide.querySelector('[data-hero-cert]'); if (c && ex) c.innerHTML = certBadgeHtml(certFor(ex, selectedCountry));
+    }
+    function heroMount(pool) {
+      const el = document.getElementById('heroCarousel');
+      if (!el) { heroDestroy(); return; }
+      if (HERO.el === el) return;
+      heroDestroy();
+      const same = HERO.pool.length === pool.length && HERO.pool.every((m, i) => m.id === pool[i].id);
+      HERO.pool = pool; HERO.el = el; if (!same) HERO.idx = 0;
+      HERO.pause = new Set(document.hidden ? ['hidden'] : []);
+      const reduce = prefersNoAutoplay();
+      // look the title up (logo, age rating) for every slide, but never show the wrong font while waiting: settle within 1.2 s
+      pool.forEach((m, i) => {
+        if (EXTRAS.cache.has(extrasKeyOf(m)) || !extrasKeyOf(m)) { heroSettleTitle(m, i); return; }
+        Promise.race([getTitleExtras(m), new Promise(r => setTimeout(r, 1200))]).then(ex => { if (HERO.el === el) { if (ex && ex.logo) preloadImage(ex.logo).then(() => HERO.el === el && heroSettleTitle(m, i)); else heroSettleTitle(m, i); } });
+      });
+      if ('IntersectionObserver' in window) {
+        HERO.io = new IntersectionObserver(es => es.forEach(e => heroSetPause('offscreen', e.intersectionRatio < 0.35)), { threshold: [0, 0.35, 0.6] });
+        HERO.io.observe(el);
+      }
+      el.addEventListener('touchstart', e => { HERO.touchX = e.touches[0].clientX; }, { passive: true });
+      el.addEventListener('touchend', e => { if (HERO.touchX == null) return; const dx = e.changedTouches[0].clientX - HERO.touchX; HERO.touchX = null; if (Math.abs(dx) > 50) (dx < 0 ? heroNext() : heroPrev()); }, { passive: true });
+      if (reduce) el.querySelectorAll('.hero-seg.is-active').forEach(s => s.classList.add('is-static'));   // no automatic changes for people who asked for less motion
+      heroApply();
+    }
+    function heroDestroy() {
+      if (HERO.io) { HERO.io.disconnect(); HERO.io = null; }
+      if (HERO.el) { HERO.el = null; if (Preview.ids !== PV_DEFAULT) stopTrailerPreview(); }
+    }
+    document.addEventListener('visibilitychange', () => heroSetPause('hidden', document.hidden));
+    function heroSetPause(reason, on) {
+      if (reason === 'hover' && on && window.matchMedia && !window.matchMedia('(hover: hover)').matches) return;   // touch screens have no real hover
+      if (on) HERO.pause.add(reason); else HERO.pause.delete(reason);
+      if (HERO.el && !HERO.el.isConnected) { heroDestroy(); return; }
+      heroApply();
+    }
+    // the bar runs while nothing holds it; the trailer plays unless the page is hidden, scrolled away or a title window is open
+    function heroApply() {
+      if (!HERO.el) return;
+      if (!HERO.el.isConnected) { heroDestroy(); return; }
+      HERO.el.dataset.paused = HERO.pause.size ? '1' : '0';
+      const trailerOk = !['hidden', 'offscreen', 'modal'].some(r => HERO.pause.has(r));
+      const item = HERO.pool[HERO.idx];
+      const playing = Preview.ids !== PV_DEFAULT && Preview.itemId === (item && item.id) && Preview.ids.slot === 'heroSlot' + HERO.idx;
+      if (trailerOk && item && !playing) heroStartTrailer();
+      else if (!trailerOk && Preview.ids !== PV_DEFAULT) stopTrailerPreview();
+    }
+    function heroStartTrailer() {
+      const item = HERO.pool[HERO.idx]; if (!item) return;
+      const ids = { slot: 'heroSlot' + HERO.idx, controls: 'heroControls', mute: 'heroMuteBtn', vol: null, volWrap: null, replay: null };
+      startTrailerPreview(item, { ids, muted: !HERO.sound, silent: true });
+    }
+    function heroGo(i, byUser) {
+      if (!HERO.el || !HERO.pool.length) return;
+      const n = HERO.pool.length, next = ((i % n) + n) % n;
+      if (next === HERO.idx && !byUser) return;
+      if (Preview.ids !== PV_DEFAULT) stopTrailerPreview();
+      HERO.idx = next;
+      const reduce = prefersNoAutoplay();
+      HERO.el.querySelectorAll('.hero-slide').forEach((s, k) => { const on = k === next; s.classList.toggle('opacity-0', !on); s.classList.toggle('pointer-events-none', !on); if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true'); });
+      const segs = HERO.el.querySelectorAll('.hero-seg');
+      segs.forEach(s => s.classList.remove('is-active', 'is-done', 'is-static'));
+      void HERO.el.offsetWidth;                                   // restart the bar's animation
+      segs.forEach((s, k) => { if (k < next) s.classList.add('is-done'); else if (k === next) { s.classList.add('is-active'); if (reduce) s.classList.add('is-static'); } });
+      heroApply();
+    }
+    function heroNext() { heroGo(HERO.idx + 1, true); }
+    function heroPrev() { heroGo(HERO.idx - 1, true); }
+    function heroEnd(e) { if (!HERO.el || !HERO.el.isConnected) { heroDestroy(); return; } if (e.target.closest('.hero-seg') === HERO.el.querySelectorAll('.hero-seg')[HERO.idx]) heroGo(HERO.idx + 1, true); }
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a></div>
@@ -3880,6 +4011,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (!modal || !contentEl) return;
 
       modal.classList.remove('hidden');
+      heroSetPause('modal', true);
       scrollDetailsToTop();
       { const ti = trackTitleInfo(mediaId); Track.event('title_open', ti); }
 
@@ -4474,6 +4606,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     function closeDetails() {
       stopTrailerPreview();
+      heroSetPause('modal', false);
       const m = document.getElementById('detailModal');
       if (m) m.classList.add('hidden');
       const c = document.getElementById('modalContent');
