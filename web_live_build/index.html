@@ -2397,7 +2397,7 @@
         const others = otherRegionsWithStreaming(all, cc);
         body += `<div class="mt-4 rounded-2xl bg-white/[0.03] p-4 text-sm text-white/60 ring-1 ring-white/[0.06]">Not available to stream, rent or buy in ${esc(cname)} right now.${others.length ? `<div class="mt-3 flex flex-wrap items-center gap-2 text-white/45">Available in: ${others.map(c => `<button type="button" onclick="setRegion('${c}', 'user')" class="rounded-full px-3 py-1 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">${esc(regionName(c))}</button>`).join('')}</div>` : ''}</div>`;
       }
-      body += `<p class="mt-4 text-[11px] leading-relaxed text-white/30">Availability by JustWatch via TMDB. Each link opens the service's own search in your region.${av.link ? ` <a class="underline hover:text-white/60" target="_blank" rel="noopener noreferrer" href="${esc(av.link)}">See all options</a>` : ''}</p>`;
+      body += `<p class="mt-4 text-[11px] leading-relaxed text-white/30">Availability by JustWatch via TMDB. Each link opens the title's page on that service in your region, or a search there when no direct page is available.${av.link ? ` <a class="underline hover:text-white/60" target="_blank" rel="noopener noreferrer" href="${esc(av.link)}">See all options</a>` : ''}</p>`;
       sec.innerHTML = head + body;
 
       // primary action: the best way to watch in this region
