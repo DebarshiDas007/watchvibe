@@ -57,6 +57,9 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+    /* More like this: exactly four cards per page (two on phones) */
+    .sim-row > button { flex: 0 0 calc((100% - 8px - 3rem) / 4); width: auto; min-width: 0; align-self: flex-start; }
+    @media (max-width: 520px) { .sim-row > button { flex-basis: calc((100% - 8px - 1rem) / 2); } }
     /* AUTH WINDOW */
     @keyframes av-fade { from { opacity: 0 } to { opacity: 1 } }
     @keyframes av-out { from { opacity: 1 } to { opacity: 0 } }
@@ -2571,7 +2574,7 @@
         if (r.score >= 30) scored.push({ r, m });
       });
       scored.sort((a, b) => b.r.score - a.r.score);
-      return scored.slice(0, 12).map(x => cardFromLocal(x.m, x.r.reason));
+      return scored.slice(0, 8).map(x => cardFromLocal(x.m, x.r.reason));
     }
 
     const SIM_CACHE = new Map();
@@ -2652,9 +2655,33 @@
     function similarSectionHtml(bundle, instant) {
       const fr = bundle && bundle.franchise;
       const items = (bundle && bundle.items) || [];
-      const row = list => `<div class="no-scrollbar -mx-1 mt-3 flex gap-4 overflow-x-auto px-1 pb-1">${list.map(r => posterCard(r)).join('')}</div>`;
-      return `${fr ? `<section><h3 class="font-display text-lg font-medium text-white">More from the ${esc(fr.name.replace(/^the\s+/i, ''))} franchise</h3>${row(fr.parts)}</section>` : ''}
-        ${items.length ? `<section class="${fr ? 'mt-8' : ''}"><h3 class="font-display text-lg font-medium text-white">More like this</h3>${row(items)}</section>` : ''}`;
+      // 4 cards per page with arrows to page through the rest
+      const arrow = (dir, icon) => `<button type="button" data-dir="${dir}" onclick="simPage(this,${dir})" class="flex h-8 w-8 items-center justify-center rounded-full text-white/60 ring-1 ring-white/10 transition duration-200 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25" aria-label="${dir < 0 ? 'Previous' : 'Next'} titles"><i class="fa-solid ${icon} text-xs"></i></button>`;
+      const block = (title, list, cls) => `<section class="${cls || ''}" data-simsec>
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="font-display text-lg font-medium text-white">${title}</h3>
+            <div class="sim-arrows flex items-center gap-1.5">${arrow(-1, 'fa-chevron-left')}${arrow(1, 'fa-chevron-right')}</div>
+          </div>
+          <div class="sim-row no-scrollbar -mx-1 mt-3 flex gap-4 overflow-x-auto scroll-smooth px-1 pb-1" onscroll="simArrows(this.closest('section'))">${list.map(r => posterCard(r)).join('')}</div>
+        </section>`;
+      setTimeout(() => document.querySelectorAll('#simSection [data-simsec]').forEach(simArrows), 0);
+      return `${fr ? block(`More from the ${esc(fr.name.replace(/^the\s+/i, ''))} franchise`, fr.parts.slice(0, 12)) : ''}
+        ${items.length ? block('More like this', items.slice(0, 8), fr ? 'mt-8' : '') : ''}`;
+    }
+    function simPage(btn, dir) {
+      const sec = btn.closest('section'); const row = sec && sec.querySelector('.sim-row');
+      if (!row || !row.firstElementChild) return;
+      const step = row.firstElementChild.offsetWidth + 16;                 // one card plus the gap
+      const perPage = Math.max(1, Math.min(4, Math.round((row.clientWidth - 8 + 16) / step)));
+      row.scrollBy({ left: dir * perPage * step, behavior: 'smooth' });
+    }
+    function simArrows(sec) {
+      const row = sec && sec.querySelector && sec.querySelector('.sim-row'); if (!row) return;
+      const l = sec.querySelector('[data-dir="-1"]'), r = sec.querySelector('[data-dir="1"]');
+      const max = row.scrollWidth - row.clientWidth;
+      if (l) l.disabled = row.scrollLeft <= 2;
+      if (r) r.disabled = row.scrollLeft >= max - 2;
+      const bar = sec.querySelector('.sim-arrows'); if (bar) bar.style.visibility = max > 4 ? '' : 'hidden';   // nothing to page through
     }
     async function fillSimilar(item) {
       const box = document.getElementById('simSection');
