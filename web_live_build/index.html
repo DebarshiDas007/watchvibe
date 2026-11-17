@@ -2464,18 +2464,206 @@
       holder.innerHTML = freshRowHtml(cands);
     }
 
-    // 2. Similar Vibes Recommendation Engine
+    // 2. "More like this" engine: franchise parts + genre-aware ranking (TMDB recommendations, TMDB similar, our catalogue)
+    const GENRE_GROUPS = { 'Action': ['Action'], 'Adventure': ['Adventure'], 'Animation': ['Animation'], 'Comedy': ['Comedy'], 'Crime': ['Crime'], 'Documentary': ['Documentary'], 'Drama': ['Drama'], 'Family': ['Family'], 'Fantasy': ['Fantasy'], 'History': ['History'], 'Horror': ['Horror'], 'Music': ['Music'], 'Mystery': ['Mystery'], 'Romance': ['Romance'], 'Sci-Fi': ['SciFi'], 'Science Fiction': ['SciFi'], 'Thriller': ['Thriller'], 'War': ['War'], 'Western': ['Western'], 'Sci-Fi & Fantasy': ['SciFi', 'Fantasy'], 'Action & Adventure': ['Action', 'Adventure'], 'Kids': ['Family'], 'War & Politics': ['War'] };
+    const TMDB_GENRE_IDS = { 28: ['Action'], 12: ['Adventure'], 16: ['Animation'], 35: ['Comedy'], 80: ['Crime'], 99: ['Documentary'], 18: ['Drama'], 10751: ['Family'], 14: ['Fantasy'], 36: ['History'], 27: ['Horror'], 10402: ['Music'], 9648: ['Mystery'], 10749: ['Romance'], 878: ['SciFi'], 53: ['Thriller'], 10752: ['War'], 37: ['Western'], 10759: ['Action', 'Adventure'], 10762: ['Family'], 10765: ['SciFi', 'Fantasy'], 10768: ['War'] };
+    const INDIAN_LANGS = ['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa', 'gu', 'ur'];
+    const GENRE_LABEL = { SciFi: 'Sci-Fi' };
+    const GENRE_WEIGHT = { Drama: 0.6, Adventure: 0.8, Family: 0.8, Action: 1, Comedy: 1, Thriller: 1, Crime: 1.3, Mystery: 1.4, Romance: 1.4, Fantasy: 1.4, Music: 1.3, History: 1.3, War: 1.6, SciFi: 1.8, Horror: 1.8, Western: 1.8, Animation: 2, Documentary: 2 };
+    const genreLabel = g => GENRE_LABEL[g] || g;
+    function genresFromNames(names) { const out = []; (names || []).forEach(n => (GENRE_GROUPS[n] || []).forEach(g => { if (!out.includes(g)) out.push(g); })); return out; }
+    function genresFromIds(ids) { const out = []; (ids || []).forEach(i => (TMDB_GENRE_IDS[i] || []).forEach(g => { if (!out.includes(g)) out.push(g); })); return out; }
+    const simBucket = it => (it && it.type === 'Stand-Up') ? 'standup' : (it && it.type === 'Series') ? 'tv' : 'movie';
+    const castList = it => Array.isArray(it && it.cast) ? it.cast : [];
+    const findItemById = id => (mediaDatabase || []).find(m => m.id === id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]) || null;
+
+    // Story similarity: compare plot descriptions (TF-IDF cosine) so shared themes count, not just genre labels
+    const SYN_STOP = new Set('about after again against also another because before being between both brings but came come could during each even every film find finds first from have having here himself into just later life like make makes many more most must only other over same several should since some still such than that their them then there these they this those through under until very want wants well were what when where which while who whom will with without would years year their young story'.split(' '));
+    const synTok = s => String(s || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !SYN_STOP.has(w)).map(w => w.replace(/(ing|ed|es|s)$/, ''));
+    let SYN_IDF = null;
+    function synIdf() {
+      if (SYN_IDF) return SYN_IDF;
+      const df = new Map(); let n = 0;
+      (mediaDatabase || []).forEach(m => { if (!m.synopsis) return; n++; new Set(synTok(m.synopsis)).forEach(w => df.set(w, (df.get(w) || 0) + 1)); });
+      SYN_IDF = { n: Math.max(n, 1), df };
+      return SYN_IDF;
+    }
+    function synVec(text) {
+      const { n, df } = synIdf(); const tf = new Map();
+      synTok(text).forEach(w => tf.set(w, (tf.get(w) || 0) + 1));
+      const v = new Map(); let norm = 0;
+      tf.forEach((c, w) => { const x = (1 + Math.log(c)) * Math.log((n + 1) / ((df.get(w) || 0) + 1)); v.set(w, x); norm += x * x; });
+      return { v, norm: Math.sqrt(norm) || 1 };
+    }
+    function synCos(a, b) { if (!a || !b) return 0; let dot = 0; const [s, l] = a.v.size < b.v.size ? [a, b] : [b, a]; s.v.forEach((x, w) => { const y = l.v.get(w); if (y) dot += x * y; }); return dot / (a.norm * b.norm); }
+    const itemSynVec = m => m.__sv || (m.__sv = m.synopsis ? synVec(m.synopsis) : null);
+
+    // How much the viewer leans towards each genre, from what they watched or saved (0..1)
+    function userTaste() {
+      const w = {}; let max = 0;
+      const add = (id, wt) => { const it = findItemById(id); if (!it) return; genresFromNames(it.genres).forEach(g => { w[g] = (w[g] || 0) + wt; max = Math.max(max, w[g]); }); };
+      (userWatchedHistory || []).forEach(h => add(h.id, 2));
+      (userWatchlistIds || []).forEach(id => add(id, 1));
+      if (max) Object.keys(w).forEach(g => { w[g] /= max; });
+      return w;
+    }
+
+    // Score how similar candidate c is to source s. Returns { score, reason } (score < 0 means "not similar").
+    function simScore(s, c, taste) {
+      let sc = 0, reason = '';
+      const sg = s.genres, cg = c.genres;
+      if (sg.length) {
+        // specific genres (Sci-Fi, Horror, War...) say more about a film than generic ones (Drama, Adventure)
+        let tot = 0, got = 0, key = sg[0], keyW = 0;
+        sg.forEach(g => { const w = GENRE_WEIGHT[g] || 1; tot += w; if (w > keyW) { keyW = w; key = g; } if (cg.includes(g)) got += w; });
+        if (!got) return { score: -1, reason };
+        sc += 45 * got / tot;
+        sc -= 6 * Math.max(0, cg.length - sg.length) / Math.max(cg.length, 1);       // a pile of unrelated extra genres is a weaker match
+        if (!cg.includes(key)) sc -= 12;                                              // the defining genre should carry over
+        reason = genreLabel(sg.filter(g => cg.includes(g)).sort((a, b) => (GENRE_WEIGHT[b] || 1) - (GENRE_WEIGHT[a] || 1))[0]);
+      }
+      [['Animation', 40, 30], ['Documentary', 40, 40], ['Horror', 25, 25]].forEach(([g, miss, extra]) => {
+        const a = sg.includes(g), b = cg.includes(g);
+        if (a && !b) sc -= miss;
+        if (!a && b) sc -= (g === 'Animation' && sg.includes('Family')) ? 8 : extra;
+      });
+      if (c.rec != null) sc += 16 * c.rec;            // TMDB "people who liked this also liked": a modest boost, the list can be noisy
+      if (c.sim != null) sc += 8 * c.sim;             // TMDB's similar-titles list
+      if (c.rec != null && c.sim != null) sc += 6;
+      if (s.lang && c.lang) sc += (s.lang === c.lang) ? 8 : (INDIAN_LANGS.includes(s.lang) ? -22 : -10);   // Indian films want Indian films
+      if (s.director && c.director && s.director === c.director) { sc += 24; reason = 'Same director'; }
+      const shared = s.cast.length ? c.cast.filter(n => s.cast.slice(0, 5).includes(n)).length : 0;
+      if (shared) { sc += Math.min(2, shared) * 9; if (!/director/.test(reason)) reason = 'Shared cast'; }
+      if (s.syn && c.syn) { const cos = synCos(s.syn, c.syn); sc += Math.min(20, cos * 130); }   // similar story / themes
+      if (s.vibe && c.vibe && s.vibe === c.vibe) sc += 4;
+      if (s.region && c.region && s.region === c.region) sc += 4;
+      if (s.year && c.year) sc -= Math.min(8, Math.abs(s.year - c.year) / 6);
+      const r = Number(c.rating) || 0, v = Number(c.votes) || 0;
+      if (r && r < 6) sc -= 20;                       // weak films don't belong in a recommendation, whoever suggests them
+      if (v && v < 1000) sc -= 10;                    // obscure titles are rarely what someone wants next
+      sc += Math.max(-8, Math.min(10, (r - 6) * 3.5));
+      sc += Math.max(0, Math.min(8, (Math.log10(Math.max(v, 1)) - 2.5) * 3));
+      if (taste) { let tb = 0; cg.forEach(g => { tb += taste[g] || 0; }); sc += Math.min(6, tb * 3); }
+      if (!reason && c.rec != null) reason = 'Fans also watch';
+      return { score: sc, reason };
+    }
+
+    function simSource(item, tmdbGenreIds, lang) {
+      const genres = tmdbGenreIds && tmdbGenreIds.length ? genresFromIds(tmdbGenreIds) : genresFromNames(item.genres);
+      return { syn: itemSynVec(item), genres: genres.length ? genres : genresFromNames(item.genres), lang: lang || item.language || null, year: Number(item.year) || null, director: item.director || null, cast: castList(item), vibe: item.dominantVibe || null, region: item.region || null };
+    }
+    function localCandidate(m) {
+      return { kind: 'local', item: m, syn: itemSynVec(m), tmdb: String(m.tmdbId || ''), genres: genresFromNames(m.genres), lang: m.language || null, year: Number(m.year) || null, rating: m.rating, votes: m.totalVotes, director: m.director || null, cast: castList(m), vibe: m.dominantVibe || null, region: m.region || null };
+    }
+    function cardFromLocal(m, reason) { return { ...m, __platform: reason || m.type }; }
+    function cardFromTmdb(c, reason) {
+      return { id: `tmdb-${c.isTv ? 'tv' : 'm'}-${c.tmdb}`, tmdbId: c.tmdb, title: c.title, poster: c.poster, year: c.year ? String(c.year) : '', rating: c.rating ? Number(c.rating).toFixed(1) : '', type: c.isTv ? 'Series' : 'Movie', dominantVibe: 'must_watch', __platform: reason || (c.isTv ? 'Series' : 'Movie') };
+    }
+
+    // Instant version from our own catalogue (shown immediately; replaced by the richer one when TMDB answers)
     function getSimilarVibeRecommendations(item) {
       if (!item) return [];
-      const matches = (mediaDatabase || []).filter(m => {
-        if (m.id === item.id) return false;
-        const sameVibe = m.dominantVibe === item.dominantVibe;
-        const sameType = (m.type || 'Movie') === (item.type || 'Movie');
-        const sharedGenre = (m.genres || []).some(g => (item.genres || []).includes(g));
-        return (sameVibe || sharedGenre) && sameType;
+      const src = simSource(item), taste = userTaste(), bucket = simBucket(item);
+      const scored = [];
+      (mediaDatabase || []).forEach(m => {
+        if (m.id === item.id || simBucket(m) !== bucket) return;
+        const c = localCandidate(m); const r = simScore(src, c, taste);
+        if (r.score >= 30) scored.push({ r, m });
       });
-      matches.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      return matches.slice(0, 8);
+      scored.sort((a, b) => b.r.score - a.r.score);
+      return scored.slice(0, 12).map(x => cardFromLocal(x.m, x.r.reason));
+    }
+
+    const SIM_CACHE = new Map();
+    async function getSimilarBundle(item) {
+      const ref = tmdbRef(item);
+      if (!ref) return null;
+      const key = (ref.isTv ? 'tv:' : 'movie:') + ref.n;
+      if (SIM_CACHE.has(key)) return SIM_CACHE.get(key);
+      const ep = ref.isTv ? 'tv' : 'movie';
+      let d;
+      try {
+        const r = await fetch(`${TMDB_BASE_URL}/${ep}/${ref.n}?api_key=${getActiveTmdbKey()}&append_to_response=recommendations,similar`);
+        if (!r.ok) return null;
+        d = await r.json();
+      } catch (e) { return null; }
+      const today = new Date().toISOString().slice(0, 10);
+      const dateOf = x => (x.release_date || x.first_air_date || '');
+      const yearOf = x => Number(dateOf(x).slice(0, 4)) || null;
+      const src = simSource(item, (d.genres || []).map(g => g.id), d.original_language);
+      if (!src.year) src.year = yearOf(d);
+      if (!src.syn && d.overview) src.syn = synVec(d.overview);
+
+      // ---- franchise: every other part of the collection, in release order
+      let franchise = null; const partIds = new Set([ref.n]);
+      if (!ref.isTv && d.belongs_to_collection && d.belongs_to_collection.id) {
+        try {
+          const cr = await fetch(`${TMDB_BASE_URL}/collection/${d.belongs_to_collection.id}?api_key=${getActiveTmdbKey()}`);
+          if (cr.ok) {
+            const cd = await cr.json();
+            const parts = (cd.parts || []).filter(p => p.release_date && p.release_date <= today && p.poster_path).sort((a, b) => a.release_date.localeCompare(b.release_date));
+            parts.forEach(p => partIds.add(String(p.id)));
+            const others = parts.filter(p => String(p.id) !== ref.n);
+            if (others.length) {
+              franchise = { name: String(cd.name || d.belongs_to_collection.name || '').replace(/\s+Collection$/i, ''), parts: others.map(p => {
+                const idx = parts.findIndex(x => x.id === p.id) + 1;
+                const local = (mediaDatabase || []).find(m => String(m.tmdbId) === String(p.id));
+                const label = `Part ${idx}`;
+                return local ? cardFromLocal(local, label) : cardFromTmdb({ tmdb: String(p.id), isTv: false, title: p.title, poster: `${TMDB_IMG_URL}${p.poster_path}`, year: yearOf(p), rating: p.vote_average }, label);
+              }) };
+            }
+          }
+        } catch (e) {}
+      }
+
+      // ---- candidates: TMDB recommendations + similar + our catalogue, merged by TMDB id
+      const pool = new Map();
+      const pushTmdb = (list, field) => (list && list.results || []).forEach((x, i, arr) => {
+        const id = String(x.id);
+        if (partIds.has(id) || x.adult || !x.poster_path || !dateOf(x) || dateOf(x) > today || (x.vote_count || 0) < 150 || (x.vote_average || 0) < 5) return;
+        const cur = pool.get(id) || { kind: 'tmdb', tmdb: id, isTv: ref.isTv, title: x.title || x.name, poster: `${TMDB_IMG_URL}${x.poster_path}`, genres: genresFromIds(x.genre_ids), lang: x.original_language || null, year: yearOf(x), rating: x.vote_average, votes: x.vote_count, cast: [], syn: x.overview ? synVec(x.overview) : null };
+        cur[field] = 1 - i / Math.max(arr.length, 1);
+        pool.set(id, cur);
+      });
+      pushTmdb(d.recommendations, 'rec');
+      pushTmdb(d.similar, 'sim');
+      const bucket = simBucket(item);
+      (mediaDatabase || []).forEach(m => {
+        if (m.id === item.id || simBucket(m) !== bucket || partIds.has(String(m.tmdbId))) return;
+        const id = String(m.tmdbId || m.id);
+        const lc = localCandidate(m);
+        const cur = pool.get(id);
+        if (cur) { Object.assign(cur, lc, { rec: cur.rec, sim: cur.sim, kind: 'local' }); } else pool.set(id, lc);
+      });
+
+      src.hasSignal = [...pool.values()].some(c => c.rec != null || c.sim != null);
+      const taste = userTaste();
+      const scored = [];
+      pool.forEach(c => { const r = simScore(src, c, taste); if (r.score > 0) scored.push({ c, r }); });
+      scored.sort((a, b) => b.r.score - a.r.score);
+      let top = scored.filter(x => x.r.score >= 30);
+      if (top.length < 8) top = scored.slice(0, 8);
+      const items = top.slice(0, 16).map(x => x.c.kind === 'local' ? cardFromLocal(x.c.item, x.r.reason) : cardFromTmdb(x.c, x.r.reason));
+      const bundle = { franchise, items, debug: top.slice(0, 16).map(x => ({ t: x.c.title || (x.c.item && x.c.item.title), s: Math.round(x.r.score), why: x.r.reason })) };
+      SIM_CACHE.set(key, bundle);
+      return bundle;
+    }
+
+    function similarSectionHtml(bundle, instant) {
+      const fr = bundle && bundle.franchise;
+      const items = (bundle && bundle.items) || [];
+      const row = list => `<div class="no-scrollbar -mx-1 mt-3 flex gap-4 overflow-x-auto px-1 pb-1">${list.map(r => posterCard(r)).join('')}</div>`;
+      return `${fr ? `<section><h3 class="font-display text-lg font-medium text-white">More from the ${esc(fr.name.replace(/^the\s+/i, ''))} franchise</h3>${row(fr.parts)}</section>` : ''}
+        ${items.length ? `<section class="${fr ? 'mt-8' : ''}"><h3 class="font-display text-lg font-medium text-white">More like this</h3>${row(items)}</section>` : ''}`;
+    }
+    async function fillSimilar(item) {
+      const box = document.getElementById('simSection');
+      if (!box || !item) return;
+      box.dataset.item = item.id;
+      const bundle = await getSimilarBundle(item);
+      const cur = document.getElementById('simSection');
+      if (!bundle || !cur || cur.dataset.item !== item.id) return; // the window moved on, or TMDB unavailable: keep the instant list
+      cur.innerHTML = similarSectionHtml(bundle);
     }
 
     // 3. User-Isolated Watchlist & Watched History Store
@@ -3622,7 +3810,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const pill = 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition';
       const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
       const sortedVibes = Object.entries(VIBES).map(([k, v]) => [v, pcts[k] || 0]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0).slice(0, 4);
-      const similar = getSimilarVibeRecommendations(item).slice(0, 8);
+      const similar = getSimilarVibeRecommendations(item);
       const realVotes = item.totalVotes && item.totalVotes > 50 ? item.totalVotes.toLocaleString() : null;
 
       return `
@@ -3661,11 +3849,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               </div>` : ''}
           </section>
 
-          ${similar.length ? `
-            <section>
-              <h3 class="font-display text-lg font-medium text-white">More like this</h3>
-              <div class="no-scrollbar -mx-1 mt-3 flex gap-4 overflow-x-auto px-1 pb-1">${similar.map(r => posterCard(r)).join('')}</div>
-            </section>` : ''}
+          <div id="simSection" data-item="${esc(item.id)}">${similarSectionHtml({ franchise: null, items: similar })}</div>
         </div>`;
     }
 
@@ -3681,6 +3865,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (contentEl.dataset.itemId === item.id && document.getElementById('detailBody')) {
         document.getElementById('detailBody').innerHTML = detailBodyHtml(item);
         fillAvailability(item);
+        fillSimilar(item);
         return;
       }
       contentEl.dataset.itemId = item.id;
@@ -3707,6 +3892,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         </div>
         <div id="detailBody">${detailBodyHtml(item)}</div>`;
       fillAvailability(item);
+      fillSimilar(item);
       scrollDetailsToTop(); // opened from "More like this" while scrolled down: always land at the top
       requestAnimationFrame(scrollDetailsToTop);
       Preview.volume = getSavedVolume();
