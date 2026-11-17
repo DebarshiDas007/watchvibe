@@ -1863,7 +1863,7 @@
         // Save last sync date
         const todayStr = new Date().toISOString().split('T')[0];
         localStorage.setItem('watchvibe_last_sync_date', todayStr);
-        localStorage.setItem('watchvibe_cached_media_v3', JSON.stringify(mediaDatabase));
+        localStorage.setItem('watchvibe_cached_media_v3', JSON.stringify(mediaDatabase, (k, v) => (typeof k === 'string' && k.startsWith('__')) ? undefined : v));   // never save runtime-only fields
 
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (label) label.innerText = `Synced at ${timeStr}`;
@@ -1919,6 +1919,8 @@
       if (cached) {
         try {
           mediaDatabase = JSON.parse(cached);
+          // older saved copies may carry runtime-only fields (names starting with __) that no longer survive saving: drop them
+          mediaDatabase.forEach(m => { Object.keys(m).forEach(k => { if (k.startsWith('__')) delete m[k]; }); });
         } catch (e) {}
       }
 
@@ -2514,8 +2516,10 @@
       tf.forEach((c, w) => { const x = (1 + Math.log(c)) * Math.log((n + 1) / ((df.get(w) || 0) + 1)); v.set(w, x); norm += x * x; });
       return { v, norm: Math.sqrt(norm) || 1 };
     }
-    function synCos(a, b) { if (!a || !b) return 0; let dot = 0; const [s, l] = a.v.size < b.v.size ? [a, b] : [b, a]; s.v.forEach((x, w) => { const y = l.v.get(w); if (y) dot += x * y; }); return dot / (a.norm * b.norm); }
-    const itemSynVec = m => m.__sv || (m.__sv = m.synopsis ? synVec(m.synopsis) : null);
+    function synCos(a, b) { if (!a || !b || !(a.v instanceof Map) || !(b.v instanceof Map)) return 0; let dot = 0; const [s, l] = a.v.size < b.v.size ? [a, b] : [b, a]; s.v.forEach((x, w) => { const y = l.v.get(w); if (y) dot += x * y; }); return dot / (a.norm * b.norm); }
+    // kept in a side table (never on the item itself): items are saved to browser storage as JSON, which would turn these Maps into empty objects
+    const SYN_VECS = new Map();
+    const itemSynVec = m => { let v = SYN_VECS.get(m.id); if (v === undefined) { v = m.synopsis ? synVec(m.synopsis) : null; SYN_VECS.set(m.id, v); } return v; };
 
     // How much the viewer leans towards each genre, from what they watched or saved (0..1)
     function userTaste() {
