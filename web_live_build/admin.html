@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WatchVibe Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0B0B0F">
+  <link rel="stylesheet" href="/tailwind.css">
+  <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
+  <script src="/vendor/supabase/supabase.js"></script>
+  <style>
+    body { background: #0B0B0F; color: #fff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+    .rise { animation: rise .4s cubic-bezier(.22,1,.36,1) both; }
+    .bar { transition: width .6s cubic-bezier(.22,1,.36,1); }
+    table { border-collapse: collapse; }
+    @media (prefers-reduced-motion: reduce) { .rise, .bar { animation: none; transition: none; } }
+  </style>
+</head>
+<body>
+  <header class="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0B0B0F]/85 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-8">
+      <a href="/" class="select-none font-display text-[20px] font-medium tracking-[0.18em] text-white">WATCH<span class="text-purple-400">VIBE</span></a>
+      <span class="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-purple-200 ring-1 ring-purple-400/30">ADMIN</span>
+      <div class="ml-auto flex items-center gap-2.5">
+        <select id="range" class="rounded-full bg-white/[0.05] px-3.5 py-1.5 text-[13px] text-white ring-1 ring-white/10 focus:outline-none focus:ring-white/30" aria-label="Date range">
+          <option value="7" class="bg-[#14141A]">Last 7 days</option>
+          <option value="30" class="bg-[#14141A]" selected>Last 30 days</option>
+          <option value="90" class="bg-[#14141A]">Last 90 days</option>
+          <option value="365" class="bg-[#14141A]">Last 12 months</option>
+        </select>
+        <button id="refresh" type="button" class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.05] text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white" aria-label="Refresh"><i class="fa-solid fa-rotate text-xs"></i></button>
+        <a href="/" class="hidden rounded-full px-4 py-1.5 text-[13px] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white sm:block">Back to site</a>
+      </div>
+    </div>
+    <nav id="tabs" class="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 sm:px-8" aria-label="Sections"></nav>
+  </header>
+
+  <main id="app" class="mx-auto max-w-7xl px-4 py-8 sm:px-8"></main>
+
+<script>
+(() => {
+  const SUPABASE_URL = 'https://lbtuikgpgcgrizijfiyl.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxidHVpa2dwZ2Nncml6aWpmaXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NjQxMzgsImV4cCI6MjExMDM0MDEzOH0.y7PrOnBUjIBnT6N2vnOV9qkGgcKX1F_epMqBMoPKejU';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+  const TABS = [['overview', 'Overview'], ['users', 'Users'], ['content', 'Content health'], ['streaming', 'Streaming'], ['system', 'System']];
+  const app = document.getElementById('app');
+  const state = { tab: (location.hash || '#overview').slice(1), days: 30, cache: {}, userFilter: '', userSort: 'created' };
+  if (!TABS.some(t => t[0] === state.tab)) state.tab = 'overview';
+
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const num = n => Number(n || 0).toLocaleString('en-US');
+  const pct = (a, b) => b ? Math.round((a / b) * 100) : 0;
+  const when = iso => { if (!iso) return 'never'; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+  const ago = iso => { if (!iso) return 'never'; const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); if (s < 90) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; };
+  const bytes = b => { b = Number(b || 0); return b > 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB'; };
+  const cname = cc => { try { return cc && cc !== '??' ? new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) : 'Unknown'; } catch (e) { return cc; } };
+
+  const card = (inner, cls) => `<section class="rise rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] ${cls || ''}">${inner}</section>`;
+  const h = (t, sub) => `<div class="mb-4"><h2 class="font-display text-lg font-medium text-white">${esc(t)}</h2>${sub ? `<p class="mt-0.5 text-xs text-white/40">${esc(sub)}</p>` : ''}</div>`;
+  const kpi = (label, value, sub) => `<div class="rise rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]"><div class="text-[11px] uppercase tracking-wider text-white/40">${esc(label)}</div><div class="mt-1.5 font-display text-3xl font-medium text-white">${esc(value)}</div>${sub ? `<div class="mt-1 text-xs text-white/40">${esc(sub)}</div>` : ''}</div>`;
+  const empty = t => `<div class="py-6 text-center text-sm text-white/35">${esc(t)}</div>`;
+  const note = t => `<div class="rounded-2xl bg-purple-500/[0.07] px-4 py-3 text-sm text-purple-100/80 ring-1 ring-purple-400/20">${t}</div>`;
+
+  function bars(list, label, valueKey, opts) {
+    opts = opts || {};
+    list = list || [];
+    if (!list.length) return empty('No data yet.');
+    const max = Math.max(...list.map(x => Number(x[valueKey]) || 0), 1);
+    const total = list.reduce((a, x) => a + (Number(x[valueKey]) || 0), 0) || 1;
+    return `<div class="space-y-3">${list.map(x => {
+      const v = Number(x[valueKey]) || 0;
+      return `<div><div class="mb-1 flex items-baseline justify-between gap-3 text-[13px]"><span class="min-w-0 truncate text-white/85">${esc(label(x))}</span><span class="shrink-0 tabular-nums text-white/50">${num(v)}${opts.share ? ` · ${pct(v, total)}%` : ''}</span></div><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.06]"><div class="bar h-full rounded-full ${opts.color || 'bg-purple-400'}" style="width:${Math.max(2, Math.round(v / max * 100))}%"></div></div></div>`;
+    }).join('')}</div>`;
+  }
+  function table(cols, rows, emptyMsg) {
+    if (!rows.length) return empty(emptyMsg || 'Nothing here yet.');
+    return `<div class="overflow-x-auto"><table class="w-full text-left text-[13px]"><thead><tr class="text-[11px] uppercase tracking-wider text-white/35">${cols.map(c => `<th class="whitespace-nowrap pb-2 pr-4 font-medium ${c.r ? 'text-right' : ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr class="border-t border-white/[0.05]">${cols.map(c => `<td class="py-2.5 pr-4 align-top ${c.r ? 'text-right tabular-nums' : ''} ${c.cls || 'text-white/80'}">${c.html ? c.html(r) : esc(c.v(r))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  function dailyChart(daily) {
+    if (!daily || !daily.length) return empty('No data yet.');
+    const W = 640, H = 150, pad = 4, n = daily.length, bw = Math.max(2, (W - pad * 2) / n - 2);
+    const max = Math.max(...daily.map(d => d.visitors), 1);
+    const bs = daily.map((d, i) => { const bh = Math.round((d.visitors / max) * (H - 28)); const x = pad + i * ((W - pad * 2) / n); return `<rect x="${x.toFixed(1)}" y="${H - 18 - bh}" width="${bw.toFixed(1)}" height="${Math.max(bh, d.visitors ? 2 : 0)}" rx="2" fill="#a78bfa" fill-opacity="${d.visitors ? .85 : .15}"><title>${esc(d.d)}: ${d.visitors} visitors, ${d.visits} visits</title></rect>`; }).join('');
+    const first = daily[0].d, last = daily[daily.length - 1].d;
+    return `<svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="Visitors per day"><line x1="0" x2="${W}" y1="${H - 18}" y2="${H - 18}" stroke="#fff" stroke-opacity=".08"/>${bs}<text x="${pad}" y="${H - 3}" fill="#fff" fill-opacity=".35" font-size="11">${esc(first)}</text><text x="${W - pad}" y="${H - 3}" fill="#fff" fill-opacity=".35" font-size="11" text-anchor="end">${esc(last)}</text><text x="${W - pad}" y="12" fill="#fff" fill-opacity=".35" font-size="11" text-anchor="end">peak ${max}</text></svg>`;
+  }
+  function funnel(f) {
+    const steps = [['Visited', f.visit], ['Opened a title', f.title_open], ['Played a trailer', f.trailer], ['Clicked a streaming link', f.ott], ['Signed up or in', f.account]];
+    const top = Math.max(f.visit || 0, 1);
+    return `<div class="space-y-3">${steps.map(([l, v], i) => `<div><div class="mb-1 flex items-baseline justify-between text-[13px]"><span class="text-white/85">${esc(l)}</span><span class="tabular-nums text-white/50">${num(v)}${i ? ` · ${pct(v, steps[i - 1][1])}% of previous` : ''}</span></div><div class="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div class="bar h-full rounded-full bg-emerald-400/80" style="width:${Math.max(v ? 2 : 0, Math.round((v || 0) / top * 100))}%"></div></div></div>`).join('')}</div>`;
+  }
+
+  // ---------------------------------------------------------------- data
+  async function rpc(name, args) {
+    const { data, error } = await sb.rpc(name, args || {});
+    if (error) { const e = new Error(error.message || 'Request failed'); e.code = error.code; throw e; }
+    return data;
+  }
+  async function load(kind, force) {
+    const key = kind + ':' + state.days;
+    if (!force && state.cache[key]) return state.cache[key];
+    const d = kind === 'users' ? await rpc('admin_users') : kind === 'system' ? await rpc('admin_system') : await rpc('admin_' + kind, { p_days: state.days });
+    state.cache[key] = d; return d;
+  }
+
+  // ---------------------------------------------------------------- views
+  async function viewOverview(force) {
+    const [o, u] = await Promise.all([load('overview', force), load('users', force)]);
+    const none = !o.visitors;
+    return `
+      ${none ? note('No visitor data yet. Tracking is live from this deploy, so numbers appear as people use the site. <span class="text-white/50">Your own browsing is not counted.</span>') : ''}
+      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        ${kpi('Visitors', num(o.visitors), num(o.new_visitors) + ' new')}
+        ${kpi('Visits', num(o.visits), num(o.pageviews) + ' screen views')}
+        ${kpi('Titles opened', num(o.title_opens), num(o.searches) + ' searches')}
+        ${kpi('Streaming clicks', num(o.ott_clicks), 'outbound to services')}
+        ${kpi('Accounts', num(u.total), num(u.new_7d) + ' new this week')}
+        ${kpi('Sign-ups', num(o.signups), num(o.logins) + ' sign-ins')}
+        ${kpi('Returning', num(Math.max(0, o.visitors - o.new_visitors)), 'seen before this period')}
+        ${kpi('Errors', num(o.errors), 'JavaScript errors')}
+      </div>
+      <div class="mt-6 grid gap-4 lg:grid-cols-3">
+        ${card(h('Visitors per day', 'Unique visitors, by day') + dailyChart(o.daily), 'lg:col-span-2')}
+        ${card(h('Journey', 'Share of visitors reaching each step') + funnel(o.funnel))}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-3">
+        ${card(h('Countries') + bars(o.countries, x => cname(x.k), 'n', { share: true }))}
+        ${card(h('Devices') + bars(o.devices, x => x.k, 'n', { share: true, color: 'bg-sky-400' }) + '<div class="mt-6"></div>' + h('Browsers') + bars(o.browsers, x => x.k, 'n', { share: true, color: 'bg-sky-400' }))}
+        ${card(h('Where visitors come from') + bars(o.referrers, x => x.k, 'n', { color: 'bg-amber-400' }))}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        ${card(h('Most opened titles') + table([{ h: 'Title', html: r => esc(r.t || r.id) }, { h: 'Opens', r: 1, v: r => num(r.n) }, { h: 'Visitors', r: 1, v: r => num(r.v) }], o.top_titles))}
+        ${card(h('Top searches', 'Zero results means we could not answer them') + table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }, { h: 'No results', r: 1, v: r => r.zero ? num(r.zero) : '-' }], o.top_searches))}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        ${card(h('Searches with no results', 'Titles or people people want that are missing') + table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.zero_searches, 'No empty searches. Nice.'))}
+        ${card(h('Mood picker requests', 'What people ask the AI Vibe Matcher for') + table([{ h: 'Request', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.moods))}
+      </div>`;
+  }
+
+  async function viewUsers(force) {
+    const u = await load('users', force);
+    const f = state.userFilter.trim().toLowerCase();
+    let rows = (u.users || []).filter(x => !f || (x.email || '').toLowerCase().includes(f) || (x.name || '').toLowerCase().includes(f));
+    const key = { created: 'created_at', login: 'last_sign_in_at', watchlist: 'watchlist' }[state.userSort] || 'created_at';
+    rows = rows.slice().sort((a, b) => key === 'watchlist' ? (b.watchlist || 0) - (a.watchlist || 0) : String(b[key] || '').localeCompare(String(a[key] || '')));
+    window.__adminUserRows = rows;
+    return `
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        ${kpi('Accounts', num(u.total))}${kpi('Verified', num(u.verified), pct(u.verified, u.total) + '%')}${kpi('New, 7 days', num(u.new_7d))}${kpi('New, 30 days', num(u.new_30d))}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-3">
+        ${card(h('Sign-in method') + bars(u.by_provider, x => x.k, 'n', { share: true }))}
+        ${card(`<div class="flex flex-wrap items-center gap-3"><input id="userFilter" type="search" value="${esc(state.userFilter)}" placeholder="Search name or email" class="min-w-[12rem] flex-1 rounded-full bg-white/[0.05] px-4 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30"><select id="userSort" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none"><option value="created" class="bg-[#14141A]" ${state.userSort === 'created' ? 'selected' : ''}>Newest first</option><option value="login" class="bg-[#14141A]" ${state.userSort === 'login' ? 'selected' : ''}>Last sign-in</option><option value="watchlist" class="bg-[#14141A]" ${state.userSort === 'watchlist' ? 'selected' : ''}>Biggest watchlist</option></select><button id="csv" type="button" class="cursor-pointer rounded-full px-4 py-2 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Export CSV</button></div><p class="mt-3 text-xs text-white/35">${num(rows.length)} shown. Deleting or blocking an account needs a secure server function and is not enabled yet.</p>`, 'lg:col-span-2')}
+      </div>
+      <div class="mt-4">${card(table([
+        { h: 'Name', html: r => `<span class="text-white">${esc(r.name || '-')}</span>` },
+        { h: 'Email', v: r => r.email },
+        { h: 'Method', v: r => r.provider },
+        { h: 'Joined', v: r => when(r.created_at), cls: 'whitespace-nowrap text-white/60' },
+        { h: 'Last sign-in', v: r => ago(r.last_sign_in_at), cls: 'whitespace-nowrap text-white/60' },
+        { h: 'Verified', v: r => r.verified ? 'Yes' : 'No' },
+        { h: 'Icon', v: r => r.icon || '-' },
+        { h: 'Watchlist', r: 1, v: r => num(r.watchlist) },
+        { h: 'Watched', r: 1, v: r => num(r.watched) }
+      ], rows, 'No accounts match.'))}</div>`;
+  }
+
+  async function viewContent(force) {
+    const c = await load('content', force);
+    const played = c.trailers.played, failed = c.trailers.failed;
+    const ti = r => `<span class="text-white/85">${esc(r.t || r.id)}</span>`;
+    return `
+      ${note('Content health comes from what real visitors hit: broken posters, trailers that would not play, and titles with no streaming option in their country. A title shows up here only after someone ran into it.')}
+      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        ${kpi('Trailers played', num(played))}${kpi('Trailers failed', num(failed), pct(failed, played + failed) + '% of attempts')}${kpi('Poster failures', num((c.poster_fail || []).reduce((a, x) => a + x.n, 0)))}${kpi('Not streamable', num((c.avail_none || []).reduce((a, x) => a + x.n, 0)), 'title and country views')}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        ${card(h('Most opened') + table([{ h: 'Title', html: ti }, { h: 'Opens', r: 1, v: r => num(r.n) }], c.top_opened))}
+        ${card(h('Most saved to watchlists') + table([{ h: 'Title', html: ti }, { h: 'Saves', r: 1, v: r => num(r.n) }], c.top_saved))}
+        ${card(h('Posters that failed to load', 'Fix or replace these') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.poster_fail, 'No broken posters reported.'))}
+        ${card(h('Trailers that would not play') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.trailer_fail, 'No trailer failures reported.'))}
+        ${card(h('Not available to watch', 'Visitors opened these where nothing streams, rents or sells') + table([{ h: 'Title', html: ti }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Times', r: 1, v: r => num(r.n) }], c.avail_none, 'Nothing reported.'))}
+        ${card(h('Vibe votes') + bars(c.vibes, x => x.k.replace(/_/g, ' '), 'n', { share: true }) + '<div class="mt-6"></div>' + h('Actor pages opened') + bars(c.actors, x => x.k, 'n', { color: 'bg-sky-400' }))}
+      </div>`;
+  }
+
+  async function viewStreaming(force) {
+    const s = await load('streaming', force);
+    return `
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        ${kpi('Streaming clicks', num(s.total), 'in this period')}
+        ${kpi('Services clicked', num((s.by_service || []).length))}
+        ${kpi('Countries', num((s.by_region || []).length))}
+        ${kpi('No-option views', num((s.unavailable_by_region || []).reduce((a, x) => a + x.n, 0)), 'title not watchable locally')}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        ${card(h('Clicks by service') + bars(s.by_service, x => x.k, 'n', { share: true, color: 'bg-rose-400' }))}
+        ${card(h('Clicks by country') + bars(s.by_region, x => cname(x.k), 'n', { share: true, color: 'bg-rose-400' }))}
+        ${card(h('Service by country') + table([{ h: 'Service', v: r => r.svc }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.matrix))}
+        ${card(h('Titles people go to watch') + table([{ h: 'Title', html: r => esc(r.t || r.id) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.top_titles))}
+        ${card(h('Countries with the most "not available" views') + bars(s.unavailable_by_region, x => cname(x.k), 'n', { color: 'bg-amber-400' }), 'lg:col-span-2')}
+      </div>`;
+  }
+
+  async function viewSystem(force) {
+    const s = await load('system', force);
+    let version = 'unknown';
+    try { const t = await (await fetch('/sw.js', { cache: 'no-store' })).text(); const m = /watchvibe-cache-(v\d+)/.exec(t); if (m) version = m[1]; } catch (e) {}
+    const age = s.newest_event ? (Date.now() - new Date(s.newest_event).getTime()) / 3600000 : null;
+    const live = age !== null && age < 24;
+    return `
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        ${kpi('Events stored', num(s.events_total), 'since ' + (s.oldest_event ? when(s.oldest_event) : 'start'))}
+        ${kpi('Events, last 24 h', num(s.events_24h), live ? 'tracking is live' : 'no recent events')}
+        ${kpi('Errors, last 24 h', num(s.errors_24h))}
+        ${kpi('App version', version, 'service worker cache')}
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        ${card(h('Storage') + `<dl class="space-y-2 text-[13px]"><div class="flex justify-between"><dt class="text-white/50">Database size</dt><dd class="text-white/85">${bytes(s.database_bytes)}</dd></div><div class="flex justify-between"><dt class="text-white/50">Events table</dt><dd class="text-white/85">${bytes(s.events_table_bytes)}</dd></div><div class="flex justify-between"><dt class="text-white/50">Latest event</dt><dd class="text-white/85">${esc(ago(s.newest_event))}</dd></div></dl><p class="mt-3 text-xs text-white/35">The free Supabase plan includes 500 MB of database space. Old events can be deleted below.</p>`)}
+        ${card(h('Housekeeping', 'Delete old analytics events to save space') + `<div class="flex flex-wrap items-center gap-3"><select id="purgeDays" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none"><option value="90" class="bg-[#14141A]">Older than 90 days</option><option value="180" class="bg-[#14141A]">Older than 180 days</option><option value="365" class="bg-[#14141A]">Older than 1 year</option></select><button id="purge" type="button" class="cursor-pointer rounded-full px-4 py-2 text-[13px] text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/10">Delete old events</button></div><p id="purgeMsg" class="mt-3 text-xs text-white/40" role="status"></p>`)}
+        ${card(h('Admins') + (s.admins || []).map(e => `<div class="text-[13px] text-white/80">${esc(e)}</div>`).join('') + '<p class="mt-3 text-xs text-white/35">The admin list lives in the database (table admins). Add or remove people there.</p>')}
+        ${card(h('Recent site errors', 'JavaScript errors visitors hit') + table([{ h: 'When', v: r => ago(r.ts), cls: 'whitespace-nowrap text-white/60' }, { h: 'Message', v: r => r.m }, { h: 'Where', v: r => r.w }, { h: 'Country', v: r => cname(r.cc) }], s.recent_errors, 'No errors reported.'))}
+      </div>
+      <div class="mt-4">${card(h('Privacy') + '<p class="text-[13px] leading-relaxed text-white/55">Analytics store no emails, names or IP addresses, only a random anonymous visitor id, country, device type, browser and what was clicked. Visitors with Do Not Track or Global Privacy Control turned on are not tracked, and neither is the admin.</p>')}</div>`;
+  }
+
+  const VIEWS = { overview: viewOverview, users: viewUsers, content: viewContent, streaming: viewStreaming, system: viewSystem };
+
+  function drawTabs() {
+    document.getElementById('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" data-tab="${id}" class="cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ${state.tab === id ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'}">${label}</button>`).join('');
+  }
+  function gate(title, body, action) {
+    app.innerHTML = `<div class="mx-auto mt-16 max-w-md rounded-3xl bg-white/[0.03] p-8 text-center ring-1 ring-white/[0.07]"><h1 class="font-display text-2xl font-medium">${esc(title)}</h1><p class="mt-3 text-sm leading-relaxed text-white/55">${body}</p>${action || ''}</div>`;
+  }
+  async function render(force) {
+    drawTabs();
+    app.innerHTML = '<div class="space-y-3"><div class="h-24 animate-pulse rounded-2xl bg-white/[0.04]"></div><div class="h-64 animate-pulse rounded-2xl bg-white/[0.04]"></div></div>';
+    try {
+      const html = await VIEWS[state.tab](force);
+      app.innerHTML = html;
+      bindView();
+    } catch (e) {
+      if (e.code === '42501' || /not authorized/i.test(e.message)) gate('Admin access only', 'This account is not on the admin list.', '<a href="/" class="mt-6 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Back to WatchVibe</a>');
+      else if (e.code === 'PGRST202' || /function .* does not exist|Could not find the function/i.test(e.message)) gate('Database not set up', 'The analytics functions are missing in Supabase. Run <code class="text-white/80">supabase/admin_analytics.sql</code> in the SQL editor, then refresh.');
+      else gate('Could not load', esc(e.message || 'Unknown error') + '<br><br><button id="retry" type="button" class="cursor-pointer rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Try again</button>');
+      const r = document.getElementById('retry'); if (r) r.onclick = () => render(true);
+    }
+  }
+  function bindView() {
+    const uf = document.getElementById('userFilter');
+    if (uf) uf.oninput = () => { state.userFilter = uf.value; clearTimeout(window.__uft); window.__uft = setTimeout(async () => { const pos = uf.selectionStart; await render(false); const n = document.getElementById('userFilter'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); };
+    const us = document.getElementById('userSort'); if (us) us.onchange = () => { state.userSort = us.value; render(false); };
+    const csv = document.getElementById('csv');
+    if (csv) csv.onclick = () => {
+      const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/^([=+\-@])/, "'$1") + '"';
+      const head = ['name', 'email', 'method', 'joined', 'last_sign_in', 'verified', 'icon', 'watchlist', 'watched'];
+      const lines = [head.join(',')].concat((window.__adminUserRows || []).map(r => [r.name, r.email, r.provider, r.created_at, r.last_sign_in_at, r.verified, r.icon, r.watchlist, r.watched].map(q).join(',')));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'watchvibe_users_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+    };
+    const purge = document.getElementById('purge');
+    if (purge) purge.onclick = async () => {
+      const days = Number(document.getElementById('purgeDays').value); const msg = document.getElementById('purgeMsg');
+      if (!confirm('Permanently delete analytics events older than ' + days + ' days? This cannot be undone.')) return;
+      msg.textContent = 'Deleting…';
+      try { const n = await rpc('admin_purge_events', { p_days: days }); msg.textContent = 'Deleted ' + num(n) + ' events.'; state.cache = {}; } catch (e) { msg.textContent = 'Could not delete: ' + e.message; }
+    };
+  }
+
+  document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render(false); });
+  document.getElementById('range').addEventListener('change', e => { state.days = Number(e.target.value); render(false); });
+  document.getElementById('refresh').addEventListener('click', () => { state.cache = {}; render(true); });
+
+  (async function start() {
+    drawTabs();
+    const { data } = await sb.auth.getSession();
+    if (!data || !data.session) { gate('Sign in first', 'Sign in on WatchVibe with the admin account, then come back to this page.', '<a href="/" class="mt-6 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Go to WatchVibe</a>'); return; }
+    render(false);
+  })();
+})();
+</script>
+</body>
+</html>

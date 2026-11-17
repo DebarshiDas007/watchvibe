@@ -505,9 +505,8 @@
     }
 
 
-    // --- SUPERADMIN COMMAND STUDIO LOGIC ---
-    // NOTE: this is only a UI gate. Real enforcement lives in Supabase RLS (see supabase/schema.sql):
-    // only a verified JWT for the admin email can read other users' rows.
+    // --- ADMIN ENTRY ---
+    // The admin dashboard lives at /admin. This is only a UI shortcut: the data is protected by Supabase (see supabase/admin_analytics.sql).
     const SUPER_ADMIN_EMAIL = 'dasdebarshi1234@gmail.com';
 
     function isSuperAdmin() {
@@ -515,431 +514,72 @@
       return !!(s && s.verified && s.email && s.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
     }
 
-    // --- REAL-TIME CLOUD USER TRACKER & TELEMETRY ---
-    let realtimeUserChannel = null;
-    let liveDurationTimer = null;
-    let cloudUsersList = [];
-
-    const AdminAnalytics = {
-      getKey() { return 'watchvibe_admin_telemetry_v2'; },
-      get() {
-        try {
-          const raw = localStorage.getItem(this.getKey());
-          if (raw) return JSON.parse(raw);
-        } catch(e) {}
-        
-        // Initial clean seed data
-        const now = Date.now();
-        return {
-          totalSessions: 0,
-          uniqueDevices: 0,
-          geoStats: {},
-          deviceStats: { mobile: 0, desktop: 0 },
-          ottReferrals: {},
-          topSearches: {},
-          aiPrompts: [],
-          userAccounts: []
-        };
-      },
-      save(data) {
-        try { localStorage.setItem(this.getKey(), JSON.stringify(data)); } catch(e) {}
-      },
-      recordSearch(query) {
-        if (!query || query.trim().length < 2) return;
-        const q = query.trim();
-        const data = this.get();
-        data.topSearches = data.topSearches || {};
-        data.topSearches[q] = (data.topSearches[q] || 0) + 1;
-        this.save(data);
-      },
-      recordOttClick(provider) {
-        if (!provider) return;
-        const data = this.get();
-        data.ottReferrals = data.ottReferrals || {};
-        const key = provider.toLowerCase().trim();
-        data.ottReferrals[key] = (data.ottReferrals[key] || 0) + 1;
-        this.save(data);
-      },
-      recordAiPrompt(promptText) {
-        if (!promptText || promptText.trim().length < 3) return;
-        const p = promptText.trim();
-        const data = this.get();
-        data.aiPrompts = data.aiPrompts || [];
-        if (!data.aiPrompts.includes(p)) {
-          data.aiPrompts.unshift(p);
-          if (data.aiPrompts.length > 15) data.aiPrompts.pop();
-        }
-        this.save(data);
-      },
-      recordUserLogin(name, email, isPersistent) {
-        if (!email || !email.includes('@')) return;
-        const cleanEmail = email.trim().toLowerCase();
-        const cleanName = sanitizeRealUserName(name, email);
-        const data = this.get();
-        data.userAccounts = data.userAccounts || [];
-        
-        const existingIdx = data.userAccounts.findIndex(u => u.email.toLowerCase() === cleanEmail);
-        const role = (cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase()) ? 'Superadmin 👑' : 'Member';
-        const nowIso = new Date().toISOString();
-        
-        const userObj = {
-          id: 'usr_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
-          name: cleanName,
-          email: cleanEmail,
-          role: role,
-          signedInAt: existingIdx >= 0 ? (data.userAccounts[existingIdx].signedInAt || nowIso) : nowIso,
-          lastActive: nowIso,
-          sessionType: isPersistent ? 'localStorage' : 'sessionStorage',
-          online: true
-        };
-
-        if (existingIdx >= 0) {
-          data.userAccounts[existingIdx] = userObj;
-        } else {
-          data.userAccounts.unshift(userObj);
-        }
-        this.save(data);
-
-        // Broadcast to Realtime WebSocket channel if Supabase connected
-        broadcastUserPresence(userObj);
-      }
-    };
-
-    // The unauthenticated "user_active" broadcast channel was removed: any visitor could spoof entries
-    // into the admin user list. User lists now come only from the RLS-protected `profiles` table.
-    function initRealtimeUserChannel() {}
-    function broadcastUserPresence() {}
-
-    // Load cloud users from Supabase profiles table
-    async function fetchCloudUsersFromSupabase() {
-      if (!window.supabaseClient) return;
-      try {
-        const { data, error } = await window.supabaseClient.from('profiles').select('*');
-        if (!error && data && data.length > 0) {
-          const analyticsData = AdminAnalytics.get();
-          data.forEach(p => {
-            const email = p.email;
-            if (!email) return;
-            let meta = {};
-            try { if (p.avatar_url) meta = JSON.parse(p.avatar_url); } catch(e) {}
-            
-            const existing = analyticsData.userAccounts.find(u => u.email.toLowerCase() === email.toLowerCase());
-            if (!existing) {
-              analyticsData.userAccounts.push({
-                id: p.id || ('usr_' + email.replace(/[^a-zA-Z0-9]/g, '_')),
-                name: p.full_name || sanitizeRealUserName(null, email),
-                email: email,
-                role: (email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) ? 'Superadmin 👑' : (meta.role || 'Member'),
-                signedInAt: meta.signedInAt || p.updated_at || new Date().toISOString(),
-                lastActive: meta.lastActive || p.updated_at || new Date().toISOString(),
-                sessionType: meta.sessionType || 'localStorage',
-                online: false
-              });
-            }
-          });
-          AdminAnalytics.save(analyticsData);
-          renderUsersTable();
-        }
-      } catch(e) {
-        console.warn('Cloud users fetch warning:', e);
-      }
-    }
-
     function openAdminStudio() {
-      if (!isSuperAdmin()) {
-        showToast('🔒 Access Restricted: Superadmin authorization required.');
-        if (window.location.hash === '#admin' || window.location.hash === '#studio') {
-          history.replaceState(null, null, window.location.pathname);
-        }
-        return;
-      }
-      const modal = document.getElementById('adminStudioModal');
-      if (modal) {
-        renderAdminStudioView();
-        modal.classList.remove('hidden');
-        window.location.hash = 'admin';
-      }
+      if (!isSuperAdmin()) { showToast('Admin access only.'); return; }
+      window.location.href = '/admin';
     }
 
-    function closeAdminStudio() {
-      stopLiveDurationTicker();
-      const modal = document.getElementById('adminStudioModal');
-      if (modal) modal.classList.add('hidden');
-      if (window.location.hash === '#admin' || window.location.hash === '#studio') {
-        history.replaceState(null, null, window.location.pathname);
+    // --- ANONYMOUS ANALYTICS ---
+    // No emails, names or IP addresses are stored. `sid` is a random id kept in this browser. Skipped when Do Not Track /
+    // Global Privacy Control is on, and for the admin's own browsing. Events go to the insert-only `events` table.
+    const Track = (() => {
+      let off = false, sid = '', queue = [], timer = null, sent = 0, visited = false;
+      const seen = new Set();
+      try { off = navigator.doNotTrack === '1' || navigator.globalPrivacyControl === true; } catch (e) {}
+      try {
+        sid = localStorage.getItem('wv_vid') || '';
+        if (!/^[a-z0-9]{16,40}$/.test(sid)) {
+          sid = ((crypto.randomUUID ? crypto.randomUUID() : '') + Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 32);
+          localStorage.setItem('wv_vid', sid);
+        }
+      } catch (e) { sid = 'anon' + Math.random().toString(36).slice(2, 14); }
+      const ua = navigator.userAgent || '';
+      const device = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) ? 'tablet' : (/Mobi|iPhone|Android/i.test(ua) ? 'mobile' : 'desktop');
+      const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Other';
+      let ref = null;
+      try { const h = document.referrer ? new URL(document.referrer).hostname : ''; ref = h && h !== location.hostname ? h.slice(0, 80) : null; } catch (e) {}
+      const country = () => {
+        if (window.__ipCountry) return window.__ipCountry;
+        return (typeof regionSource !== 'undefined' && (regionSource === 'ip' || regionSource === 'timezone') && /^[A-Z]{2}$/.test(selectedCountry)) ? selectedCountry : null;
+      };
+      const clean = p => { const o = {}; Object.keys(p || {}).forEach(k => { const v = p[k]; o[k] = typeof v === 'string' ? v.slice(0, 120) : (typeof v === 'number' || typeof v === 'boolean' ? v : String(v).slice(0, 120)); }); return o; };
+      function flush() {
+        clearTimeout(timer); timer = null;
+        if (!queue.length) return;
+        const batch = queue.splice(0, 50);
+        try {
+          fetch(SUPABASE_URL + '/rest/v1/events', { method: 'POST', keepalive: true, headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(batch) }).catch(() => {});
+        } catch (e) {}
       }
-    }
-
-    function switchAdminTab(tabId) {
-      const tabs = ['overview', 'users', 'ott', 'ai', 'system'];
-      tabs.forEach(t => {
-        const pane = document.getElementById(`adminTabPane_${t}`);
-        const btn = document.getElementById(`adminTabBtn_${t}`);
-        if (pane) {
-          if (t === tabId) pane.classList.remove('hidden');
-          else pane.classList.add('hidden');
-        }
-        if (btn) {
-          if (t === tabId) {
-            btn.className = 'px-3 py-1.5 rounded-xl font-black text-xs bg-purple-600 text-white shadow-md transition';
-          } else {
-            btn.className = 'px-3 py-1.5 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition';
-          }
-        }
+      function event(type, props, path) {
+        if (off || sent >= 250) return;
+        try { if (typeof isSuperAdmin === 'function' && isSuperAdmin()) return; } catch (e) {}
+        queue.push({ sid, type, props: clean(props), country: country(), device, browser, ref: type === 'visit' ? ref : null, path: path ? String(path).slice(0, 40) : null });
+        sent++;
+        if (queue.length >= 12) flush(); else if (!timer) timer = setTimeout(flush, 4000);
+      }
+      function once(key, type, props, path) { if (seen.has(key)) return; seen.add(key); event(type, props, path); }
+      function visit() { if (visited) return; visited = true; event('visit', {}, typeof activeTab !== 'undefined' ? activeTab : null); }
+      let errs = 0;
+      window.addEventListener('error', e => {
+        const m = String(e.message || '').slice(0, 140);
+        if (errs++ > 4 || /ResizeObserver|Script error/i.test(m)) return;
+        event('js_error', { m, w: (String(e.filename || '').split('/').pop() || '') + ':' + (e.lineno || 0) });
       });
-    }
+      window.addEventListener('unhandledrejection', e => {
+        if (errs++ > 4) return;
+        event('js_error', { m: String((e.reason && e.reason.message) || e.reason || 'rejection').slice(0, 140), w: 'promise' });
+      });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+      window.addEventListener('pagehide', flush);
+      setTimeout(visit, 3500); // fallback if region detection is slow
+      return { event, once, visit, flush };
+    })();
 
-    function formatDuration(startTimeIso) {
-      if (!startTimeIso) return '0m 00s';
-      try {
-        const diff = Math.max(0, Date.now() - new Date(startTimeIso).getTime());
-        const totalSecs = Math.floor(diff / 1000);
-        const hrs = Math.floor(totalSecs / 3600);
-        const mins = Math.floor((totalSecs % 3600) / 60);
-        const secs = totalSecs % 60;
-        if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
-        if (mins > 0) return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-        return `${secs}s`;
-      } catch(e) { return '0m 00s'; }
-    }
-
-    function formatSignInDateTime(isoString) {
-      if (!isoString) return { date: 'Today', time: 'Just now', relative: 'Now' };
-      try {
-        const d = new Date(isoString);
-        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        return { date: dateStr, time: timeStr, relative: formatTimeAgo(isoString) };
-      } catch(e) {
-        return { date: 'Recent', time: '', relative: 'Recently' };
-      }
-    }
-
-    function renderUsersTable() {
-      const data = AdminAnalytics.get();
-      const userListEl = document.getElementById('adminUsersTableBody');
-      const badgeCount = document.getElementById('adminUsersCountBadge');
-      const liveOnlineBadge = document.getElementById('adminLiveOnlineBadge');
-      
-      const users = data.userAccounts || [];
-      if (badgeCount) badgeCount.innerText = `${users.length} Users Tracked`;
-      
-      const onlineCount = users.filter(u => u.online !== false).length;
-      if (liveOnlineBadge) liveOnlineBadge.innerText = `${onlineCount} Live Active`;
-
-      if (userListEl) {
-        userListEl.innerHTML = users.map(u => {
-          const isMe = u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-          const initial = ((u.name || 'U')[0] || 'U').toUpperCase();
-          const dt = formatSignInDateTime(u.signedInAt);
-          const duration = formatDuration(u.signedInAt);
-          const timeAgo = formatTimeAgo(u.lastActive);
-          const isOnline = u.online !== false;
-
-          return `
-            <tr class="border-b border-[#2C2C3A]/40 hover:bg-purple-950/20 transition group">
-              <!-- 1. New User & Email -->
-              <td class="py-3 px-4 flex items-center gap-3">
-                <div class="relative">
-                  <div class="w-9 h-9 rounded-xl ${isMe ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 border border-purple-400' : 'bg-[#1D1D25] border border-slate-700'} flex items-center justify-center font-black text-xs text-white shadow">
-                    ${initial}
-                  </div>
-                  <span class="w-2.5 h-2.5 rounded-full absolute -bottom-0.5 -right-0.5 border-2 border-[#14141E] ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}"></span>
-                </div>
-                <div>
-                  <div class="font-black text-white text-xs flex items-center gap-1.5">
-                    ${esc(u.name)}
-                    ${isMe ? '<span class="text-[9px] bg-purple-500/30 text-purple-300 px-1.5 py-0.2 rounded font-mono font-bold border border-purple-400/30">YOU</span>' : ''}
-                  </div>
-                  <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                    <span>${esc(u.email)}</span>
-                  </div>
-                </div>
-              </td>
-
-              <!-- 2. Signed In (Time & Date) -->
-              <td class="py-3 px-3">
-                <div class="text-xs font-bold text-slate-200">${dt.date}</div>
-                <div class="text-[11px] text-slate-400 font-mono">${dt.time} <span class="text-purple-400">(${dt.relative})</span></div>
-              </td>
-
-              <!-- 3. Duration -->
-              <td class="py-3 px-3">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 font-mono text-xs font-bold">
-                  <i class="fa-regular fa-clock text-[10px] text-purple-400"></i>
-                  <span class="user-duration-live" data-start="${u.signedInAt}">${duration}</span>
-                </div>
-              </td>
-
-              <!-- 4. Role -->
-              <td class="py-3 px-3">
-                <span class="text-[10px] px-2.5 py-1 rounded-full font-bold ${isMe ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' : 'bg-slate-800 text-slate-300 border border-slate-700'}">
-                  ${u.role || 'Member'}
-                </span>
-              </td>
-
-              <!-- 5. Last Active -->
-              <td class="py-3 px-3">
-                <div class="text-xs font-bold ${isOnline ? 'text-emerald-400' : 'text-slate-400'} flex items-center gap-1.5">
-                  <span class="w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}"></span>
-                  ${isOnline ? 'Active just now' : timeAgo}
-                </div>
-                <div class="text-[10px] text-slate-500 font-mono">${new Date(u.lastActive || Date.now()).toLocaleTimeString()}</div>
-              </td>
-
-              <!-- 6. Session Type -->
-              <td class="py-3 px-4 text-right">
-                <span class="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold ${u.sessionType === 'localStorage' ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30' : 'bg-sky-950/40 text-sky-300 border border-sky-500/30'}">
-                  ${u.sessionType || 'localStorage'}
-                </span>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      }
-    }
-
-    function startLiveDurationTicker() {
-      if (liveDurationTimer) clearInterval(liveDurationTimer);
-      liveDurationTimer = setInterval(() => {
-        const els = document.querySelectorAll('.user-duration-live');
-        els.forEach(el => {
-          const start = el.getAttribute('data-start');
-          if (start) el.innerText = formatDuration(start);
-        });
-      }, 1000);
-    }
-
-    function stopLiveDurationTicker() {
-      if (liveDurationTimer) {
-        clearInterval(liveDurationTimer);
-        liveDurationTimer = null;
-      }
-    }
-
-    function renderAdminStudioView() {
-      const data = AdminAnalytics.get();
-
-      // Top KPI counts
-      const elSessions = document.getElementById('adminStatSessions');
-      const elDevices = document.getElementById('adminStatDevices');
-      const elWatchlist = document.getElementById('adminStatWatchlist');
-      if (elSessions) elSessions.innerText = data.totalSessions || 184;
-      if (elDevices) elDevices.innerText = `${data.uniqueDevices || 36} Devices`;
-      if (elWatchlist) elWatchlist.innerText = `${(userWatchlistIds || []).length + 42} Saves`;
-
-      // Render Users Table
-      renderUsersTable();
-      startLiveDurationTicker();
-
-      // Also trigger cloud fetch from Supabase
-      fetchCloudUsersFromSupabase();
-
-      // 2. OTT Referral Stats
-      const ottContainer = document.getElementById('adminOttStatsGrid');
-      if (ottContainer) {
-        const ottData = data.ottReferrals || {};
-        const entries = [
-          { name: 'Netflix', key: 'netflix', icon: 'fa-solid fa-play', color: 'from-red-600 to-rose-700' },
-          { name: 'Prime Video', key: 'prime', icon: 'fa-solid fa-cart-shopping', color: 'from-sky-600 to-blue-700' },
-          { name: 'Disney+ Hotstar', key: 'hotstar', icon: 'fa-solid fa-star', color: 'from-blue-600 to-indigo-800' },
-          { name: 'JioCinema', key: 'jiocinema', icon: 'fa-solid fa-tv', color: 'from-pink-600 to-purple-700' },
-          { name: 'Zee5', key: 'zee5', icon: 'fa-solid fa-circle-play', color: 'from-amber-600 to-orange-700' }
-        ];
-        const totalOtt = Object.values(ottData).reduce((a, b) => a + b, 0) || 1;
-        ottContainer.innerHTML = entries.map(e => {
-          const count = ottData[e.key] || 0;
-          const pct = Math.round((count / totalOtt) * 100);
-          return `
-            <div class="bg-[#12121A] p-3.5 rounded-2xl border border-[#2C2C3A] flex flex-col justify-between">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-black text-white">${e.name}</span>
-                <span class="text-xs font-mono font-bold text-purple-300">${count} clicks</span>
-              </div>
-              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-2">
-                <div class="h-full bg-gradient-to-r ${e.color}" style="width: ${pct}%"></div>
-              </div>
-              <div class="text-[10px] text-slate-400 mt-1.5 flex justify-between">
-                <span>Share: ${pct}%</span>
-                <span class="text-emerald-400">● Active</span>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      // 3. Top Searches
-      const searchContainer = document.getElementById('adminTopSearchesList');
-      if (searchContainer) {
-        const searches = Object.entries(data.topSearches || {}).sort((a,b) => b[1] - a[1]).slice(0, 8);
-        searchContainer.innerHTML = searches.map(([q, count], idx) => `
-          <div class="flex items-center justify-between py-2 border-b border-[#2C2C3A]/50 text-xs">
-            <div class="flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold font-mono text-[10px] flex items-center justify-center">#${idx+1}</span>
-              <span class="font-bold text-white">${esc(q)}</span>
-            </div>
-            <span class="bg-purple-900/40 border border-purple-500/30 text-purple-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">${count} queries</span>
-          </div>
-        `).join('') || '<div class="text-xs text-slate-500 py-2">No searches logged yet.</div>';
-      }
-
-      // 4. AI Vibe Prompts
-      const aiContainer = document.getElementById('adminAiPromptsList');
-      if (aiContainer) {
-        aiContainer.innerHTML = (data.aiPrompts || []).map(prompt => `
-          <div class="bg-[#12121A] p-3 rounded-xl border border-[#2C2C3A] flex items-center justify-between gap-3 text-xs">
-            <div class="flex items-center gap-2.5 truncate">
-              <i class="fa-solid fa-sparkles text-purple-400 text-xs shrink-0"></i>
-              <span class="text-slate-200 font-medium truncate">"${esc(prompt)}"</span>
-            </div>
-            <button onclick="testAiPromptInStudio('${prompt.replace(/'/g, "\\'")}')" class="shrink-0 bg-purple-600/30 hover:bg-purple-600 text-purple-300 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold border border-purple-500/30 transition">
-              Test Prompt
-            </button>
-          </div>
-        `).join('') || '<div class="text-xs text-slate-500 py-2">No AI prompts logged yet.</div>';
-      }
-    }
-
-    function formatTimeAgo(isoString) {
-      if (!isoString) return 'Active just now';
-      try {
-        const diffMs = Date.now() - new Date(isoString).getTime();
-        const mins = Math.floor(diffMs / 60000);
-        if (mins < 1) return 'Active just now';
-        if (mins < 60) return `${mins}m ago`;
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `${hrs}h ago`;
-        return `${Math.floor(hrs / 24)}d ago`;
-      } catch(e) { return 'Recent'; }
-    }
-
-    function testAiPromptInStudio(promptText) {
-      closeAdminStudio();
-      const input = document.getElementById('aiVibeInput');
-      if (input) {
-        input.value = promptText;
-        if (typeof runAiVibeMatcher === 'function') runAiVibeMatcher();
-      }
-    }
-
-    function exportAdminDataJson() {
-      const data = AdminAnalytics.get();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `watchvibe_analytics_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('📥 Admin telemetry exported as JSON!');
-    }
-
-    function resetAdminSampleData() {
-      if (confirm('Reset admin telemetry to fresh benchmark data?')) {
-        localStorage.removeItem(AdminAnalytics.getKey());
-        renderAdminStudioView();
-        showToast('🔄 Benchmark analytics reset complete.');
-      }
+    function trackTitleInfo(id) {
+      let it = null;
+      try { it = (mediaDatabase || []).find(m => m.id === id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]); } catch (e) {}
+      return { id: String(id || '').slice(0, 80), t: it && it.title ? it.title : '' };
     }
 
     window.addEventListener('hashchange', () => {
@@ -959,13 +599,6 @@
     window.handleGoogleSignIn = handleGoogleSignIn;
     window.isSuperAdmin = isSuperAdmin;
     window.openAdminStudio = openAdminStudio;
-    window.closeAdminStudio = closeAdminStudio;
-    window.switchAdminTab = switchAdminTab;
-    window.renderAdminStudioView = renderAdminStudioView;
-    window.exportAdminDataJson = exportAdminDataJson;
-    window.resetAdminSampleData = resetAdminSampleData;
-    window.testAiPromptInStudio = testAiPromptInStudio;
-    window.AdminAnalytics = AdminAnalytics;
 
     window.updateGoogleSignInUi = updateGoogleSignInUi;
     window.getLastUsedLoginInfo = getLastUsedLoginInfo;
@@ -1261,321 +894,6 @@
     </div>
   </div>
 
-  <!-- SUPERADMIN COMMAND STUDIO MODAL (STRICTLY LOCKED TO dasdebarshi1234@gmail.com) -->
-  <div id="adminStudioModal" class="fixed inset-0 bg-[#09090D]/95 backdrop-blur-2xl z-[100] hidden flex flex-col p-3 sm:p-6 overflow-y-auto">
-    <div class="max-w-6xl w-full mx-auto space-y-5 my-auto">
-      
-      <!-- Studio Header -->
-      <div class="bg-[#14141E] border border-purple-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3.5">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-purple-900/40">
-            <i class="fa-solid fa-shield-halved"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">WATCHVIBE COMMAND STUDIO</h1>
-              <span class="text-[9px] font-mono font-black bg-purple-500/20 text-purple-300 border border-purple-400/30 px-2 py-0.5 rounded-full">v42 PRO</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-2.5 mt-1 text-xs">
-              <span class="text-emerald-400 font-bold flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Edge Live · Earth Region
-              </span>
-              <span class="text-slate-500">•</span>
-              <span class="text-slate-300 font-mono text-[11px] bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700/60">
-                <i class="fa-solid fa-lock text-purple-400 mr-1"></i>dasdebarshi1234@gmail.com
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 self-end sm:self-auto">
-          <button onclick="exportAdminDataJson()" class="bg-[#1D1D28] hover:bg-purple-900/40 border border-[#2C2C3A] hover:border-purple-500/50 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-2 shadow cursor-pointer">
-            <i class="fa-solid fa-file-arrow-down text-purple-400"></i> Export JSON
-          </button>
-          <button onclick="renderAdminStudioView(); showToast('🔄 Telemetry refreshed.');" class="bg-[#1D1D28] hover:bg-slate-800 border border-[#2C2C3A] text-white font-bold text-xs px-3 py-2 rounded-xl transition shadow cursor-pointer">
-            <i class="fa-solid fa-arrows-rotate"></i>
-          </button>
-          <button onclick="closeAdminStudio()" class="bg-rose-950/40 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer">
-            ✕ Close
-          </button>
-        </div>
-      </div>
-
-      <!-- Top KPI Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <!-- KPI 1 -->
-        <div class="bg-[#14141E] p-4 sm:p-5 rounded-3xl border border-[#2C2C3A] relative overflow-hidden shadow-lg">
-          <div class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Sessions</div>
-          <div id="adminStatSessions" class="text-2xl sm:text-3xl font-black text-white mt-1">184</div>
-          <div class="flex items-center justify-between mt-2 text-[11px]">
-            <span class="text-emerald-400 font-bold flex items-center gap-1">
-              <i class="fa-solid fa-arrow-trend-up"></i> +28.4% WoW
-            </span>
-            <span id="adminStatDevices" class="text-slate-400 font-mono">36 Devices</span>
-          </div>
-        </div>
-
-        <!-- KPI 2 -->
-        <div class="bg-[#14141E] p-4 sm:p-5 rounded-3xl border border-[#2C2C3A] relative overflow-hidden shadow-lg">
-          <div class="text-slate-400 text-xs font-bold uppercase tracking-wider">Catalog Corpus</div>
-          <div class="text-2xl sm:text-3xl font-black text-purple-300 mt-1">2,062</div>
-          <div class="flex items-center justify-between mt-2 text-[11px]">
-            <span class="text-amber-400 font-bold">564 Regional Desi</span>
-            <span class="text-sky-400 font-mono">321 Stand-up</span>
-          </div>
-        </div>
-
-        <!-- KPI 3 -->
-        <div class="bg-[#14141E] p-4 sm:p-5 rounded-3xl border border-[#2C2C3A] relative overflow-hidden shadow-lg">
-          <div class="text-slate-400 text-xs font-bold uppercase tracking-wider">Watchlist Reach</div>
-          <div id="adminStatWatchlist" class="text-2xl sm:text-3xl font-black text-pink-400 mt-1">1,428 Saves</div>
-          <div class="flex items-center justify-between mt-2 text-[11px]">
-            <span class="text-emerald-400 font-bold">84.2% Saved Retention</span>
-            <span class="text-slate-400">Cloud Synced</span>
-          </div>
-        </div>
-
-        <!-- KPI 4 -->
-        <div class="bg-[#14141E] p-4 sm:p-5 rounded-3xl border border-[#2C2C3A] relative overflow-hidden shadow-lg">
-          <div class="text-slate-400 text-xs font-bold uppercase tracking-wider">Infrastructure Cost</div>
-          <div class="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">$0.00 / Mo</div>
-          <div class="flex items-center justify-between mt-2 text-[11px]">
-            <span class="text-slate-300 font-bold">Cloudflare Pages Edge</span>
-            <span class="text-emerald-400 font-mono">Free Forever</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Module Tabs Nav -->
-      <div class="flex flex-wrap items-center gap-2 bg-[#14141E] p-1.5 rounded-2xl border border-[#2C2C3A]">
-        <button id="adminTabBtn_overview" onclick="switchAdminTab('overview')" class="px-3.5 py-2 rounded-xl font-black text-xs bg-purple-600 text-white shadow-md transition">
-          📊 Traffic & Audience
-        </button>
-        <button id="adminTabBtn_users" onclick="switchAdminTab('users')" class="px-3.5 py-2 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          👥 User Accounts (Real-time)
-        </button>
-        <button id="adminTabBtn_ott" onclick="switchAdminTab('ott')" class="px-3.5 py-2 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          🎬 OTT Streaming & Searches
-        </button>
-        <button id="adminTabBtn_ai" onclick="switchAdminTab('ai')" class="px-3.5 py-2 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          🧠 AI Vibe Matcher Logs
-        </button>
-        <button id="adminTabBtn_system" onclick="switchAdminTab('system')" class="px-3.5 py-2 rounded-xl font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          ⚙️ Controls & Database
-        </button>
-      </div>
-
-      <!-- Tab 1: Traffic & Audience Overview -->
-      <div id="adminTabPane_overview" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Geo Breakdown -->
-          <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-3.5 shadow-lg">
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-earth-asia text-purple-400"></i> Geographic Distribution (Auto IP)
-              </h3>
-              <span class="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
-            </div>
-            
-            <div class="space-y-2.5 pt-1 text-xs">
-              <div>
-                <div class="flex justify-between font-bold mb-1">
-                  <span>🇮🇳 India (IN Auto IP)</span>
-                  <span class="font-mono text-purple-300">152 Sessions · 82.6%</span>
-                </div>
-                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-purple-500 to-indigo-500" style="width: 82.6%"></div>
-                </div>
-              </div>
-
-              <div>
-                <div class="flex justify-between font-bold mb-1">
-                  <span>🇺🇸 United States (US)</span>
-                  <span class="font-mono text-slate-300">19 Sessions · 10.3%</span>
-                </div>
-                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style="width: 10.3%"></div>
-                </div>
-              </div>
-
-              <div>
-                <div class="flex justify-between font-bold mb-1">
-                  <span>🇬🇧 United Kingdom (GB)</span>
-                  <span class="font-mono text-slate-300">8 Sessions · 4.3%</span>
-                </div>
-                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-amber-500 to-orange-500" style="width: 4.3%"></div>
-                </div>
-              </div>
-
-              <div>
-                <div class="flex justify-between font-bold mb-1">
-                  <span>🇦🇪 UAE & Middle East</span>
-                  <span class="font-mono text-slate-300">5 Sessions · 2.8%</span>
-                </div>
-                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500" style="width: 2.8%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Platform Ratio -->
-          <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-3.5 shadow-lg flex flex-col justify-between">
-            <div>
-              <h3 class="text-sm font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-mobile-screen-button text-purple-400"></i> Platform & Device Breakdown
-              </h3>
-              <p class="text-xs text-slate-400 mt-1">Automatic device viewport and user-agent classification.</p>
-              
-              <div class="grid grid-cols-2 gap-3 mt-4">
-                <div class="bg-[#12121A] p-4 rounded-2xl border border-[#2C2C3A] text-center">
-                  <i class="fa-solid fa-mobile-screen text-2xl text-purple-400 mb-1"></i>
-                  <div class="text-xl font-black text-white">68%</div>
-                  <div class="text-[11px] text-slate-400 font-bold">Mobile / Handheld</div>
-                </div>
-                <div class="bg-[#12121A] p-4 rounded-2xl border border-[#2C2C3A] text-center">
-                  <i class="fa-solid fa-laptop text-2xl text-indigo-400 mb-1"></i>
-                  <div class="text-xl font-black text-white">32%</div>
-                  <div class="text-[11px] text-slate-400 font-bold">Desktop / Tablet</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="p-3 bg-purple-950/20 rounded-2xl border border-purple-500/20 text-xs text-purple-300">
-              <span class="font-bold">Edge Performance:</span> Cloudflare Earth Anycast Edge responding in <strong>~18ms</strong>.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 2: User Accounts Table -->
-      <div id="adminTabPane_users" class="hidden space-y-4">
-        <div class="bg-[#14141E] rounded-3xl border border-[#2C2C3A] overflow-hidden shadow-lg">
-          <div class="p-4 sm:p-5 border-b border-[#2C2C3A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="text-sm font-black text-white">Live Real-Time User Intelligence Dashboard</h3>
-                <span class="text-[9px] font-mono font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> WEBSOCKET LIVE
-                </span>
-              </div>
-              <p class="text-xs text-slate-400 mt-0.5">Tracks new users, sign-in timestamp, active duration, role, last active, and session persistence.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="adminLiveOnlineBadge" class="text-xs font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-xl font-bold">
-                1 Live Active
-              </span>
-              <span id="adminUsersCountBadge" class="text-xs font-mono bg-purple-950 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-xl font-bold">
-                3 Users Tracked
-              </span>
-              <button onclick="fetchCloudUsersFromSupabase(); showToast('☁️ Cloud users re-synced.');" class="bg-[#1D1D28] hover:bg-purple-900/40 border border-[#2C2C3A] text-white p-1.5 rounded-xl transition text-xs cursor-pointer" title="Re-sync Cloud Users">
-                <i class="fa-solid fa-cloud-arrow-down text-purple-400"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-[#12121A] text-slate-400 font-bold border-b border-[#2C2C3A] text-[11px]">
-                <tr>
-                  <th class="py-2.5 px-4">New User & Email</th>
-                  <th class="py-2.5 px-3">Signed In (Time & Date)</th>
-                  <th class="py-2.5 px-3">Duration</th>
-                  <th class="py-2.5 px-3">Role</th>
-                  <th class="py-2.5 px-3">Last Active</th>
-                  <th class="py-2.5 px-4 text-right">Session Type</th>
-                </tr>
-              </thead>
-              <tbody id="adminUsersTableBody" class="divide-y divide-[#2C2C3A]/30">
-                <!-- Dynamically Rendered with Live Ticking Durations -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 3: OTT Streaming & Searches -->
-      <div id="adminTabPane_ott" class="hidden space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- OTT Outbound Clicks -->
-          <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-4 shadow-lg">
-            <h3 class="text-sm font-black text-white flex items-center gap-2">
-              <i class="fa-solid fa-arrow-up-right-from-square text-purple-400"></i> Outbound OTT Clickstream Referrals
-            </h3>
-            <div id="adminOttStatsGrid" class="space-y-2.5">
-              <!-- Dynamically Rendered -->
-            </div>
-          </div>
-
-          <!-- Top Searches -->
-          <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-4 shadow-lg">
-            <h3 class="text-sm font-black text-white flex items-center gap-2">
-              <i class="fa-solid fa-magnifying-glass text-purple-400"></i> Top Searched Titles & Actors
-            </h3>
-            <div id="adminTopSearchesList" class="space-y-1">
-              <!-- Dynamically Rendered -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 4: AI Vibe Matcher Logs -->
-      <div id="adminTabPane_ai" class="hidden space-y-4">
-        <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-4 shadow-lg">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-sparkles text-purple-400"></i> AI Vibe Matcher Prompt Stream
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Exact emotional and vibe prompts entered by visitors.</p>
-            </div>
-            <span class="text-[10px] bg-purple-500/20 text-purple-300 font-mono font-bold px-2 py-0.5 rounded-full border border-purple-400/30">$0 In-Memory Engine</span>
-          </div>
-
-          <div id="adminAiPromptsList" class="space-y-2">
-            <!-- Dynamically Rendered -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 5: Controls & Database -->
-      <div id="adminTabPane_system" class="hidden space-y-4">
-        <div class="bg-[#14141E] p-5 rounded-3xl border border-[#2C2C3A] space-y-4 shadow-lg">
-          <h3 class="text-sm font-black text-white flex items-center gap-2">
-            <i class="fa-solid fa-server text-purple-400"></i> System Health & Local Operations
-          </h3>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div class="bg-[#12121A] p-4 rounded-2xl border border-[#2C2C3A] space-y-2">
-              <div class="font-bold text-white flex items-center justify-between">
-                <span>Reset Telemetry Benchmark</span>
-                <i class="fa-solid fa-rotate-right text-purple-400"></i>
-              </div>
-              <p class="text-[11px] text-slate-400">Restores telemetry stats to the clean initial benchmark dataset.</p>
-              <button onclick="resetAdminSampleData()" class="mt-2 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/40 text-purple-200 text-xs font-bold px-3 py-1.5 rounded-xl transition">
-                Reset Benchmark Data
-              </button>
-            </div>
-
-            <div class="bg-[#12121A] p-4 rounded-2xl border border-[#2C2C3A] space-y-2">
-              <div class="font-bold text-white flex items-center justify-between">
-                <span>Clear Database Cache</span>
-                <i class="fa-solid fa-database text-purple-400"></i>
-              </div>
-              <p class="text-[11px] text-slate-400">Flushes local cache keys (v6_2062) to force clean asset re-fetch.</p>
-              <button onclick="localStorage.removeItem('watchvibe_cached_media_v6'); showToast('🧹 Local media cache cleared.');" class="mt-2 bg-[#1D1D25] hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-xl transition border border-slate-700">
-                Purge Client Cache
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-
   <!-- TMDB API & DATABASE CONFIG MODAL -->
   <div id="apiConfigModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
     <div class="bg-[#16161E] border border-[#2C2C3A] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative space-y-4">
@@ -1704,8 +1022,9 @@
       const changed = cc !== selectedCountry;
       selectedCountry = cc;
       if (source) regionSource = source;
+      if (source === 'ip') window.__ipCountry = cc;
       detectedCountryName = regionName(cc);
-      if (source === 'user') { try { localStorage.setItem(REGION_KEY, cc); } catch (e) {} }
+      if (source === 'user') { try { localStorage.setItem(REGION_KEY, cc); } catch (e) {} if (changed) Track.event('region_change', { c: cc }); }
       updateRegionUI();
       if (changed || opts.force) {
         if (typeof refreshAvailabilityUi === 'function') refreshAvailabilityUi();
@@ -1714,11 +1033,12 @@
     }
     async function autoDetectUserRegion() {
       const saved = getRegionOverride();
-      if (saved) { setRegion(saved, 'user', { silent: true }); return; }
+      if (saved) { setRegion(saved, 'user', { silent: true }); detectRegionByIp().then(cc => { if (cc) window.__ipCountry = cc; Track.visit(); }); return; }
       const tz = regionFromTimezone();
       if (tz) setRegion(tz, 'timezone', { silent: true });
       const ip = await detectRegionByIp();
       if (ip) setRegion(ip, 'ip');
+      Track.visit();
     }
 
     // Auto-detect region on document load
@@ -2147,6 +1467,13 @@
       if (isNewUser) {
         loadUserWatchlistStore(true);
         syncUserDataFromSupabaseCloud();
+        try {
+          if (!sessionStorage.getItem('wv_login_tracked')) {
+            sessionStorage.setItem('wv_login_tracked', '1');
+            const fresh = user.created_at && (Date.now() - new Date(user.created_at).getTime()) < 5 * 60 * 1000;
+            Track.event(fresh ? 'signup' : 'login', { p: (user.app_metadata && user.app_metadata.provider) || 'email' });
+          }
+        } catch (e) {}
         let prompted = true;
         try { const k = 'watchvibe_avatar_prompted:' + user.id; prompted = !!localStorage.getItem(k); if (!prompted) localStorage.setItem(k, '1'); } catch (e) {}
         // Seamless: if the sign-in window is already open, keep it open and show the icon picker in place.
@@ -2283,10 +1610,6 @@
         const authModal = document.getElementById('authModal');
         if (authModal && !authModal.classList.contains('hidden')) {
           closeAuthModal();
-        }
-        const adminModal = document.getElementById('adminStudioModal');
-        if (adminModal && !adminModal.classList.contains('hidden')) {
-          closeAdminStudio();
         }
       }
     });
@@ -2748,6 +2071,7 @@
         if (Preview.startAt > 5) previewCmd('seekTo', [Preview.startAt, true]);
       }
       if (info.playerState === 1) {
+        if (!Preview.reported) { Preview.reported = true; const ti = trackTitleInfo(Preview.itemId); Track.event('trailer_play', ti); }
         Preview.playing = true;
         clearTimeout(Preview.fallbackTimer);
         if (Preview.seeked && (info.currentTime || 0) >= Preview.startAt - 1) {
@@ -2794,7 +2118,7 @@
     }
 
     function nextTrailerCandidate() {
-      if (!Preview.keys || Preview.keyIdx + 1 >= Preview.keys.length) { stopTrailerPreview(); return; }
+      if (!Preview.keys || Preview.keyIdx + 1 >= Preview.keys.length) { if (!Preview.reported) { const ti = trackTitleInfo(Preview.itemId); Track.once('tf:' + ti.id, 'trailer_fail', ti); } stopTrailerPreview(); return; }
       Preview.token++;
       Preview.keyIdx++;
       Preview.key = Preview.keys[Preview.keyIdx];
@@ -2805,9 +2129,10 @@
       stopTrailerPreview();
       if (!item || prefersNoAutoplay()) return;
       const token = Preview.token;
-      Preview.itemId = item.id;
+      Preview.itemId = item.id; Preview.reported = false;
       const keys = await resolveTrailerKeys(item);
-      if (token !== Preview.token || !keys.length) return; // closed/changed meanwhile, or no trailer found
+      if (token !== Preview.token) return; // closed/changed meanwhile
+      if (!keys.length) { Track.once('tf:' + item.id, 'trailer_fail', { id: String(item.id).slice(0, 80), t: item.title || '', w: 'none' }); return; } // no trailer found
       Preview.keys = keys; Preview.keyIdx = 0; Preview.key = keys[0];
       mountPreviewIframe(getSavedMute());
     }
@@ -2993,7 +2318,7 @@
     // count a click only when a service link is actually opened (not when the page is rendered)
     document.addEventListener('click', e => {
       const a = e.target && e.target.closest ? e.target.closest('a[data-ott]') : null;
-      if (a && typeof AdminAnalytics !== 'undefined') { try { AdminAnalytics.recordOttClick(a.dataset.ott); } catch (err) {} }
+      if (a) { try { const sec = document.getElementById('wtwSection'); const info = trackTitleInfo(sec && sec.dataset.item); Track.event('ott_click', { svc: a.dataset.ott, id: info.id, t: info.t }); } catch (err) {} }
     });
 
     function availabilityPillHtml(e, item, cc, av) {
@@ -3033,6 +2358,7 @@
       if (av.stream.length) body += `<div class="mt-4"><div class="mb-2 text-xs text-white/40">Stream</div><div class="grid grid-cols-1 gap-2 sm:grid-cols-2">${av.stream.map(e => availabilityPillHtml(e, item, cc, av)).join('')}</div></div>`;
       if (av.rentbuy.length) body += `<div class="mt-4"><div class="mb-2 text-xs text-white/40">${av.stream.length ? 'Also available to rent or buy' : 'Rent or buy'}</div><div class="grid grid-cols-1 gap-2 sm:grid-cols-2">${av.rentbuy.map(e => availabilityPillHtml(e, item, cc, av)).join('')}</div></div>`;
       if (!av.has) {
+        Track.once('na:' + item.id + ':' + cc, 'avail_none', { id: String(item.id).slice(0, 80), t: item.title || '' });
         const others = otherRegionsWithStreaming(all, cc);
         body += `<div class="mt-4 rounded-2xl bg-white/[0.03] p-4 text-sm text-white/60 ring-1 ring-white/[0.06]">Not available to stream, rent or buy in ${esc(cname)} right now.${others.length ? `<div class="mt-3 flex flex-wrap items-center gap-2 text-white/45">Available in: ${others.map(c => `<button type="button" onclick="setRegion('${c}', 'user')" class="rounded-full px-3 py-1 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">${esc(regionName(c))}</button>`).join('')}</div>` : ''}</div>`;
       }
@@ -3238,6 +2564,7 @@
         showToast('Removed title from your Watchlist.');
       } else {
         userWatchlistIds.push(mediaId);
+        Track.event('watchlist_add', trackTitleInfo(mediaId));
         showToast('📌 Added to your Saved Watchlist!');
       }
       saveWatchlistStore();
@@ -3288,6 +2615,7 @@
 
     function castUserVibe(mediaId, vibeId) {
       if (!mediaId || !vibeId) return;
+      Track.event('vibe_vote', { v: vibeId });
       const item = (mediaDatabase || []).find(m => m.id === mediaId) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[mediaId]);
       if (item) {
         if (!item.vibeVotes) item.vibeVotes = {};
@@ -3441,9 +2769,7 @@
         showToast('Type what you feel like, or pick a mood.');
         return;
       }
-      if (q && typeof AdminAnalytics !== 'undefined') {
-        AdminAnalytics.recordAiPrompt(q);
-      }
+      if (q) Track.event('mood', { q });
       aiVibeQuery = q;
       const lower = q.toLowerCase();
 
@@ -3868,6 +3194,7 @@ function posterCard(item, opts) {
         actor = ACTORS['robert-downey-jr'] || Object.values(ACTORS)[0];
       }
 
+      if (window.__actorOpen !== actor.id) Track.event('actor_open', { n: actor.name });
       let list = [...actor.filmography];
       if (currentActorVibeFilter) {
         list = list.filter(m => m.vibes.includes(currentActorVibeFilter));
@@ -4036,6 +3363,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
       modal.classList.remove('hidden');
       scrollDetailsToTop();
+      { const ti = trackTitleInfo(mediaId); Track.event('title_open', ti); }
 
       // 1. Check local mediaDatabase
       let item = mediaDatabase.find(m => m.id === mediaId || (m.title && m.title.toLowerCase() === mediaId.toLowerCase()));
@@ -4506,6 +3834,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (!imgEl || imgEl.dataset.fallbackSet) return;
       imgEl.dataset.fallbackSet = "true";
       const raw = (title || imgEl.alt || 'Untitled').trim();
+      Track.once('pf:' + raw, 'poster_fail', { id: raw.slice(0, 80), t: raw.slice(0, 100) });
       const esc2 = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       // wrap the title onto up to 4 short lines
       const words = raw.split(/\s+/); const lines = []; let cur = '';
@@ -4521,9 +3850,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
     async function handleUniversalSearch(query) {
       currentSearchQuery = query || '';
-      if (typeof AdminAnalytics !== 'undefined' && query && query.trim().length >= 2) {
-        AdminAnalytics.recordSearch(query);
-      }
       const q = currentSearchQuery.trim().toLowerCase();
       const resultsContainer = document.getElementById('searchResultsContainer');
       const defaultSections = document.getElementById('exploreDefaultSections');
@@ -4767,6 +4093,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
           // Final smooth render
           renderSearchResults(instantActors, instantMovies, suggestionsHtml, query, false);
+          clearTimeout(window.__searchTrackT);
+          window.__searchTrackT = setTimeout(() => { if (q.length >= 2) Track.event('search', { q, n: instantActors.length + instantMovies.length }); }, 2500);
 
         } catch (err) {
           console.error(err);
@@ -5016,6 +4344,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
     // --- CONTROLLER NAVIGATION ---
     function switchTab(tab) {
+      if (tab !== activeTab) Track.event('view', {}, tab);
       activeTab = tab;
       refreshViews();
     }
