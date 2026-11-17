@@ -77,7 +77,7 @@
     .auth-glow { animation: av-glow 7s ease-in-out infinite; }
     .auth-drawer:not(.hidden), .auth-reveal:not(.hidden) { animation: av-rise .38s cubic-bezier(.22,1,.36,1) both; }
     .auth-btn {
-      position: relative; width: 100%; height: 50px; border-radius: 999px;
+      position: relative; width: 100%; height: 46px; border-radius: 999px;
       display: flex; align-items: center; justify-content: center; gap: 12px;
       font-size: 14.5px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;
       transition: transform .25s cubic-bezier(.22,1,.36,1), background-color .25s ease, box-shadow .25s ease, border-color .25s ease, filter .25s ease;
@@ -94,14 +94,14 @@
     .auth-btn.email-pill:hover:not(:disabled) { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
     .auth-btn.email-pill.is-open { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(168,85,247,.55); }
     .auth-input {
-      width: 100%; background: rgba(255,255,255,.045); border-radius: 14px; padding: 13px 16px;
-      color: #f4f4f6; font-size: 15px; outline: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+      width: 100%; background: rgba(255,255,255,.045); border-radius: 14px; padding: 11px 16px;
+      color: #f4f4f6; font-size: 14.5px; outline: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
       transition: box-shadow .25s ease, background-color .25s ease;
     }
     .auth-input::placeholder { color: rgba(255,255,255,.3); }
     .auth-input:focus { background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(168,85,247,.75), 0 0 0 4px rgba(168,85,247,.16); }
     .auth-primary {
-      width: 100%; height: 50px; border-radius: 999px; background: #fff; color: #0b0b0f; border: 0;
+      width: 100%; height: 46px; border-radius: 999px; background: #fff; color: #0b0b0f; border: 0;
       font-weight: 600; font-size: 14.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
       transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease, opacity .2s ease, background-color .2s ease;
     }
@@ -1131,22 +1131,30 @@
 
   <!-- SIGN IN / PROFILE WINDOW -->
   <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-5" onclick="if(event.target === this) closeAuthModal();">
-    <div class="auth-card relative w-full max-w-[440px] max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-[#0F0F14] shadow-2xl shadow-black/60 ring-1 ring-white/10" role="dialog" aria-modal="true" aria-labelledby="authModalHeaderTitle">
+    <div class="auth-card relative w-full max-w-[440px] md:max-w-[800px] max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-[#0F0F14] shadow-2xl shadow-black/60 ring-1 ring-white/10" role="dialog" aria-modal="true" aria-labelledby="authModalHeaderTitle">
       <div class="auth-glow pointer-events-none absolute -top-24 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-full bg-purple-500/20 blur-3xl"></div>
 
       <button onclick="closeAuthModal()" type="button" aria-label="Close" class="absolute right-4 top-4 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition duration-200 hover:bg-white/10 hover:text-white active:scale-95">
         <i class="fa-solid fa-xmark text-sm"></i>
       </button>
 
-      <div class="relative px-6 pb-7 pt-9 sm:px-9 sm:pb-9 sm:pt-11">
-        <div class="select-none text-center font-display text-[15px] font-medium tracking-[0.3em] text-white/80">WATCH<span class="text-purple-400">VIBE</span></div>
-        <div class="mt-6 text-center">
-          <h3 id="authModalHeaderTitle" class="font-display text-[28px] font-medium leading-tight text-white sm:text-[31px]">Sign in or create an account</h3>
-          <p id="authModalHeaderSubtitle" class="mx-auto mt-2.5 max-w-[320px] text-[14px] leading-relaxed text-white/50">Free to use. Sync your watchlist across devices.</p>
+      <div class="relative grid md:grid-cols-[0.9fr_1.1fr]">
+        <div class="px-6 pb-2 pt-9 sm:px-9 md:flex md:flex-col md:justify-between md:bg-white/[0.02] md:py-11 md:pr-8 md:ring-1 md:ring-white/[0.05]">
+          <div class="select-none text-center font-display text-[15px] font-medium tracking-[0.3em] text-white/80 md:text-left">WATCH<span class="text-purple-400">VIBE</span></div>
+          <div class="mt-6 text-center md:mt-0 md:text-left">
+            <h3 id="authModalHeaderTitle" class="font-display text-[28px] font-medium leading-tight text-white md:text-[34px]">Sign in or create an account</h3>
+            <p id="authModalHeaderSubtitle" class="mx-auto mt-2.5 max-w-[320px] text-[14px] leading-relaxed text-white/50 md:mx-0">Free to use. Sync your watchlist across devices.</p>
+          </div>
+          <ul class="mt-6 hidden space-y-2.5 text-[13px] text-white/50 md:block">
+            <li class="flex items-center gap-2.5"><span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>Cloud watchlist on every device</li>
+            <li class="flex items-center gap-2.5"><span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>Vibe votes build your taste profile</li>
+            <li class="flex items-center gap-2.5"><span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>No password needed</li>
+          </ul>
         </div>
+        <div class="px-6 pb-7 pt-5 sm:px-9 md:py-11 md:pl-8">
 
         <!-- Logged in -->
-        <div id="authLoggedInState" class="auth-reveal mt-7 hidden space-y-5">
+        <div id="authLoggedInState" class="auth-reveal hidden space-y-4">
           <div class="flex items-center gap-4 rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08]">
             <div id="profileUserAvatarBox" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-500/25 text-lg font-semibold text-white ring-1 ring-purple-400/30"><i class="fa-solid fa-user"></i></div>
             <div class="min-w-0 flex-1">
@@ -1161,7 +1169,7 @@
           </div>
           <div class="flex gap-2.5">
             <button onclick="syncCloudWatchlists()" type="button" class="auth-primary flex-1"><i class="fa-solid fa-rotate text-xs"></i> Sync now</button>
-            <button onclick="userSignOut()" type="button" class="h-[50px] cursor-pointer rounded-full px-6 text-sm font-medium text-white/70 ring-1 ring-white/15 transition duration-200 hover:bg-white/10 hover:text-white active:scale-[0.98]">Sign out</button>
+            <button onclick="userSignOut()" type="button" class="h-[46px] cursor-pointer rounded-full px-6 text-sm font-medium text-white/70 ring-1 ring-white/15 transition duration-200 hover:bg-white/10 hover:text-white active:scale-[0.98]">Sign out</button>
           </div>
           <div id="adminStudioEntryPoint" class="hidden border-t border-white/[0.08] pt-4">
             <button onclick="closeAuthModal(); openAdminStudio();" type="button" class="flex w-full cursor-pointer items-center justify-between rounded-2xl bg-purple-500/10 px-4 py-3 text-sm font-medium text-purple-100 ring-1 ring-purple-400/30 transition duration-200 hover:bg-purple-500/20">
@@ -1172,8 +1180,8 @@
         </div>
 
         <!-- Logged out -->
-        <div id="authLoggedOutState" class="mt-7">
-          <div class="auth-stagger space-y-3">
+        <div id="authLoggedOutState">
+          <div class="auth-stagger space-y-2.5">
             <button id="googleSignInBtn" onclick="handleGoogleSignIn()" type="button" class="auth-btn google">
               <svg viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -1197,8 +1205,8 @@
 
           <div id="googleMultiAccountsTray" class="hidden pt-1"><div id="googleSavedAccountsList"></div></div>
 
-          <div id="mimicoreEmailBox" class="auth-drawer mt-6 hidden border-t border-white/[0.07] pt-6">
-            <form onsubmit="handleMimiCoreEmailSubmit(event)" class="space-y-4">
+          <div id="mimicoreEmailBox" class="auth-drawer mt-5 hidden border-t border-white/[0.07] pt-5">
+            <form onsubmit="handleMimiCoreEmailSubmit(event)" class="space-y-3.5">
               <div>
                 <label for="authEmailInput" class="mb-2 block text-[13px] font-medium text-white/70">Email address</label>
                 <input type="email" id="authEmailInput" placeholder="you@example.com" autocomplete="email" required class="auth-input">
@@ -1236,10 +1244,11 @@
             </form>
           </div>
 
-          <div class="mt-7 space-y-3 text-center">
+          <div class="mt-5 space-y-2.5 text-center">
             <button type="button" onclick="closeAuthModal()" class="cursor-pointer text-[13px] font-medium text-white/60 transition duration-200 hover:text-white">Continue as guest</button>
             <p class="text-[11.5px] leading-relaxed text-white/35">We store only your email, name and watchlist to sync your account. Sign-in is handled by Supabase Auth. <a href="/privacy.html" target="_blank" rel="noopener" class="underline decoration-white/20 underline-offset-2 hover:text-white/70">Privacy policy</a></p>
           </div>
+        </div>
         </div>
       </div>
     </div>
