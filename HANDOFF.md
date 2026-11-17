@@ -97,3 +97,5 @@ Still open:
 - (SW v54) Home is full width like Prime: main padding 16/24/36 px, home viewport max 2400 px (other tabs stay 1440), banner full-bleed (-mx), 21:8 ratio on lg (max 760 px), bigger logo/buttons, home-row posters 150/180/210/235/270 px by breakpoint, grids up to 7 columns at 2xl and 9 at 2200 px.
 
 - (SW v55) Trailer iframe is sized in pixels to always cover its frame (fixes black bars above/below the trailer in the tall phone banner).
+
+- (SW v57) Featured bar rewritten: a JS clock (heroTick every 50 ms, HERO.elapsed) drives the fill and the 15 s change instead of a CSS animation + animationend (it stalled when the browser stopped painting). Hover/focus no longer pause it; added a pause/play button; it counts as visible at 20% on screen. Full loop 1>2>3>4>5>1 tested (~15 s each).

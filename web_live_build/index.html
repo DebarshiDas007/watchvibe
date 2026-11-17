@@ -78,12 +78,9 @@
     .eq-bar-3 { animation: equalizer 0.9s ease-in-out infinite 0.4s; }
 
     /* Featured carousel: each segment fills over 15 s, then the next title shows */
-    @keyframes heroFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    .hero-fill { transform: scaleX(0); transform-origin: left center; }
+    .hero-fill { transform: scaleX(0); transform-origin: left center; transition: transform .1s linear; will-change: transform; }
     .hero-seg.is-done .hero-fill { transform: scaleX(1); }
-    .hero-seg.is-active .hero-fill { animation: heroFill 15s linear forwards; }
-    .hero-seg.is-active.is-static .hero-fill { animation: none; transform: scaleX(1); }
-    #heroCarousel[data-paused="1"] .hero-seg.is-active .hero-fill { animation-play-state: paused; }
+    .hero-seg.is-active.is-static .hero-fill { transform: scaleX(1) !important; }
     .hero-slide { transition: opacity .7s ease; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -3669,7 +3666,7 @@ function posterCard(item, opts) {
     // ================= Featured carousel =================
     const HERO_COUNT = 5;          // 5 titles x 15 s = a 75 s loop: enough variety, and every title still gets its turn
     const HERO_SECONDS = 15;
-    const HERO = { pool: [], idx: 0, el: null, pause: new Set(), sound: false, io: null, mounted: 0, touchX: null };
+    const HERO = { pool: [], idx: 0, el: null, pause: new Set(), sound: false, io: null, mounted: 0, touchX: null, elapsed: 0, last: 0, timer: 0, static: false };
 
     function heroTitleHtml(item, i) {
       const ex = EXTRAS.cache.get(extrasKeyOf(item));
@@ -3702,13 +3699,16 @@ function posterCard(item, opts) {
     }
     function heroCarouselHtml(pool) {
       const arrow = (dir, icon, label) => `<button type="button" onclick="${dir}" aria-label="${label}" class="absolute ${dir === 'heroPrev()' ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 sm:h-11 sm:w-11"><i class="fa-solid ${icon} text-sm"></i></button>`;
-      const segs = pool.map((m, i) => `<button type="button" onclick="heroGo(${i}, true)" aria-label="Show featured title ${i + 1} of ${pool.length}: ${esc(m.title)}" class="hero-seg group flex-1 py-2.5 ${i < HERO.idx ? 'is-done' : i === HERO.idx ? 'is-active' : ''}"><span class="block h-[3px] overflow-hidden rounded-full bg-white/25 transition-all group-hover:h-[5px]"><span class="hero-fill block h-full bg-white" onanimationend="heroEnd(event)"></span></span></button>`).join('');
+      const segs = pool.map((m, i) => `<button type="button" onclick="heroGo(${i}, true)" aria-label="Show featured title ${i + 1} of ${pool.length}: ${esc(m.title)}" class="hero-seg group flex-1 py-2.5 ${i < HERO.idx ? 'is-done' : i === HERO.idx ? 'is-active' : ''}"><span class="block h-1 overflow-hidden rounded-full bg-white/30 transition-all group-hover:h-[6px] lg:h-[5px]"><span class="hero-fill block h-full bg-white"></span></span></button>`).join('');
       return `
-        <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative -mx-4 grid overflow-hidden rounded-none sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" onmouseenter="heroSetPause('hover', true)" onmouseleave="heroSetPause('hover', false)" onfocusin="if(event.target.matches(':focus-visible'))heroSetPause('focus', true)" onfocusout="heroSetPause('focus', false)">
+        <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative -mx-4 grid overflow-hidden rounded-none sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]">
           ${pool.map(heroSlideHtml).join('')}
           ${arrow('heroPrev()', 'fa-chevron-left', 'Previous featured title')}
           ${arrow('heroNext()', 'fa-chevron-right', 'Next featured title')}
-          <div id="heroControls" class="absolute bottom-9 right-4 z-10 hidden sm:right-8"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
+          <div class="absolute bottom-9 right-4 z-10 flex items-center gap-2 sm:right-8 lg:bottom-12 lg:right-16">
+            <div id="heroControls" class="hidden"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
+            <button id="heroPauseBtn" type="button" onclick="heroToggle()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Pause automatic changes"><i class="fa-solid fa-pause text-xs"></i></button>
+          </div>
           <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10 lg:inset-x-16">${segs}</div>
         </section>`;
     }
@@ -3740,15 +3740,29 @@ function posterCard(item, opts) {
         Promise.race([getTitleExtras(m), new Promise(r => setTimeout(r, 1200))]).then(ex => { if (HERO.el === el) { if (ex && ex.logo) preloadImage(ex.logo).then(() => HERO.el === el && heroSettleTitle(m, i)); else heroSettleTitle(m, i); } });
       });
       if ('IntersectionObserver' in window) {
-        HERO.io = new IntersectionObserver(es => es.forEach(e => heroSetPause('offscreen', e.intersectionRatio < 0.35)), { threshold: [0, 0.35, 0.6] });
+        HERO.io = new IntersectionObserver(es => es.forEach(e => heroSetPause('offscreen', e.intersectionRatio < 0.2)), { threshold: [0, 0.2, 0.5] });
         HERO.io.observe(el);
       }
       el.addEventListener('touchstart', e => { HERO.touchX = e.touches[0].clientX; }, { passive: true });
       el.addEventListener('touchend', e => { if (HERO.touchX == null) return; const dx = e.changedTouches[0].clientX - HERO.touchX; HERO.touchX = null; if (Math.abs(dx) > 50) (dx < 0 ? heroNext() : heroPrev()); }, { passive: true });
+      HERO.static = reduce; HERO.elapsed = 0; HERO.last = performance.now();
       if (reduce) el.querySelectorAll('.hero-seg.is-active').forEach(s => s.classList.add('is-static'));   // no automatic changes for people who asked for less motion
+      else HERO.timer = setInterval(heroTick, 50);
       heroApply();
     }
+    // The clock: 15 s per title, counted in JavaScript so it keeps running whatever the browser does with animations.
+    function heroTick() {
+      const now = performance.now(), dt = Math.min(now - HERO.last, 2000); HERO.last = now;
+      if (!HERO.el) return;
+      if (!HERO.el.isConnected) { heroDestroy(); return; }
+      if (HERO.static || HERO.pause.size) return;
+      HERO.elapsed += dt;
+      const f = HERO.el.querySelectorAll('.hero-seg .hero-fill')[HERO.idx];
+      if (f) f.style.transform = `scaleX(${Math.min(1, HERO.elapsed / (HERO_SECONDS * 1000))})`;
+      if (HERO.elapsed >= HERO_SECONDS * 1000) heroGo(HERO.idx + 1, true);
+    }
     function heroDestroy() {
+      clearInterval(HERO.timer); HERO.timer = 0;
       if (HERO.io) { HERO.io.disconnect(); HERO.io = null; }
       if (HERO.el) { HERO.el = null; if (Preview.ids !== PV_DEFAULT) stopTrailerPreview(); }
     }
@@ -3784,14 +3798,24 @@ function posterCard(item, opts) {
       const reduce = prefersNoAutoplay();
       HERO.el.querySelectorAll('.hero-slide').forEach((s, k) => { const on = k === next; s.classList.toggle('opacity-0', !on); s.classList.toggle('pointer-events-none', !on); if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true'); });
       const segs = HERO.el.querySelectorAll('.hero-seg');
-      segs.forEach(s => s.classList.remove('is-active', 'is-done', 'is-static'));
-      void HERO.el.offsetWidth;                                   // restart the bar's animation
-      segs.forEach((s, k) => { if (k < next) s.classList.add('is-done'); else if (k === next) { s.classList.add('is-active'); if (reduce) s.classList.add('is-static'); } });
+      HERO.elapsed = 0; HERO.last = performance.now();
+      segs.forEach((s, k) => {
+        s.classList.remove('is-active', 'is-done', 'is-static');
+        const f = s.querySelector('.hero-fill'); f.style.transition = 'none'; f.style.transform = '';   // jump back without sweeping
+        if (k < next) s.classList.add('is-done'); else if (k === next) { s.classList.add('is-active'); if (reduce) s.classList.add('is-static'); }
+      });
+      void HERO.el.offsetWidth;
+      segs.forEach(s => { s.querySelector('.hero-fill').style.transition = ''; });
+      heroApply();
+    }
+    function heroToggle() {
+      if (HERO.pause.has('user')) HERO.pause.delete('user'); else HERO.pause.add('user');
+      const b = document.getElementById('heroPauseBtn'), on = HERO.pause.has('user');
+      if (b) { b.innerHTML = `<i class="fa-solid ${on ? 'fa-play' : 'fa-pause'} text-xs"></i>`; b.setAttribute('aria-label', on ? 'Resume automatic changes' : 'Pause automatic changes'); }
       heroApply();
     }
     function heroNext() { heroGo(HERO.idx + 1, true); }
     function heroPrev() { heroGo(HERO.idx - 1, true); }
-    function heroEnd(e) { if (!HERO.el || !HERO.el.isConnected) { heroDestroy(); return; } if (e.target.closest('.hero-seg') === HERO.el.querySelectorAll('.hero-seg')[HERO.idx]) heroGo(HERO.idx + 1, true); }
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a></div>
