@@ -2722,7 +2722,7 @@
 
     // ---------------- Background trailer preview (30 s highlight, with a volume toggle) ----------------
     const PREVIEW_SECONDS = 30;
-    const Preview = { itemId: null, iframe: null, key: null, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
+    const Preview = { itemId: null, iframe: null, key: null, keys: null, keyIdx: 0, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
 
     function prefersNoAutoplay() {
       try {
@@ -2735,8 +2735,11 @@
     function getSavedMute() { try { return localStorage.getItem('watchvibe_preview_muted') === '1'; } catch (e) { return false; } }
     function saveMute(v) { try { localStorage.setItem('watchvibe_preview_muted', v ? '1' : '0'); } catch (e) {} }
 
-    async function resolveTrailerKey(item) {
-      let key = (typeof TRAILER_FALLBACKS !== 'undefined' && TRAILER_FALLBACKS[item.id]) || null;
+    // All embeddable-looking YouTube candidates for a title, best first (trailers, then teasers, then anything).
+    async function resolveTrailerKeys(item) {
+      const keys = [];
+      const add = k => { if (k && !keys.includes(k)) keys.push(k); };
+      if (typeof TRAILER_FALLBACKS !== 'undefined') add(TRAILER_FALLBACKS[item.id]);
       try {
         const apiKey = getActiveTmdbKey();
         const mediaId = item.id || '';
@@ -2752,18 +2755,26 @@
         if (numeric) {
           const endpoint = isTv ? 'tv' : 'movie';
           const lookup = async (extra) => {
-            const res = await fetch(`${TMDB_BASE_URL}/${endpoint}/${numeric}/videos?api_key=${apiKey}${extra}`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            const list = (data && data.results) || [];
-            const pick = list.find(v => v.site === 'YouTube' && v.type === 'Trailer') || list.find(v => v.site === 'YouTube' && v.type === 'Teaser') || list.find(v => v.site === 'YouTube');
-            return pick && pick.key ? pick.key : null;
+            try {
+              const res = await fetch(`${TMDB_BASE_URL}/${endpoint}/${numeric}/videos?api_key=${apiKey}${extra}`);
+              if (!res.ok) return [];
+              const data = await res.json();
+              const yt = ((data && data.results) || []).filter(v => v.site === 'YouTube' && v.key);
+              const rank = v => (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 1 : 2) + (v.official ? 0 : 0.5);
+              return yt.sort((a, b) => rank(a) - rank(b)).map(v => v.key);
+            } catch (e) { return []; }
           };
-          // English first; then also accept the film's own language (many regional titles only have native-language trailers)
-          key = (await lookup('')) || (item.language ? await lookup(`&include_video_language=${encodeURIComponent(item.language)},en,null`) : null) || key;
+          (await lookup('')).forEach(add);
+          // also the film's own language (regional titles often only have native-language trailers) when we have few options
+          if (keys.length < 3 && item.language) (await lookup(`&include_video_language=${encodeURIComponent(item.language)},en,null`)).forEach(add);
         }
       } catch (e) { console.warn('Trailer lookup failed:', e); }
-      return key;
+      return keys.slice(0, 5);
+    }
+
+    async function resolveTrailerKey(item) {
+      const keys = await resolveTrailerKeys(item);
+      return keys[0] || null;
     }
 
     function previewCmd(func, args) {
@@ -2801,6 +2812,7 @@
       if (!Preview.iframe || e.source !== Preview.iframe.contentWindow) return;
       let msg = e.data;
       if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (err) { return; } }
+      if (msg && msg.event === 'onError') { nextTrailerCandidate(); return; }
       if (!msg || msg.event !== 'infoDelivery' || !msg.info) return;
       const info = msg.info;
       if (typeof info.muted === 'boolean' && info.muted !== Preview.muted) { Preview.muted = info.muted; setPreviewUi(); }
@@ -2854,9 +2866,17 @@
       clearTimeout(Preview.fallbackTimer);
       Preview.fallbackTimer = setTimeout(() => {
         if (token !== Preview.token || Preview.playing) return;
-        if (!startMuted) { mountPreviewIframe(true); }
-        else { stopTrailerPreview(); } // still nothing (e.g. embedding disabled for this video): drop it and keep the backdrop
-      }, 4500);
+        if (!startMuted) { Preview.token++; mountPreviewIframe(true); }
+        else { nextTrailerCandidate(); } // still nothing (e.g. embedding disabled): try the next trailer, else keep the backdrop
+      }, startMuted ? 8000 : 6000);
+    }
+
+    function nextTrailerCandidate() {
+      if (!Preview.keys || Preview.keyIdx + 1 >= Preview.keys.length) { stopTrailerPreview(); return; }
+      Preview.token++;
+      Preview.keyIdx++;
+      Preview.key = Preview.keys[Preview.keyIdx];
+      mountPreviewIframe(getSavedMute());
     }
 
     async function startTrailerPreview(item) {
@@ -2864,9 +2884,9 @@
       if (!item || prefersNoAutoplay()) return;
       const token = Preview.token;
       Preview.itemId = item.id;
-      const key = await resolveTrailerKey(item);
-      if (token !== Preview.token || !key) return; // closed/changed meanwhile, or no trailer found
-      Preview.key = key;
+      const keys = await resolveTrailerKeys(item);
+      if (token !== Preview.token || !keys.length) return; // closed/changed meanwhile, or no trailer found
+      Preview.keys = keys; Preview.keyIdx = 0; Preview.key = keys[0];
       mountPreviewIframe(getSavedMute());
     }
 
@@ -2876,7 +2896,7 @@
       Preview.retry = null; Preview.fallbackTimer = null;
       const slot = document.getElementById('previewSlot');
       if (slot) { slot.innerHTML = ''; slot.style.opacity = '0'; }
-      Preview.iframe = null; Preview.key = null; Preview.playing = false; Preview.seeked = false;
+      Preview.iframe = null; Preview.key = null; Preview.keys = null; Preview.keyIdx = 0; Preview.playing = false; Preview.seeked = false;
     }
 
     function toggleTrailerMute() {
