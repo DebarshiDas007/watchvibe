@@ -2257,16 +2257,67 @@
     }
 
     // ---- IMDb ratings: the only rating the site shows. /api/imdb (OMDb, cached at the edge) is asked only for titles actually on screen ----
-    const IMDB = { map: new Map(), q: [], queued: new Set(), active: 0, pausedUntil: 0, KEY: 'watchvibe_imdb_v1', io: null, saveT: 0 };
+    const IMDB = { ens: new Set(), map: new Map(), q: [], queued: new Set(), active: 0, pausedUntil: 0, KEY: 'watchvibe_imdb_v1', io: null, saveT: 0 };
     try {
       const o = JSON.parse(localStorage.getItem(IMDB.KEY) || '{}'), now = Date.now();
       Object.entries(o).forEach(([k, v]) => { if (v && now - v.t < (v.r ? 14 : 2) * 864e5) IMDB.map.set(k, v); });
     } catch (e) {}
-    function imdbKey(item) { const r = tmdbRef(item); return r ? (r.isTv ? 't:' : 'm:') + r.n : ''; }
+    const TMAP = { m: new Map(), inflight: new Map(), KEY: 'watchvibe_tmap_v1' };
+    try { Object.entries(JSON.parse(localStorage.getItem(TMAP.KEY) || '{}')).forEach(([k, v]) => TMAP.m.set(k, v)); } catch (e) {}
+    const tmapKey = item => String((item && item.title) || '').toLowerCase().trim() + '|' + ((item && item.year) || '');
+    function imdbResolve(item) {
+      const tk = tmapKey(item);
+      if (TMAP.m.has(tk)) return Promise.resolve(TMAP.m.get(tk));
+      if (TMAP.inflight.has(tk)) return TMAP.inflight.get(tk);
+      const p = (async () => {
+        try {
+          const yr = parseInt(item.year, 10);
+          const r = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${getActiveTmdbKey()}&query=${encodeURIComponent(item.title)}`);
+          const j = await r.json();
+          const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          // only an exact title + release-year match counts: a wrong film's rating is worse than none
+          const hit = (j.results || []).find(x => (x.media_type === 'movie' || x.media_type === 'tv') && (norm(x.title || x.name) === norm(item.title) || norm(x.original_title || x.original_name) === norm(item.title)) && Math.abs(parseInt(String(x.release_date || x.first_air_date || '').slice(0, 4), 10) - yr) <= 1);
+          const k = hit ? (hit.media_type === 'tv' ? 't:' : 'm:') + hit.id : '';
+          TMAP.m.set(tk, k);
+          try { localStorage.setItem(TMAP.KEY, JSON.stringify(Object.fromEntries(TMAP.m))); } catch (e) {}
+          return k;
+        } catch (e) { return null; } finally { TMAP.inflight.delete(tk); }
+      })();
+      TMAP.inflight.set(tk, p);
+      return p;
+    }
+    let imdbLocalIdx = null, imdbLocalN = -1;
+    function imdbLocal(item) {
+      if (!item || !item.title) return null;
+      if (!imdbLocalIdx || imdbLocalN !== mediaDatabase.length) { imdbLocalIdx = new Map(); mediaDatabase.forEach(m => { if (tmdbRef(m)) imdbLocalIdx.set(String(m.title).toLowerCase() + '|' + m.year, m); }); imdbLocalN = mediaDatabase.length; }
+      return imdbLocalIdx.get(String(item.title).toLowerCase() + '|' + item.year) || null;
+    }
+    function imdbKey(item) {
+      let r = tmdbRef(item);
+      if (!r) { const m = imdbLocal(item); r = m && tmdbRef(m); }
+      return r ? (r.isTv ? 't:' : 'm:') + r.n : (TMAP.m.get(tmapKey(item)) || '');
+    }
+    // number used to order by rating: the IMDb rating when known (0 = IMDb has none), the TMDB score only while it has not loaded yet
+    function imdbSortVal(m) { const v = IMDB.map.get(imdbKey(m)); return v ? (v.r || 0) : (Number(m && m.rating) || 0); }
+    // loads IMDb ratings for these titles first (front of the queue), resolving when done or after 8 s
+    async function imdbEnsure(items) {
+      const unresolved = items.filter(m => !imdbKey(m) && m.title && m.year && !TMAP.m.has(tmapKey(m)));
+      if (unresolved.length) await Promise.race([Promise.all(unresolved.map(imdbResolve)), new Promise(r => setTimeout(r, 6000))]);
+      const keys = [...new Set(items.map(imdbKey).filter(k => k && !IMDB.map.has(k)))];
+      if (!keys.length) return;
+      keys.slice().reverse().forEach(k => { if (!IMDB.queued.has(k)) { IMDB.queued.add(k); IMDB.q.unshift(k); } else { const i = IMDB.q.indexOf(k); if (i > 0) { IMDB.q.splice(i, 1); IMDB.q.unshift(k); } } });
+      imdbPump();
+      return await new Promise(res => { const t0 = Date.now(); const iv = setInterval(() => { if (keys.every(k => IMDB.map.has(k)) || Date.now() - t0 > 8000 || Date.now() < IMDB.pausedUntil) { clearInterval(iv); res(); } }, 150); });
+    }
+    function imdbEnsureThen(items, sig, cb) {
+      if (!items.some(m => { const k = imdbKey(m); return k ? !IMDB.map.has(k) : (m.title && m.year && !TMAP.m.has(tmapKey(m))); }) || IMDB.ens.has(sig)) return;
+      IMDB.ens.add(sig); imdbEnsure(items).then(cb);
+    }
     function imdbText(k, sep) { const v = IMDB.map.get(k); return v && v.r ? (sep || '') + '\u2605 ' + v.r.toFixed(1) : ''; }
     // <span> that shows "★ 8.4" (IMDb) once known and nothing until then; never a made-up or TMDB number
     function rtHtml(item, cls, sep) {
-      const k = imdbKey(item); if (!k) return '';
+      const k = imdbKey(item);
+      if (!k) return (item && item.title && item.year && !(TMAP.m.has(tmapKey(item)))) ? `<span data-rtl="${esc(String(item.title))}|${esc(String(item.year))}"${sep ? ` data-sp="${esc(sep)}"` : ''} class="${cls || ''}" title="IMDb rating"></span>` : '';
       return `<span data-rt="${k}"${sep ? ` data-sp="${esc(sep)}"` : ''} class="${cls || ''}" title="IMDb rating">${esc(imdbText(k, sep))}</span>`;
     }
     function imdbSaveSoon() {
@@ -2292,8 +2343,16 @@
         })();
       }
     }
+    async function imdbLink(el) {
+      const [title, year] = String(el.dataset.rtl || '').split('|');
+      const k = await imdbResolve({ title, year });
+      if (!k || !el.isConnected) return;
+      el.dataset.rt = k; delete el.dataset.rtl;
+      if (IMDB.map.has(k)) imdbApply(k); else imdbWant(k);
+    }
     function imdbWant(k) { if (!k || IMDB.map.has(k) || IMDB.queued.has(k)) return; IMDB.queued.add(k); IMDB.q.push(k); imdbPump(); }
     function imdbScan() {
+      document.querySelectorAll('[data-rtl]:not([data-rto])').forEach(el => { el.dataset.rto = '1'; if (IMDB.io) IMDB.io.observe(el); else imdbLink(el); });
       document.querySelectorAll('[data-rt]:not([data-rto])').forEach(el => {
         el.dataset.rto = '1';
         const k = el.dataset.rt;
@@ -2302,7 +2361,7 @@
       });
     }
     (function () {
-      if ('IntersectionObserver' in window) IMDB.io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { IMDB.io.unobserve(e.target); imdbWant(e.target.dataset.rt); } }), { rootMargin: '150px' });
+      if ('IntersectionObserver' in window) IMDB.io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { IMDB.io.unobserve(e.target); if (e.target.dataset.rtl) imdbLink(e.target); else imdbWant(e.target.dataset.rt); } }), { rootMargin: '150px' });
       let t = 0;
       new MutationObserver(() => { clearTimeout(t); t = setTimeout(imdbScan, 120); }).observe(document.documentElement, { childList: true, subtree: true });
     })();
@@ -3282,7 +3341,7 @@
       renderPartyUI();
     }
     function partyShortlist() {
-      const pool = mediaDatabase.filter(m => m.type === 'Movie' && (m.totalVotes || 0) > 1000 && m.poster).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 24);
+      const pool = mediaDatabase.filter(m => m.type === 'Movie' && (m.totalVotes || 0) > 1000 && m.poster).sort((a, b) => imdbSortVal(b) - imdbSortVal(a)).slice(0, 24);
       const day = Math.floor(Date.now() / 86400000);
       const out = [];
       for (let i = 0; i < 4 && pool.length; i++) out.push(pool[(day * 3 + i * 5) % pool.length]);
@@ -3381,11 +3440,11 @@ function posterCard(item, opts) {
       const isSeries = (selectedTopCategory === 'Series');
       const isStandup = (selectedTopCategory === 'Stand-Up');
       const hasTopFilter = (!isAll || selectedTopVibe !== 'all' || selectedTopLanguage !== '');
-      const byRating = (a, b) => (b.rating || 0) - (a.rating || 0);
+      const byRating = (a, b) => imdbSortVal(b) - imdbSortVal(a);
       const langOk = m => !selectedTopLanguage || m.language === selectedTopLanguage;
 
       const yr = new Date().getFullYear();
-      const ottAll = mediaDatabase.filter(m => langOk(m) && Number(m.year) >= yr - 1 && (m.totalVotes || 0) > 0).sort((a, b) => (Number(b.year) - Number(a.year)) || ((b.rating || 0) - (a.rating || 0)));
+      const ottAll = mediaDatabase.filter(m => langOk(m) && Number(m.year) >= yr - 1 && (m.totalVotes || 0) > 0).sort((a, b) => (Number(b.year) - Number(a.year)) || (imdbSortVal(b) - imdbSortVal(a)));
       const desiAll = mediaDatabase.filter(m => m.region && m.region.startsWith('Indian') && m.type === 'Movie' && langOk(m)).sort(byRating);
       const seriesAll = mediaDatabase.filter(m => m.type === 'Series' && langOk(m)).sort(byRating);
       const standupAll = mediaDatabase.filter(m => m.type === 'Stand-Up' && langOk(m)).sort(byRating);
@@ -3575,7 +3634,8 @@ function posterCard(item, opts) {
       if (currentActorSort === 'boxOffice') {
         list.sort((a, b) => ((b.boxOfficeVal || 0) - (a.boxOfficeVal || 0)) || ((b.popularity || 0) - (a.popularity || 0)));
       } else if (currentActorSort === 'rating') {
-        list.sort((a, b) => b.rating - a.rating);
+        imdbEnsureThen(list, 'actor:' + actor.id + ':' + list.length, () => { const am = document.getElementById('actorModal'); if (currentActorSort === 'rating' && window.__actorOpen === actor.id && am && !am.classList.contains('hidden')) openActorProfile(actor.id); });
+        list.sort((a, b) => imdbSortVal(b) - imdbSortVal(a));
       } else if (currentActorSort === 'popularity') {
         list.sort((a, b) => b.popularity - a.popularity);
       } else if (currentActorSort === 'releaseDateNew') {
@@ -5237,7 +5297,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const streaming = pool.filter(m => wantAvail(m).state === 'stream');
       if (TN.only && streaming.length) pool = streaming;                    // lean towards what you can watch right now
       if (!pool.length) { TN.seen = new Set(); pool = list; }               // went through everything: start the round again
-      const weight = m => { const a = wantAvail(m), c = commInfo(m); return 1 + (a.state === 'stream' ? 1.5 : 0) + (c && c.loved >= 70 ? 1 : 0) + ((Number(m.rating) || 0) >= 8 ? 0.5 : 0); };
+      const weight = m => { const a = wantAvail(m), c = commInfo(m); return 1 + (a.state === 'stream' ? 1.5 : 0) + (c && c.loved >= 70 ? 1 : 0) + (imdbSortVal(m) >= 8 ? 0.5 : 0); };
       let r = Math.random() * pool.reduce((s, m) => s + weight(m), 0), pick = pool[pool.length - 1];
       for (const m of pool) { r -= weight(m); if (r <= 0) { pick = m; break; } }
       TN.seen.add(pick.id); TN.cur = pick;
@@ -5310,7 +5370,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           setTimeout(() => hydrateWant(wantList.filter(m => !m.__pending)), 0);
           let rows = wantList.map((m, idx) => ({ m, idx, a: wantAvail(m) }));
           if (WL.avail !== 'all') rows = rows.filter(x => x.a.state === WL.avail);
-          if (WL.wsort === 'rating') rows.sort((a, b) => (Number(b.m.rating) || 0) - (Number(a.m.rating) || 0) || b.idx - a.idx);
+          if (WL.wsort === 'rating') { imdbEnsureThen(rows.map(x => x.m), 'want:' + rows.length, () => { if (currentWatchlistSubTab === 'want' && WL.wsort === 'rating' && document.getElementById('detailModal')?.classList.contains('hidden') !== false) renderWatchlist(); }); rows.sort((a, b) => imdbSortVal(b.m) - imdbSortVal(a.m) || b.idx - a.idx); }
           else if (WL.wsort === 'year') rows.sort((a, b) => (Number(b.m.year) || 0) - (Number(a.m.year) || 0) || b.idx - a.idx);
           else if (WL.wsort === 'title') rows.sort((a, b) => String(a.m.title).localeCompare(String(b.m.title)));
           else rows.sort((a, b) => b.idx - a.idx);                                  // recently added first
