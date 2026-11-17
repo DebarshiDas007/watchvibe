@@ -440,7 +440,7 @@
               : error.message);
             return;
           }
-          closeAuthModal();
+          // the window is closed or kept open by setLoggedInUser (no close/re-open flash)
         } else {
           const nameInput = document.getElementById('authNameInput');
           const name = sanitizeRealUserName((nameInput && nameInput.value.trim()) || '', email);
@@ -2146,7 +2146,11 @@
         syncUserDataFromSupabaseCloud();
         let prompted = true;
         try { const k = 'watchvibe_avatar_prompted:' + user.id; prompted = !!localStorage.getItem(k); if (!prompted) localStorage.setItem(k, '1'); } catch (e) {}
-        if (!currentUserSession.character && !prompted) openAuthModal(); else closeAuthModal();
+        // Seamless: if the sign-in window is already open, keep it open and show the icon picker in place.
+        const am = document.getElementById('authModal');
+        const isOpen = !!am && !am.classList.contains('hidden') && !am.classList.contains('is-closing');
+        if (!currentUserSession.character && (isOpen || !prompted)) openAuthModal(); // idempotent: just swaps to the signed-in view
+        else closeAuthModal();
       }
       updateProfileUiState();
       updateGoogleSignInUi();
