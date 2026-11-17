@@ -1,24 +1,18 @@
 {
-  "name": "WATCHVIBE - Discovery Engine",
+  "name": "WatchVibe: Find What to Watch by Vibe",
   "short_name": "WatchVibe",
-  "description": "Don't just rate it. Tell us the vibe.",
-  "start_url": "./index.html",
+  "description": "Mood-based movie and series picks with IMDb ratings and where to stream.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "en",
   "display": "standalone",
-  "background_color": "#101014",
-  "theme_color": "#A855F7",
-  "orientation": "portrait-primary",
+  "background_color": "#0B0B0F",
+  "theme_color": "#101014",
+  "categories": ["entertainment", "movies"],
   "icons": [
-    {
-      "src": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=192",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=512",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
