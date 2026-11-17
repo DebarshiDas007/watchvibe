@@ -40,6 +40,7 @@ window.testNoClipping = async () => {
     if (sc.scrollWidth > sc.clientWidth + 1) I.hOverflow++;
     for (const el of holder.querySelectorAll('h2,p,dd,dt,a,button,span,div')) {
       if (el.children.length > 2) continue;
+      if (el.id === 'simSection') continue; // its scrolling rows bleed 4px on purpose (-mx-1); not clipped text
       if (getComputedStyle(el).overflow === 'visible' && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.innerText && el.innerText.trim()) { I.textOverflow++; break; }
     }
     vw.classList.add('hidden'); vw.classList.remove('flex');
