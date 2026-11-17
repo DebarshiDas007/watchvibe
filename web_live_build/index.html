@@ -3416,7 +3416,8 @@
       if (!guest) { guest = 'Guest-' + Math.floor(100 + Math.random() * 900); try { localStorage.setItem('wt_name', guest); } catch (e) {} }
       const name = (currentUserSession && currentUserSession.name) ? String(currentUserSession.name).slice(0, 24) : guest;
       let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-      WT.me = { id, name, color: `hsl(${h % 360} 65% 55%)`, ts: 0 };
+      let svc = null; try { const s = JSON.parse(localStorage.getItem('wt_services') || 'null'); if (Array.isArray(s)) svc = s; } catch (e) {}
+      WT.me = { id, name, color: `hsl(${h % 360} 65% 55%)`, ts: 0, svc, cc: selectedCountry };
       return WT.me;
     }
     function wtCompact(m) { const r = tmdbRef(m); return { id: m.id, title: m.title, year: m.year, poster: m.poster, type: m.type, tmdbId: r ? r.n : (m.tmdbId || null) }; }
@@ -3461,6 +3462,7 @@
       if (WT.ch) wtLeave(true);
       const me = wtMe();
       WT.code = code; WT.members = []; WT.search = '';
+      WT.svcStep = !localStorage.getItem('wt_services_set'); WT.svcDraft = new Set(wtMe().svc || []);
       WT.st = create ? wtFresh() : null;
       wtBuild();
       const ch = sb.channel('wt:' + code, { config: { broadcast: { self: true }, presence: { key: me.id } } });
@@ -3469,13 +3471,13 @@
         .on('presence', { event: 'sync' }, () => {
           const st = ch.presenceState();
           WT.members = Object.values(st).map(a => a[0]).filter(Boolean).sort((x, y) => (x.ts - y.ts) || String(x.id).localeCompare(String(y.id)));
-          wtRenderHead(); wtPill();
+          wtRenderHead(); wtPill(); wtRenderMain();   // main too: the "who can watch" markers depend on who is here and which apps they shared
           if (WT.members.length > 12 && WT.members.findIndex(m => m.id === me.id) >= 12) { showToast('This party is full (12 people).'); wtLeave(); }
         })
         .subscribe(async status => {
           if (status === 'SUBSCRIBED') {
             me.ts = Date.now();
-            await ch.track({ id: me.id, name: me.name, color: me.color, ts: me.ts });
+            await ch.track({ id: me.id, name: me.name, color: me.color, ts: me.ts, svc: me.svc, cc: selectedCountry });
             if (!create) { setTimeout(() => wtSend({ t: 'req', from: me.id }), 800); setTimeout(() => { if (!WT.st) wtRenderMain(); }, 3500); }
             wtSystem(create ? 'You started this party. Share the link to invite people.' : 'Joined the party.');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { showToast('Connection problem. Check your internet and try again.'); }
@@ -3551,6 +3553,59 @@
       box.innerHTML = hits.length ? hits.map(m => `<button type="button" onclick="wtAddTitle('${esc(m.id)}')" class="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/[0.06]"><img src="${esc(m.poster)}" alt="" class="h-10 w-7 rounded object-cover"><span class="min-w-0 flex-1 truncate text-sm text-white">${esc(m.title)} <span class="text-white/40">${esc(m.year)}</span></span><i class="fa-solid fa-plus text-xs text-white/50"></i></button>`).join('') : '<div class="px-2 py-1.5 text-sm text-white/40">No match in the catalogue</div>';
     }
 
+    // ----- subscriptions: which apps each person has, and who can watch what
+    const WT_SERVICES = [
+      { k: 'netflix', l: 'Netflix', m: /netflix/i }, { k: 'prime', l: 'Prime Video', m: /prime|amazon/i }, { k: 'hotstar', l: 'JioHotstar', m: /hotstar/i },
+      { k: 'zee5', l: 'ZEE5', m: /zee5/i }, { k: 'sonyliv', l: 'SonyLIV', m: /sony ?liv/i }, { k: 'apple', l: 'Apple TV+', m: /apple tv/i },
+      { k: 'disney', l: 'Disney+', m: /disney/i }, { k: 'max', l: 'Max / HBO', m: /\bmax\b|hbo/i }, { k: 'hulu', l: 'Hulu', m: /hulu/i },
+      { k: 'paramount', l: 'Paramount+', m: /paramount/i }, { k: 'mx', l: 'MX Player', m: /mx player/i }
+    ];
+    function wtSvcToggle(k) { if (WT.svcDraft.has(k)) WT.svcDraft.delete(k); else WT.svcDraft.add(k); wtRenderMain(); }
+    function wtOpenSvc() { WT.svcStep = true; WT.svcDraft = new Set(wtMe().svc || []); wtRenderMain(); }
+    function wtSvcSave(skip) {
+      const me = wtMe();
+      me.svc = skip ? null : [...WT.svcDraft];
+      try { localStorage.setItem('wt_services_set', '1'); localStorage.setItem('wt_services', JSON.stringify(me.svc)); } catch (e) {}
+      WT.svcStep = false;
+      if (WT.ch) WT.ch.track({ id: me.id, name: me.name, color: me.color, ts: me.ts, svc: me.svc, cc: selectedCountry });
+      wtRenderMain();
+    }
+    // true = can watch it on something they have, false = cannot, null = not known (apps not shared, or still loading)
+    function wtCanWatch(item, member) {
+      const all = cachedWatchProviders(item);
+      if (all === undefined) return null;
+      const av = availabilityFor(all, member.cc || selectedCountry);
+      if (av.stream.some(e => e.kinds.has('free') || e.kinds.has('ads'))) return true;            // free titles: anyone
+      if (!av.stream.length) return false;
+      if (!Array.isArray(member.svc)) return null;
+      return av.stream.some(e => WT_SERVICES.some(s => member.svc.includes(s.k) && s.m.test(e.name)));
+    }
+    function wtWhoHtml(item) {
+      const mem = WT.members.length ? WT.members : [{ ...wtMe() }];
+      const res = mem.map(m => [m, wtCanWatch(item, m)]);
+      const yes = res.filter(r => r[1] === true).length, no = res.filter(r => r[1] === false).length;
+      const dots = res.map(([m, ok]) => `<span title="${esc(m.name)}: ${ok === true ? 'can watch' : ok === false ? 'cannot watch on their apps' : 'apps not shared'}" class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ring-1 ${ok === true ? 'bg-emerald-500/25 text-emerald-200 ring-emerald-400/40' : ok === false ? 'bg-rose-500/20 text-rose-200 ring-rose-400/40' : 'border border-dashed border-white/25 text-white/40 ring-0'}">${esc(String(m.name).replace(/^Guest-/, '#').slice(0, 1).toUpperCase())}</span>`).join('');
+      const label = no === 0 && yes === res.length ? '<span class="text-emerald-300/90">Everyone can watch</span>' : no ? `<span class="text-amber-300/90">${yes} of ${res.length} can watch</span>` : `<span class="text-white/45">${yes} of ${res.length} confirmed</span>`;
+      return `<div class="mt-1 flex items-center gap-2 text-xs"><span class="flex -space-x-1">${dots}</span>${label}</div>`;
+    }
+    // host: look through well-rated films and add up to four that everyone who shared their apps can watch
+    async function wtSuggestAll() {
+      if (!wtIsHost() || WT.suggesting) return;
+      WT.suggesting = true; wtRenderMain();
+      try {
+        const have = new Set(WT.st.short.map(x => x.id));
+        const cands = mediaDatabase.filter(m => m.type === 'Movie' && m.poster && (m.totalVotes || 0) > 1000 && !have.has(m.id)).sort((a, b) => imdbSortVal(b) - imdbSortVal(a)).slice(0, 40);
+        const found = [];
+        for (let i = 0; i < cands.length && found.length < 4; i += 8) {
+          const batch = cands.slice(i, i + 8);
+          await Promise.all(batch.map(m => getWatchProviders(m)));
+          for (const m of batch) { if (found.length < 4 && WT.members.every(mem => wtCanWatch(m, mem) !== false)) found.push(m); }
+        }
+        if (!found.length) showToast('Nothing in the top films that everyone can watch. Try adding free titles.');
+        found.forEach(m => wtSend({ t: 'add', item: wtCompact(m) }));
+      } finally { WT.suggesting = false; wtRenderMain(); }
+    }
+
     // ----- availability (is it on a service the viewer can use?)
     function wtAvailHtml(item) {
       const cached = cachedWatchProviders(item);
@@ -3611,6 +3666,7 @@
             <div class="text-xs text-white/45">${mem.length} here${wtIsHost() ? ' · you are the host' : ''}</div>
           </div>
           <div class="flex items-center gap-1.5">
+            <button type="button" onclick="wtOpenSvc()" class="rounded-full px-3.5 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-solid fa-tv mr-1.5 text-xs"></i>My apps</button>
             <button type="button" onclick="wtCopy()" class="rounded-full px-3.5 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-solid fa-link mr-1.5 text-xs"></i>Copy link</button>
             <button type="button" onclick="wtWhatsApp()" class="rounded-full px-3.5 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-brands fa-whatsapp mr-1.5 text-xs"></i>Share</button>
             <button type="button" onclick="wtLeave()" class="rounded-full px-3 py-1.5 text-sm text-white/50 transition hover:text-white">Leave</button>
@@ -3619,6 +3675,15 @@
     }
     function wtRenderMain() {
       const el = document.getElementById('wtMain'); if (!el) return;
+      if (WT.svcStep) {
+        el.innerHTML = `
+          <div class="space-y-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+            <div><div class="font-display text-xl text-white">Which streaming apps do you have?</div><p class="mt-1 text-sm text-white/50">Everyone has to be able to watch the same film. Tick yours and we will show who can watch what. This stays on your device and is only shared with people in this room.</p></div>
+            <div class="flex flex-wrap gap-2">${WT_SERVICES.map(sv => { const on = WT.svcDraft.has(sv.k); return `<button type="button" onclick="wtSvcToggle('${sv.k}')" aria-pressed="${on}" class="rounded-full px-4 py-2 text-sm font-medium ring-1 transition ${on ? 'bg-white text-black ring-white' : 'bg-white/[0.04] text-white/75 ring-white/15 hover:bg-white/10'}">${on ? '<i class="fa-solid fa-check mr-1.5 text-xs"></i>' : ''}${sv.l}</button>`; }).join('')}</div>
+            <div class="flex items-center gap-3"><button type="button" onclick="wtSvcSave(false)" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${WT.svcDraft.size ? 'Continue' : 'I have none of these'}</button><button type="button" onclick="wtSvcSave(true)" class="text-sm text-white/50 underline underline-offset-2 hover:text-white">Skip</button></div>
+          </div>`;
+        return;
+      }
       const s = WT.st, host = wtIsHost();
       // keep what someone is typing in the search box
       const act = document.activeElement, keep = act && act.id === 'wtSearch' ? { v: act.value, a: act.selectionStart } : null;
@@ -3633,19 +3698,20 @@
             <div class="space-y-2">${s.short.map((m, i) => `
               <div class="flex items-center gap-3 rounded-2xl p-2.5 ring-1 transition ${mine === i ? 'bg-purple-500/15 ring-purple-400/50' : 'bg-white/[0.03] ring-white/[0.06]'}">
                 <img src="${esc(m.poster)}" alt="" class="h-16 w-11 shrink-0 rounded-lg object-cover" onerror="handleMediaPosterError(this)">
-                <div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-white">${esc(m.title)}</div><div class="text-xs text-white/45">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-0.5 text-xs">${wtAvailHtml(m)}</div></div>
+                <div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-white">${esc(m.title)}</div><div class="text-xs text-white/45">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-0.5 text-xs">${wtAvailHtml(m)}</div>${wtWhoHtml(m)}</div>
                 <div class="w-6 text-center text-sm tabular-nums text-white/70">${votes[i]}</div>
                 <button type="button" onclick="wtVote(${i})" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition ${mine === i ? 'bg-purple-500 text-white' : 'bg-white text-black hover:bg-white/90'}">${mine === i ? 'Voted' : 'Vote'}</button>
               </div>`).join('')}</div>
             ${host ? `
               <div class="relative"><input id="wtSearch" type="text" placeholder="Add another title" oninput="wtSearchInput(this.value)" class="w-full rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30"><div id="wtResults" class="mt-1 space-y-0.5"></div></div>
+              <button type="button" onclick="wtSuggestAll()" ${WT.suggesting ? 'disabled' : ''} class="w-full rounded-full px-4 py-2.5 text-sm font-medium text-white/80 ring-1 ring-white/15 transition hover:bg-white/10 disabled:opacity-50"><i class="fa-solid fa-wand-magic-sparkles mr-2 text-xs"></i>${WT.suggesting ? 'Looking for films you can all watch…' : 'Find films everyone can watch'}</button>
               <button type="button" onclick="wtLock()" class="w-full rounded-full bg-white py-3 text-sm font-semibold text-black transition hover:bg-white/90">Lock in the winner: ${esc(s.short[wtLeader()].title)}</button>`
               : '<div class="rounded-2xl bg-white/[0.03] px-4 py-3 text-center text-sm text-white/45 ring-1 ring-white/[0.06]">The host will lock in the winner.</div>'}
           </div>`;
       } else {
         const m = s.short[s.pick];
         const poster = `<img src="${esc(m.poster)}" alt="" class="h-40 w-28 shrink-0 rounded-xl object-cover ring-1 ring-white/10 sm:h-48 sm:w-32" onerror="handleMediaPosterError(this)">`;
-        const info = `<div class="min-w-0"><div class="font-display text-2xl text-white">${esc(m.title)}</div><div class="mt-1 text-sm text-white/50">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-1.5 text-sm">${wtAvailHtml(m)}</div><button type="button" onclick="openDetails('${esc(m.id)}')" class="mt-3 rounded-full px-4 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Where to watch</button></div>`;
+        const info = `<div class="min-w-0"><div class="font-display text-2xl text-white">${esc(m.title)}</div><div class="mt-1 text-sm text-white/50">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-1.5 text-sm">${wtAvailHtml(m)}</div><div class="text-sm">${wtWhoHtml(m)}</div><button type="button" onclick="openDetails('${esc(m.id)}')" class="mt-3 rounded-full px-4 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Where to watch</button></div>`;
         let body = '';
         if (ph === 'lobby') {
           body = s.startAt ? `<div class="text-center"><div class="text-xs uppercase tracking-[0.2em] text-white/40">Starting in</div><div id="wtCountdown" class="mt-1 font-display text-6xl tabular-nums text-white">--:--</div><div class="mt-2 text-sm text-white/50">Open ${esc(m.title)} on your streaming app and get ready.</div></div>`
