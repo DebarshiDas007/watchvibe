@@ -11,8 +11,8 @@
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
   <style>
     :root {
-      --bg: #101014;
-      --card: #1D1D25;
+      --bg: #0B0B0F;
+      --card: #14141A;
       --card-elevated: #262633;
       --border: #2C2C3A;
       --primary: #A855F7;
@@ -29,13 +29,14 @@
     body {
       background-color: var(--bg);
       color: #F8FAFC;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
       margin: 0;
       padding: 0;
       overflow-x: hidden;
     }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #121217; }
+    ::-webkit-scrollbar-track { background: #0B0B0F; }
     ::-webkit-scrollbar-thumb { background: #2C2C3A; border-radius: 6px; }
     ::-webkit-scrollbar-thumb:hover { background: #3E3E52; }
     
@@ -222,6 +223,8 @@
       if (tray) tray.classList.add('hidden');
     }
 
+    const PROFILE_BTN_CLASS = 'flex items-center gap-2.5 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-4 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10';
+
     function updateProfileUiState() {
       const btn = document.getElementById('cloudAuthBtn');
       const label = document.getElementById('cloudAuthBtnLabel');
@@ -236,9 +239,9 @@
         if (label) label.innerText = firstName;
         const initial = ((firstName || 'U')[0] || 'U').toUpperCase();
         if (avatar) {
-          avatar.innerHTML = `<span class="text-[10px] font-black">${esc(initial)}</span>`;
+          avatar.innerHTML = `<span class="text-[11px] font-semibold">${esc(initial)}</span>`;
         }
-        if (btn) btn.className = 'bg-purple-900/40 hover:bg-purple-800/60 border border-purple-400 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg text-xs';
+        if (btn) btn.className = PROFILE_BTN_CLASS;
         
         if (loggedInDiv) loggedInDiv.classList.remove('hidden');
         if (loggedOutDiv) loggedOutDiv.classList.add('hidden');
@@ -261,7 +264,7 @@
       } else {
         if (label) label.innerText = 'Profile';
         if (avatar) avatar.innerHTML = '<i class="fa-solid fa-user"></i>';
-        if (btn) btn.className = 'bg-[#1D1D25] hover:bg-[#282834] border border-purple-500/40 hover:border-purple-400 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg text-xs group';
+        if (btn) btn.className = PROFILE_BTN_CLASS;
         if (loggedInDiv) loggedInDiv.classList.add('hidden');
         if (loggedOutDiv) loggedOutDiv.classList.remove('hidden');
         const adminBtn = document.getElementById('adminStudioEntryPoint');
@@ -1013,201 +1016,61 @@
 </head>
 <body class="min-h-screen text-slate-100 antialiased selection:bg-purple-500 selection:text-white flex flex-col">
 
-    <!-- TOP HEADER (STREAMLINED MINIMALIST CONSUMER BAR) -->
-  <header class="border-b border-[#2C2C3A] bg-[#16161E]/95 backdrop-blur-md px-4 sm:px-8 py-3 sticky top-0 z-50 flex items-center justify-between gap-4 shadow-xl">
+    <!-- TOP HEADER: wordmark, category tabs, search, profile -->
+  <header class="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-[#0B0B0F]/85 px-4 backdrop-blur-xl sm:gap-8 sm:px-8">
+    <button type="button" onclick="goHome()" class="shrink-0 select-none font-display text-[22px] font-medium tracking-[0.18em] text-white" aria-label="WatchVibe home">WATCH<span class="text-purple-400">VIBE</span></button>
 
-    <!-- Brand Wordmark & Motto (Pure Sleek Typography) -->
-    <div class="flex items-center gap-3">
-      <div class="flex items-center cursor-pointer select-none group" onclick="switchTab('discover')">
-        <span class="font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 text-2xl transition group-hover:opacity-90 font-sans">WATCHVIBE</span>
-      </div>
-      <span class="hidden md:inline-block text-xs text-slate-500 border-l border-[#2C2C3A] pl-3 italic font-medium">
-        "Don't just rate it. Tell us the vibe."
-      </span>
-    </div>
+    <nav id="topCategoryNavBar" class="no-scrollbar hidden min-w-0 items-center gap-1 overflow-x-auto md:flex" aria-label="Browse by type">
+      <button type="button" onclick="setTopCategory('all')" id="top-cat-all" class="top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium bg-white/10 text-white transition">All</button>
+      <button type="button" onclick="setTopCategory('Movie')" id="top-cat-movie" class="top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-white/55 hover:text-white transition">Movies</button>
+      <button type="button" onclick="setTopCategory('Series')" id="top-cat-series" class="top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-white/55 hover:text-white transition">Series</button>
+      <button type="button" onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-white/55 hover:text-white transition">Stand-Up</button>
+    </nav>
 
-    <!-- Actions (Profile Only - Ultra Clean) -->
-    <div class="flex items-center gap-3 ml-auto text-xs">
-      <!-- User Profile & Authentication Button -->
-      <button id="cloudAuthBtn" onclick="openAuthModal()" class="bg-[#1D1D25] hover:bg-[#282834] border border-purple-500/40 hover:border-purple-400 text-white px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-2.5 transition shadow-lg text-xs group" title="User Profile & Settings">
-        <div id="userProfileAvatar" class="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-[10px] font-black shadow ring-1 ring-purple-400/50">
-          <i class="fa-solid fa-user"></i>
-        </div>
-        <span id="cloudAuthBtnLabel" class="font-bold text-xs">Profile</span>
+    <div class="ml-auto flex items-center gap-3">
+      <button type="button" onclick="goSearch()" class="hidden items-center gap-2.5 rounded-full bg-white/[0.05] px-4 py-2 text-sm text-white/45 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white/70 md:flex md:w-64" aria-label="Search">
+        <i class="fa-solid fa-magnifying-glass text-xs"></i><span>Search titles, actors, moods</span>
+      </button>
+      <button id="cloudAuthBtn" type="button" onclick="openAuthModal()" class="flex items-center gap-2.5 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-4 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10" title="Account">
+        <span id="userProfileAvatar" class="flex h-7 w-7 items-center justify-center rounded-full bg-purple-500/30 text-[11px] font-semibold text-white"><i class="fa-solid fa-user text-xs"></i></span>
+        <span id="cloudAuthBtnLabel" class="hidden sm:inline">Profile</span>
       </button>
     </div>
   </header>
-  <!-- TOP STICKY CATEGORY & LANGUAGE NAVIGATION BAR WITH COMBINATORIAL VIBE FILTER -->
-  <nav id="topCategoryNavBar" class="sticky top-[61px] z-40 bg-[#121218]/95 backdrop-blur-md border-b border-[#2C2C3A] px-4 sm:px-8 py-2.5 space-y-2 shadow-md">
-    <!-- Row 1: Primary Category Pills + Language Dropdown -->
-    <div class="flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
-      <!-- Category Filter Pills -->
-      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button onclick="setTopCategory('all')" id="top-cat-all" class="top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white border border-purple-400 shadow-md shadow-purple-500/25">
-          <i class="fa-solid fa-shapes text-xs"></i>
-          <span>All</span>
-        </button>
-        <button onclick="setTopCategory('Movie')" id="top-cat-movie" class="top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#1A1A24] text-slate-400 hover:text-white hover:bg-[#252533] border border-[#2C2C3A]">
-          <i class="fa-solid fa-film text-xs text-amber-400"></i>
-          <span>Movies</span>
-        </button>
-        <button onclick="setTopCategory('Series')" id="top-cat-series" class="top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#1A1A24] text-slate-400 hover:text-white hover:bg-[#252533] border border-[#2C2C3A]">
-          <i class="fa-solid fa-tv text-xs text-purple-400"></i>
-          <span>Series & TV Shows</span>
-        </button>
-        <button onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#1A1A24] text-slate-400 hover:text-white hover:bg-[#252533] border border-[#2C2C3A]">
-          <i class="fa-solid fa-microphone-lines text-xs text-rose-400"></i>
-          <span>Stand-Up Comedy</span>
-        </button>
-      </div>
-
-      <!-- Right: Language Dropdown Selector & Reset Button -->
-      <div class="flex items-center gap-2 shrink-0 ml-auto">
-        <div class="flex items-center gap-1.5 bg-[#1A1A24] px-2.5 py-1 rounded-xl border border-[#2C2C3A] text-xs">
-          <i class="fa-solid fa-language text-purple-400"></i>
-          <select id="topLanguageSelect" onchange="setTopLanguage(this.value)" class="bg-transparent text-white font-bold text-xs outline-none cursor-pointer">
-            <option value="" class="bg-[#1A1A24] text-white">🌐 All Languages (2,062 Titles)</option>
-            <option value="en" class="bg-[#1A1A24] text-white">🇺🇸 English</option>
-            <option value="hi" class="bg-[#1A1A24] text-white">🇮🇳 Hindi (हिंदी)</option>
-            <option value="te" class="bg-[#1A1A24] text-white">🇮🇳 Telugu (తెలుగు)</option>
-            <option value="ta" class="bg-[#1A1A24] text-white">🇮🇳 Tamil (தமிழ்)</option>
-            <option value="ml" class="bg-[#1A1A24] text-white">🇮🇳 Malayalam (മലയാളം)</option>
-            <option value="kn" class="bg-[#1A1A24] text-white">🇮🇳 Kannada (ಕನ್ನಡ)</option>
-            <option value="ko" class="bg-[#1A1A24] text-white">🇰🇷 Korean (한국어)</option>
-            <option value="ja" class="bg-[#1A1A24] text-white">🇯🇵 Japanese (日本語)</option>
-            <option value="fr" class="bg-[#1A1A24] text-white">🇫🇷 French (Français)</option>
-            <option value="es" class="bg-[#1A1A24] text-white">🇪🇸 Spanish (Español)</option>
-            <option value="de" class="bg-[#1A1A24] text-white">🇩🇪 German (Deutsch)</option>
-            <option value="it" class="bg-[#1A1A24] text-white">🇮🇹 Italian (Italiano)</option>
-            <option value="pt" class="bg-[#1A1A24] text-white">🇧🇷 Portuguese (Português)</option>
-            <option value="zh" class="bg-[#1A1A24] text-white">🇨🇳 Chinese (中文)</option>
-            <option value="sv" class="bg-[#1A1A24] text-white">🇸🇪 Scandinavian / Nordic</option>
-            <option value="ar" class="bg-[#1A1A24] text-white">🇸🇦 Arabic (العربية)</option>
-            <option value="tr" class="bg-[#1A1A24] text-white">🇹🇷 Turkish (Türkçe)</option>
-            <option value="fa" class="bg-[#1A1A24] text-white">🇮🇷 Persian (فارسی)</option>
-            <option value="bn" class="bg-[#1A1A24] text-white">🇮🇳 Bengali (বাংলা)</option>
-            <option value="mr" class="bg-[#1A1A24] text-white">🇮🇳 Marathi (मराठी)</option>
-            <option value="pa" class="bg-[#1A1A24] text-white">🇮🇳 Punjabi (ਪੰਜਾਬੀ)</option>
-          </select>
-        </div>
-
-        <button id="topFilterResetBtn" onclick="clearTopFilters()" class="hidden text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2.5 py-1 rounded-xl transition flex items-center gap-1 font-semibold">
-          <i class="fa-solid fa-xmark text-[10px]"></i> Reset Filters
-        </button>
-      </div>
-    </div>
-
-    <!-- Row 2: Interactive Emotional Vibe Palette (Combinatorial Filter) -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-0.5 border-t border-[#232330]">
-      <span class="text-[10px] font-black uppercase tracking-wider text-purple-300 shrink-0 flex items-center gap-1">
-        <i class="fa-solid fa-dna text-purple-400 text-xs"></i> Vibe:
-      </span>
-      <button onclick="setTopVibe('all')" id="top-vibe-all" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-[#2C2C3A] bg-[#16161E] ring-2 ring-purple-400 bg-purple-600/30 text-white cursor-pointer">
-        All Vibes
-      </button>
-      <button onclick="setTopVibe('mind_blown')" id="top-vibe-mind-blown" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-purple-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>🤯</span> Mind Blown
-      </button>
-      <button onclick="setTopVibe('must_watch')" id="top-vibe-must-watch" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-emerald-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>👑</span> Must Watch
-      </button>
-      <button onclick="setTopVibe('emotional_damage')" id="top-vibe-emotional-damage" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-rose-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>💔</span> Emotional Damage
-      </button>
-      <button onclick="setTopVibe('hidden_gem')" id="top-vibe-hidden-gem" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-amber-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>💎</span> Hidden Gem
-      </button>
-      <button onclick="setTopVibe('fun_time')" id="top-vibe-fun-time" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-cyan-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>😂</span> Fun Time
-      </button>
-      <button onclick="setTopVibe('time_pass')" id="top-vibe-time-pass" class="top-vibe-pill shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition border border-yellow-500/30 bg-[#16161E] text-slate-300 hover:text-white cursor-pointer flex items-center gap-1">
-        <span>⏳</span> Time Pass
-      </button>
-    </div>
-  </nav>
-
 
   <!-- MAIN FULL-SCREEN LAYOUT -->
   <div class="flex-1 flex flex-row min-h-0 w-full">
 
     <!-- DESKTOP SIDEBAR (AUTO-SHOWN ON DESKTOP, AUTO-HIDDEN ON MOBILE) -->
-    <aside class="hidden md:flex w-64 lg:w-72 bg-[#16161E] border-r border-[#2C2C3A] p-5 flex-col justify-between shrink-0 sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto">
-      <div class="space-y-6">
-        
-        <!-- Navigation Section -->
-        <div>
-          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">Explore & Vibe</div>
-          <nav class="space-y-1">
-            <button onclick="switchTab('discover')" id="desk-tab-discover" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition">
-              <i class="fa-solid fa-house text-sm"></i>
-              <span>Discover</span>
-            </button>
-            <button onclick="switchTab('explore')" id="desk-tab-explore" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition">
-              <i class="fa-solid fa-magnifying-glass text-sm"></i>
-              <span>Universal Search</span>
-            </button>
-            <button onclick="openSwipeDeck()" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition text-purple-300 hover:text-white hover:bg-purple-600/10 border border-purple-500/20">
-              <i class="fa-solid fa-layer-group text-sm text-purple-400"></i>
-              <span>Swipe to Vibe Deck</span>
-            </button>
-            <button onclick="switchTab('community')" id="desk-tab-community" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition">
-              <i class="fa-solid fa-users text-sm"></i>
-              <span>Taste Match Twins</span>
-            </button>
-            <button onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition">
-              <i class="fa-solid fa-bookmark text-sm"></i>
-              <span>My Watchlist</span>
-            </button>
-            <button onclick="switchTab('profile')" id="desk-tab-profile" class="sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs transition">
-              <i class="fa-solid fa-user text-sm"></i>
-              <span>Profile & Vibe DNA</span>
-            </button>
-          </nav>
-        </div>
+    <aside class="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 flex-col justify-between overflow-y-auto border-r border-white/[0.06] bg-[#0B0B0F] p-4 md:flex lg:w-60">
+      <nav class="space-y-1" aria-label="Primary">
+        <button type="button" onclick="goHome()" id="desk-tab-discover" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-house w-4 text-center text-[13px]"></i><span>Home</span></button>
+        <button type="button" onclick="openSwipeDeck()" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-layer-group w-4 text-center text-[13px]"></i><span>Vibe Deck</span></button>
+        <button type="button" onclick="openPartyModal()" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-users-viewfinder w-4 text-center text-[13px]"></i><span>Movie Night</span></button>
+        <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-heart-pulse w-4 text-center text-[13px]"></i><span>Taste Match</span></button>
+        <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-bookmark w-4 text-center text-[13px]"></i><span>Watchlist</span></button>
+        <button type="button" onclick="switchTab('profile')" id="desk-tab-profile" class="sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white"><i class="fa-solid fa-user w-4 text-center text-[13px]"></i><span>Profile</span></button>
+      </nav>
 
-        <!-- Vibe Legend Fast Filters -->
-        <div>
-          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">Vibe Categories</div>
-          <div class="space-y-1">
-            <button onclick="filterByVibe('must_watch')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-300 hover:bg-[#1D1D25] transition">
-              <span class="flex items-center gap-2"><i class="fa-solid fa-certificate text-emerald-400 text-xs"></i> Must Watch</span>
-              <span class="text-[10px] text-emerald-400 font-bold">👑 Top</span>
-            </button>
-            <button onclick="filterByVibe('mind_blown')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-300 hover:bg-[#1D1D25] transition">
-              <span class="flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-purple-400 text-xs"></i> Mind Blown</span>
-              <span class="text-[10px] text-purple-400 font-bold">💥 48%</span>
-            </button>
-            <button onclick="filterByVibe('emotional_damage')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-300 hover:bg-[#1D1D25] transition">
-              <span class="flex items-center gap-2"><i class="fa-solid fa-heart text-rose-400 text-xs"></i> Emotional Damage</span>
-              <span class="text-[10px] text-rose-400 font-bold">❤️ Cry</span>
-            </button>
-            <button onclick="filterByVibe('fun_time')" class="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between text-slate-300 hover:bg-[#1D1D25] transition">
-              <span class="flex items-center gap-2"><i class="fa-solid fa-face-laugh-beam text-cyan-400 text-xs"></i> Fun Time</span>
-              <span class="text-[10px] text-cyan-400 font-bold">😄 Pop</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- User Card at Bottom of Sidebar (filled by updateSidebarUserCard) -->
-      <div class="bg-[#1D1D25] p-3.5 rounded-2xl border border-[#2C2C3A] text-xs space-y-2">
+      <!-- Account card (filled by updateSidebarUserCard) -->
+      <div class="rounded-xl bg-white/[0.04] p-3.5 text-xs ring-1 ring-white/[0.06]">
         <div class="flex items-center gap-3">
-          <div id="sidebarUserAvatar" class="w-10 h-10 rounded-full border-2 border-purple-400 bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black shrink-0 overflow-hidden"><i class="fa-solid fa-user"></i></div>
+          <div id="sidebarUserAvatar" class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/30 font-semibold text-white"><i class="fa-solid fa-user"></i></div>
           <div class="min-w-0 flex-1">
-            <div id="sidebarUserName" class="font-bold text-white truncate">Guest</div>
-            <button id="sidebarUserSub" type="button" onclick="openAuthModal()" class="text-[10px] text-purple-400 font-semibold hover:text-purple-300 text-left cursor-pointer">Sign in to sync your watchlist</button>
+            <div id="sidebarUserName" class="truncate text-sm font-medium text-white">Guest</div>
+            <button id="sidebarUserSub" type="button" onclick="openAuthModal()" class="cursor-pointer text-left text-[11px] text-white/50 hover:text-white">Sign in to sync your watchlist</button>
           </div>
         </div>
-        <div id="sidebarUserStats" class="text-[10px] text-slate-400 flex justify-between border-t border-[#2C2C3A] pt-2">
-          <span><b>0</b> Watched</span>
-          <span><b>0</b> Want to watch</span>
+        <div id="sidebarUserStats" class="mt-3 flex justify-between border-t border-white/[0.06] pt-2.5 text-[11px] text-white/45">
+          <span><b class="text-white/80">0</b> Watched</span>
+          <span><b class="text-white/80">0</b> Want to watch</span>
         </div>
-      </div>    </aside>
+      </div>
+    </aside>
 
     <!-- FULL SCREEN MAIN CONTENT VIEWPORT (RESPONSIVE) -->
-    <main class="flex-1 min-w-0 min-h-screen px-4 py-6 sm:px-8 lg:px-12 w-full max-w-full pb-24 md:pb-12">
-      <div id="mainViewport" class="space-y-8"></div>
+    <main class="min-h-screen w-full min-w-0 max-w-full flex-1 px-4 py-6 pb-24 sm:px-8 lg:px-12 md:pb-14">
+      <div id="mainViewport" class="mx-auto max-w-[1400px]"></div>
     </main>
 
   </div>
@@ -3322,42 +3185,59 @@
     selectedTopVibe = selectedTopVibe || "all";
     selectedTopLanguage = selectedTopLanguage || "";
 
+    const NAV_ON = 'top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium bg-white/10 text-white transition';
+    const NAV_OFF = 'top-nav-pill whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-white/55 hover:text-white transition';
+    window.homeRow = null; // 'fresh' | 'desi' | 'series' | 'standup' | 'all' | null (null = curated home)
+
+    function syncTopNav() {
+      document.querySelectorAll('.top-nav-pill').forEach(btn => { btn.className = NAV_OFF; });
+      const active = document.getElementById(`top-cat-${selectedTopCategory.toLowerCase().replace(/[^a-z]/g, '')}`);
+      if (active) active.className = NAV_ON;
+    }
+
+    function goHome() {
+      window.homeRow = null;
+      selectedTopCategory = 'all'; selectedTopVibe = 'all'; selectedTopLanguage = ''; activeMood = null;
+      window.currentFeedLimit = 36;
+      syncTopNav();
+      switchTab('discover');
+      window.scrollTo({ top: 0 });
+    }
+
+    function goSearch() {
+      switchTab('explore');
+      setTimeout(() => { const el = document.getElementById('universalSearchInput'); if (el) el.focus(); }, 120);
+    }
+
+    function setHomeRow(row) {
+      window.homeRow = row;
+      window.currentFeedLimit = 36;
+      refreshViews();
+      window.scrollTo({ top: 0 });
+    }
+
+    function scrollRow(btn, dir) {
+      const sec = btn.closest('section');
+      const row = sec && sec.querySelector('.row-scroll');
+      if (row) row.scrollBy({ left: dir * Math.round(row.clientWidth * 0.85), behavior: 'smooth' });
+    }
+
     function setTopVibe(vibeId) {
       selectedTopVibe = vibeId || 'all';
-      document.querySelectorAll('.top-vibe-pill').forEach(btn => {
-        btn.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-600/30', 'text-white', 'scale-105');
-        btn.classList.add('text-slate-400');
-      });
-      const activeVibeBtn = document.getElementById(`top-vibe-${(vibeId || 'all').replace(/_/g, '-')}`);
-      if (activeVibeBtn) {
-        activeVibeBtn.classList.add('ring-2', 'ring-purple-400', 'bg-purple-600/30', 'text-white', 'scale-105');
-        activeVibeBtn.classList.remove('text-slate-400');
-      }
-      updateResetButtonVisibility();
       window.currentFeedLimit = 36;
       refreshViews();
     }
 
     function setTopCategory(cat) {
       selectedTopCategory = cat;
-      // Update Pill styles
-      document.querySelectorAll('.top-nav-pill').forEach(btn => {
-        btn.className = 'top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-[#1A1A24] text-slate-400 hover:text-white hover:bg-[#252533] border border-[#2C2C3A]';
-      });
-
-      const activeBtn = document.getElementById(`top-cat-${cat.toLowerCase().replace(/[^a-z]/g, '')}`);
-      if (activeBtn) {
-        activeBtn.className = 'top-nav-pill px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white border border-purple-400 shadow-md shadow-purple-500/25';
-      }
-
-      updateResetButtonVisibility();
+      window.homeRow = null;
+      syncTopNav();
       window.currentFeedLimit = 36;
       refreshViews();
     }
 
     function setTopLanguage(lang) {
       selectedTopLanguage = lang || '';
-      updateResetButtonVisibility();
       window.currentFeedLimit = 36;
       refreshViews();
     }
@@ -3366,29 +3246,12 @@
       selectedTopCategory = 'all';
       selectedTopVibe = 'all';
       selectedTopLanguage = '';
-      const selectEl = document.getElementById('topLanguageSelect');
-      if (selectEl) selectEl.value = '';
-      document.querySelectorAll('.top-vibe-pill').forEach(btn => {
-        btn.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-600/30', 'text-white', 'scale-105');
-        btn.classList.add('text-slate-400');
-      });
-      const allVibeBtn = document.getElementById('top-vibe-all');
-      if (allVibeBtn) {
-        allVibeBtn.classList.add('ring-2', 'ring-purple-400', 'bg-purple-600/30', 'text-white');
-        allVibeBtn.classList.remove('text-slate-400');
-      }
+      window.homeRow = null;
+      syncTopNav();
       setTopCategory('all');
     }
 
-    function updateResetButtonVisibility() {
-      const resetBtn = document.getElementById('topFilterResetBtn');
-      if (!resetBtn) return;
-      if (selectedTopCategory !== 'all' || selectedTopVibe !== 'all' || selectedTopLanguage !== '') {
-        resetBtn.classList.remove('hidden');
-      } else {
-        resetBtn.classList.add('hidden');
-      }
-    }
+    function updateResetButtonVisibility() {}
 
     // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
     
@@ -3648,595 +3511,200 @@
 
 
         // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
-function renderDiscover() {
-      // Top Navigation Filter Evaluation
+function posterCard(item, opts) {
+      opts = opts || {};
+      const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
+      const sub = [item.year, item.ottPlatform || item.type].filter(Boolean).join(' · ');
+      const sizing = opts.wide ? 'w-full' : 'w-[150px] sm:w-[170px] shrink-0';
+      return `
+        <button type="button" onclick="openDetails('${item.id}')" class="group ${sizing} text-left focus:outline-none">
+          <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
+            <img src="${esc(item.poster)}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
+            ${opts.badge ? `<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">${esc(opts.badge)}</span>` : ''}
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2.5 pt-12 opacity-0 transition duration-300 group-hover:opacity-100">
+              <div class="flex items-center gap-1.5 text-[11px] font-medium text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>${esc(dom.label)}</div>
+            </div>
+          </div>
+          <div class="mt-2.5 px-0.5">
+            <div class="truncate text-[13px] font-medium text-white/90">${esc(item.title)}</div>
+            <div class="mt-0.5 flex items-center gap-2 truncate text-xs text-white/45"><span class="truncate">${esc(sub)}</span><span class="shrink-0 text-amber-300/90">★ ${esc(item.rating)}</span></div>
+          </div>
+        </button>`;
+    }
+
+    function homeRowSection(title, subtitle, items, seeAll) {
+      if (!items || !items.length) return '';
+      return `
+        <section>
+          <div class="mb-4 flex items-end justify-between gap-4">
+            <div class="min-w-0">
+              <h2 class="font-display text-[22px] font-medium leading-tight text-white">${title}</h2>
+              ${subtitle ? `<p class="mt-1 text-sm text-white/45">${subtitle}</p>` : ''}
+            </div>
+            <div class="flex shrink-0 items-center gap-1">
+              ${seeAll ? `<button type="button" onclick="${seeAll}" class="mr-2 text-sm text-white/55 transition hover:text-white">See all</button>` : ''}
+              <button type="button" onclick="scrollRow(this,-1)" class="hidden h-8 w-8 items-center justify-center rounded-full text-white/50 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white md:flex" aria-label="Scroll left"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+              <button type="button" onclick="scrollRow(this,1)" class="hidden h-8 w-8 items-center justify-center rounded-full text-white/50 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white md:flex" aria-label="Scroll right"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            </div>
+          </div>
+          <div class="row-scroll no-scrollbar -mx-1 flex gap-4 overflow-x-auto px-1 pb-2">${items.map(i => posterCard(i)).join('')}</div>
+        </section>`;
+    }
+
+    function renderDiscover() {
       const isAll = (selectedTopCategory === 'all');
       const isMovie = (selectedTopCategory === 'Movie');
       const isSeries = (selectedTopCategory === 'Series');
       const isStandup = (selectedTopCategory === 'Stand-Up');
       const hasTopFilter = (!isAll || selectedTopVibe !== 'all' || selectedTopLanguage !== '');
+      const byRating = (a, b) => (b.rating || 0) - (a.rating || 0);
+      const langOk = m => !selectedTopLanguage || m.language === selectedTopLanguage;
 
-      // Base filtered feed according to COMBINATORIAL top category, vibe, and language
-      let filteredFeed = mediaDatabase;
-      if (!isAll) {
-        filteredFeed = filteredFeed.filter(m => m.type === selectedTopCategory);
+      const ottAll = mediaDatabase.filter(m => m.isFreshOtt && langOk(m));
+      const desiAll = mediaDatabase.filter(m => m.region && m.region.startsWith('Indian') && m.type === 'Movie' && langOk(m)).sort(byRating);
+      const seriesAll = mediaDatabase.filter(m => m.type === 'Series' && langOk(m)).sort(byRating);
+      const standupAll = mediaDatabase.filter(m => m.type === 'Stand-Up' && langOk(m)).sort(byRating);
+
+      // Grid view = any active filter, or "See all" on a row
+      let gridTitle = null, gridItems = [];
+      if (window.homeRow) {
+        const map = { fresh: ['Fresh on streaming', ottAll], desi: ['Indian & regional cinema', desiAll], series: ['Series worth bingeing', seriesAll], standup: ['Stand-up specials', standupAll], all: ['All titles', mediaDatabase.filter(langOk)] };
+        const [tt, list] = map[window.homeRow] || map.all;
+        gridTitle = tt; gridItems = list;
+      } else if (hasTopFilter) {
+        let f = mediaDatabase.filter(langOk);
+        if (!isAll) f = f.filter(m => m.type === selectedTopCategory);
+        if (selectedTopVibe !== 'all') f = f.filter(m => m.dominantVibe === selectedTopVibe || (m.vibeVotes && m.vibeVotes[selectedTopVibe] > 0));
+        gridTitle = (selectedTopVibe !== 'all' ? (VIBES[selectedTopVibe] ? VIBES[selectedTopVibe].label + ' · ' : '') : '') + (isMovie ? 'Movies' : (isSeries ? 'Series' : (isStandup ? 'Stand-up specials' : 'All titles')));
+        gridItems = f;
       }
-      if (selectedTopVibe && selectedTopVibe !== 'all') {
-        filteredFeed = filteredFeed.filter(m => m.dominantVibe === selectedTopVibe || (m.vibeVotes && m.vibeVotes[selectedTopVibe] > 0));
-      }
-      if (selectedTopLanguage) {
-        filteredFeed = filteredFeed.filter(m => m.language === selectedTopLanguage);
+      if (gridTitle && activeMood) gridItems = gridItems.filter(m => (getVibePercentages(m)[activeMood] || 0) >= 20);
+
+      const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + '</div>';
+      const selectCls = 'rounded-full bg-white/[0.05] px-3.5 py-2 text-sm text-white/80 ring-1 ring-white/10 outline-none transition hover:bg-white/[0.08] focus:ring-white/30';
+      const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
+      const toolbar = `
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <select id="topLanguageSelect" onchange="setTopLanguage(this.value)" class="${selectCls}" aria-label="Language">
+            ${langOptions.map(([v, l]) => `<option value="${v}" class="bg-[#14141A]" ${v === selectedTopLanguage ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <select id="topVibeSelect" onchange="setTopVibe(this.value)" class="${selectCls}" aria-label="Vibe">
+            <option value="all" class="bg-[#14141A]">All vibes</option>
+            ${Object.values(VIBES).map(v => `<option value="${v.id}" class="bg-[#14141A]" ${v.id === selectedTopVibe ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}
+          </select>
+          ${(hasTopFilter || window.homeRow) ? `<button type="button" onclick="goHome()" class="rounded-full px-3 py-2 text-sm text-white/55 transition hover:text-white">Reset</button>` : ''}
+        </div>`;
+
+      // ---------- Filtered / "see all" grid ----------
+      if (gridTitle) {
+        const limit = window.currentFeedLimit || 36;
+        return `
+          <div class="space-y-8">
+            ${mobileTabs}
+            <div class="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                ${window.homeRow ? `<button type="button" onclick="goHome()" class="mb-2 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>Home</button>` : ''}
+                <h1 class="font-display text-3xl font-medium text-white">${esc(gridTitle)}</h1>
+                <p class="mt-1 text-sm text-white/45">${gridItems.length} titles</p>
+              </div>
+              ${toolbar}
+            </div>
+            ${gridItems.length === 0 ? `
+              <div class="rounded-2xl bg-white/[0.03] py-16 text-center ring-1 ring-white/[0.06]">
+                <div class="text-white/80">Nothing matches these filters.</div>
+                <button type="button" onclick="goHome()" class="mt-3 text-sm text-purple-300 hover:text-white">Clear filters</button>
+              </div>` : `
+              <div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                ${gridItems.slice(0, limit).map(i => posterCard(i, { wide: true })).join('')}
+              </div>
+              ${gridItems.length > limit ? `<div class="pt-4 text-center"><button type="button" onclick="loadMoreFeed()" class="rounded-full bg-white/[0.06] px-6 py-2.5 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">Show more <span class="text-white/40">(${limit} of ${gridItems.length})</span></button></div>` : ''}`}
+            ${homeFooter()}
+          </div>`;
       }
 
-      // Stand-up Specials
-      let standupList = mediaDatabase.filter(m => m.type === 'Stand-Up');
-      if (selectedTopLanguage) {
-        standupList = standupList.filter(m => m.language === selectedTopLanguage);
-      }
+      // ---------- Curated home ----------
+      const heroPool = ottAll.filter(m => m.type === 'Movie' && m.backdrop).sort(byRating).slice(0, 5);
+      const dayIdx = Math.floor(Date.now() / 86400000);
+      const hero = heroPool.length ? heroPool[dayIdx % heroPool.length] : null;
+      const heroDom = hero ? (VIBES[hero.dominantVibe] || VIBES.must_watch) : null;
+      const heroHtml = hero ? `
+        <section class="relative flex min-h-[360px] items-end overflow-hidden rounded-3xl ring-1 ring-white/[0.07] sm:min-h-[440px]">
+          <img src="${esc(hero.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
+          <div class="relative max-w-2xl p-6 sm:p-10">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${heroDom.color}"></span>Featured · ${esc(heroDom.label)}</div>
+            <h1 class="mt-3 font-display text-4xl font-medium leading-[1.1] text-white sm:text-5xl">${esc(hero.title)}</h1>
+            <p class="mt-3 text-sm text-white/60">${esc([hero.year, (hero.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), hero.duration].filter(Boolean).join('  ·  '))}<span class="ml-3 text-amber-300">★ ${esc(hero.rating)}</span></p>
+            <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-white/70">${esc(hero.synopsis || '')}</p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <button type="button" onclick="openDetails('${hero.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">View details</button>
+              <button type="button" onclick="openTrailer('${hero.id}')" class="rounded-full bg-white/10 px-6 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15"><i class="fa-solid fa-play mr-2 text-xs"></i>Trailer</button>
+            </div>
+          </div>
+        </section>` : '';
 
-      // TV Series
-      let seriesList = mediaDatabase.filter(m => m.type === 'Series');
-      if (selectedTopLanguage) {
-        seriesList = seriesList.filter(m => m.language === selectedTopLanguage);
-      }
+      const moodChips = AI_MOODS.map(mo => {
+        const on = aiMoods.includes(mo.id);
+        return `<button type="button" onclick="toggleAiMood('${mo.id}')" aria-pressed="${on}" class="rounded-full px-3.5 py-1.5 text-[13px] font-medium ring-1 transition ${on ? 'bg-white text-black ring-white' : 'bg-white/[0.04] text-white/70 ring-white/10 hover:bg-white/10 hover:text-white'}">${esc(mo.label)}</button>`;
+      }).join('');
+      const runtimeChips = [[0, 'Any length'], [60, 'Under 1 hour'], [100, 'Under 100 min'], [130, 'Under 2h 10m']].map(([mins, lbl]) =>
+        `<button type="button" onclick="setAiRuntime(${mins})" aria-pressed="${aiMaxRuntime === mins}" class="rounded-full px-3 py-1 text-xs ring-1 transition ${aiMaxRuntime === mins ? 'bg-white/90 text-black ring-white' : 'text-white/60 ring-white/10 hover:text-white'}">${lbl}</button>`).join('');
+      const moodHtml = `
+        <section class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] sm:p-6">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 class="font-display text-[22px] font-medium text-white">What are you in the mood for?</h2>
+              <p class="mt-1 text-sm text-white/45">Pick a feeling, or describe it in your own words.</p>
+            </div>
+            <div class="flex w-full gap-2 lg:max-w-md">
+              <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a comforting film for a rainy night" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
+              <button type="button" onclick="runAiVibeMatcher()" class="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Match</button>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">${moodChips}</div>
+          <details class="mt-3" ${aiMaxRuntime ? 'open' : ''}><summary class="cursor-pointer select-none text-xs text-white/40 hover:text-white/70">Runtime</summary><div class="mt-2 flex flex-wrap gap-2">${runtimeChips}</div></details>
+          ${aiVibeResults && aiVibeResults.length > 0 ? `
+            <div id="aiVibeResultsSection" class="mt-6 border-t border-white/[0.06] pt-5">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <div class="text-sm text-white/60">Top ${aiVibeResults.length} of ${aiMatchTotal}${aiVibeQuery ? ` for “${esc(aiVibeQuery)}”` : ''}${aiMoods.length ? ' · ' + esc(aiMoods.map(id => (AI_MOODS.find(x => x.id === id) || {}).label).filter(Boolean).join(' + ')) : ''}</div>
+                <button type="button" onclick="clearAiVibeMatcher()" class="text-sm text-white/55 transition hover:text-white">Clear</button>
+              </div>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-8">${aiVibeResults.map(m => posterCard(m, { wide: true, badge: m.alignmentPct + '% match' })).join('')}</div>
+            </div>` : ''}
+        </section>`;
 
-      // OTT Releases (filtered by active category & language)
-      let ottList = mediaDatabase.filter(m => m.isFreshOtt);
-      if (!isAll) {
-        ottList = ottList.filter(m => m.type === selectedTopCategory);
-      }
-      if (selectedTopLanguage) {
-        ottList = ottList.filter(m => m.language === selectedTopLanguage);
-      }
-      if (selectedOttFilter) {
-        ottList = ottList.filter(m => (m.ottPlatform || '').toLowerCase().includes(selectedOttFilter.toLowerCase()));
-      }
-
-      // Indian & Regional Cinema (filtered by active category & language)
-      let indianList = mediaDatabase.filter(m => m.region && m.region.startsWith('Indian'));
-      if (!isAll) {
-        indianList = indianList.filter(m => m.type === selectedTopCategory);
-      }
-      if (selectedIndianLang) {
-        indianList = indianList.filter(m => m.language === selectedIndianLang);
-      } else if (selectedTopLanguage) {
-        indianList = indianList.filter(m => m.language === selectedTopLanguage);
-      }
-
-      // Grid items with mood filter
-      let gridItems = filteredFeed;
-      if (activeMood) {
-        gridItems = filteredFeed.filter(m => (getVibePercentages(m)[activeMood] || 0) >= 20);
-      }
+      const starsHtml = `
+        <section>
+          <div class="mb-4"><h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2></div>
+          <div class="no-scrollbar -mx-1 flex gap-6 overflow-x-auto px-1 pb-2">
+            ${Object.values(ACTORS).slice(0, 10).map(a => `
+              <button type="button" onclick="openActorProfile('${a.id}')" class="group w-[84px] shrink-0 text-center focus:outline-none">
+                <img src="${esc(a.img)}" alt="${esc(a.name)}" loading="lazy" class="mx-auto h-[84px] w-[84px] rounded-full object-cover ring-1 ring-white/10 transition duration-300 group-hover:ring-2 group-hover:ring-white/40" onerror="handleActorImageError(this)">
+                <div class="mt-2.5 truncate text-[13px] text-white/80 group-hover:text-white">${esc(a.name)}</div>
+              </button>`).join('')}
+          </div>
+        </section>`;
 
       return `
-        <div class="space-y-8">
+        <div class="space-y-14">
+          <div class="space-y-5">${mobileTabs}<div class="flex justify-end">${toolbar}</div>${heroHtml}</div>
+          ${moodHtml}
+          ${homeRowSection('Fresh on streaming', 'Recently landed on Netflix, Prime Video and more', ottAll.slice(0, 16), "setHomeRow('fresh')")}
+          ${homeRowSection('Indian & regional cinema', 'Hindi, Tamil, Telugu, Malayalam and Kannada', desiAll.slice(0, 16), "setHomeRow('desi')")}
+          ${homeRowSection('Series worth bingeing', null, seriesAll.slice(0, 16), "setHomeRow('series')")}
+          ${homeRowSection('Stand-up specials', null, standupAll.slice(0, 14), "setHomeRow('standup')")}
+          ${starsHtml}
+          <div class="text-center"><button type="button" onclick="setHomeRow('all')" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">Browse the full catalogue</button></div>
+          ${homeFooter()}
+        </div>`;
+    }
 
-          <!-- 1. UNIVERSAL SEARCH ENGINE BAR (CLICK TO EXPLORE) -->
-          <div class="relative max-w-3xl">
-            <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-purple-400 text-sm"></i>
-            <input type="text" onclick="switchTab('explore'); setTimeout(() => { const el = document.getElementById('universalSearchInput'); if(el) el.focus(); }, 120);" 
-              placeholder="Search actors (Robert Downey Jr., SRK, Prabhas, Zendaya), movies, TV series, stand-up, or vibes..." 
-              class="w-full bg-[#1D1D25] border border-purple-500/40 rounded-2xl pl-11 pr-5 py-3 text-sm text-white placeholder-slate-400 cursor-pointer shadow-lg hover:border-purple-400 transition">
-          </div>
-
-          ${hasTopFilter ? `
-            <!-- ACTIVE TOP NAVIGATION FILTER BANNER -->
-            <div id="activeFilterBanner" class="bg-gradient-to-r from-purple-950/70 via-[#1D1D25] to-indigo-950/60 p-4 sm:p-5 rounded-3xl border border-purple-500/50 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center border border-purple-400/40 shadow-lg shrink-0">
-                  <i class="fa-solid fa-filter text-sm"></i>
-                </span>
-                <div>
-                  <div class="text-sm sm:text-base font-black text-white flex flex-wrap items-center gap-2">
-                    <span>Showing Only:</span>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 font-extrabold">
-                      ${isAll ? 'All Content' : (isStandup ? '🎤 Stand-Up Comedy' : (isSeries ? '📺 Series & TV Shows' : '🎥 Movies'))}
-                    </span>
-                    ${selectedTopLanguage ? `<span class="bg-purple-900/60 border border-purple-500/40 text-purple-200 text-xs font-bold px-2.5 py-0.5 rounded-lg uppercase">🌐 ${selectedTopLanguage.toUpperCase()}</span>` : ''}
-                  </div>
-                  <p class="text-xs text-slate-300 font-medium">Home page filtered to ${filteredFeed.length} matching titles</p>
-                </div>
-              </div>
-              <button id="topClearFilterBtn" onclick="clearTopFilters()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
-                <i class="fa-solid fa-xmark"></i> Show All Content
-              </button>
-            </div>
-          ` : ''}
-
-          <!-- 2. AI VIBE MATCHER PROMPT ENGINE ($0 FREE TIER) -->
-          <div class="bg-gradient-to-r from-purple-950/60 via-[#1D1D25] to-emerald-950/50 p-5 rounded-3xl border border-purple-500/40 shadow-2xl space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center border border-purple-400/40 shadow-lg">
-                  <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
-                </span>
-                <div>
-                  <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                    ${isStandup ? 'Stand-Up Vibe Matcher' : (isSeries ? 'Binge Vibe Matcher' : 'AI Vibe Matcher Prompt Engine')}
-                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">$0 Free Tier</span>
-                  </h3>
-                  <p class="text-xs text-slate-300">${isStandup ? 'Unhinged crowd work, roast comedy, or wholesome punchlines' : (isSeries ? 'Addictive cliffhangers, slow-burn mystery, or comforting sitcoms' : 'Tell us what you want to feel — AI maps your emotional craving')}</p>
-                </div>
-              </div>
-              ${aiVibeResults ? `
-                <button onclick="clearAiVibeMatcher()" class="text-xs text-purple-300 hover:text-white font-bold bg-purple-600/30 px-3 py-1.5 rounded-xl border border-purple-400/30 self-start sm:self-auto transition">
-                  ✕ Clear AI Match
-                </button>
-              ` : ''}
-            </div>
-
-            <!-- Prompt Input Bar -->
-            <div class="flex gap-2">
-              <div class="relative flex-1">
-                <i class="fa-solid fa-sparkles absolute left-4 top-3 text-purple-400 text-xs"></i>
-                <input id="aiVibeInput" type="text" 
-                  value="${esc(aiVibeQuery)}"
-                  onkeydown="if(event.key === 'Enter') runAiVibeMatcher();"
-                  placeholder="${isStandup ? 'e.g. Relatable everyday life observations or dark comedy' : (isSeries ? 'e.g. Gripping dystopian mystery with shocking twists' : 'e.g. Heartwarming comfort tears or mindfuck sci-fi...')}"
-                  class="w-full bg-[#16161E] border border-purple-500/40 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-300 transition">
-              </div>
-              <button onclick="runAiVibeMatcher()" class="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-500 hover:to-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shrink-0 flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt"></i> Match Vibe
-              </button>
-            </div>
-
-            <!-- Mood Picker (multi-select) + runtime filter -->
-            <div class="space-y-2">
-              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pick your mood</div>
-              <div class="flex flex-wrap gap-2">
-                ${AI_MOODS.map(mo => {
-                  const on = aiMoods.includes(mo.id);
-                  return `<button type="button" onclick="toggleAiMood('${mo.id}')" aria-pressed="${on}" class="px-3 py-1.5 rounded-xl text-[11px] font-bold border transition ${on ? 'bg-purple-600/40 border-purple-300 text-white ring-2 ring-purple-400' : 'bg-[#16161E]/80 border-purple-500/30 text-purple-200 hover:border-purple-300 hover:text-white'}">${mo.emoji} ${mo.label}</button>`;
-                }).join('')}
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Runtime</span>
-                ${[[0, 'Any'], [60, 'Quick (≤60 min)'], [100, 'Under 100 min'], [130, 'Under 2h 10m']].map(([mins, lbl]) => `
-                  <button type="button" onclick="setAiRuntime(${mins})" aria-pressed="${aiMaxRuntime === mins}" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${aiMaxRuntime === mins ? 'bg-emerald-600/30 border-emerald-300 text-white' : 'bg-[#16161E]/80 border-white/10 text-slate-300 hover:text-white'}">${lbl}</button>
-                `).join('')}
-              </div>
-            </div>
-
-            <!-- Quick Inspiration Prompt Pills -->
-            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              ${[
-                'Wholesome comfort cinema',
-                'Mind-bending sci-fi with crazy twists',
-                'Tears & emotional damage',
-                'Peak Malayalam realism',
-                'Adrenaline mass cinema',
-                'Chaotic unhinged comedy'
-              ].map(prompt => `
-                <button onclick="runAiVibeMatcher('${prompt}')" class="shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-[#16161E]/80 text-purple-200 border border-purple-500/30 hover:border-purple-300 hover:text-white transition">
-                  ${prompt}
-                </button>
-              `).join('')}
-            </div>
-
-            <!-- AI Vibe Match Results Shelf (If Searched) -->
-            ${aiVibeResults && aiVibeResults.length > 0 ? `
-              <div id="aiVibeResultsSection" class="pt-2 space-y-3 border-t border-purple-500/30">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-brain"></i> AI Vibe Match Results for "${esc(aiVibeQuery)}"
-                  </span>
-                  <span class="text-[11px] text-slate-400">Top ${aiVibeResults.length} of ${aiMatchTotal} titles${aiMoods.length ? ' · ' + aiMoods.map(id => (AI_MOODS.find(x => x.id === id) || {}).label).filter(Boolean).join(' + ') : ''}</span>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  ${aiVibeResults.map(m => `
-                    <div onclick="openDetails('${m.id}')" class="bg-[#16161E] p-2.5 rounded-2xl border border-emerald-500/40 hover:border-emerald-300 cursor-pointer transition shadow-xl group">
-                      <div class="relative overflow-hidden rounded-xl mb-2 h-44 bg-slate-900">
-                        <img src="${m.poster}" class="w-full h-full object-cover group-hover:scale-105 transition" onerror="handleMediaPosterError(this)">
-                        <span class="absolute top-2 left-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[10px] px-2 py-0.5 rounded shadow">
-                          ${m.alignmentPct}% Vibe Match
-                        </span>
-                      </div>
-                      <div class="text-xs font-bold text-white truncate">${esc(m.title)}</div>
-                      <div class="text-[10px] text-emerald-400 font-bold">${VIBES[m.dominantVibe]?.label || 'Must Watch'} · ${esc(m.duration || '')}</div>
-                      ${m.aiHits && m.aiHits.length ? `<div class="text-[10px] text-slate-400 truncate">matched: ${esc(m.aiHits.join(', '))}</div>` : ''}
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- 3. FEATURE: 🇮🇳 DESI VIBES: INDIAN & REGIONAL CINEMA CAROUSEL (Visible for All or Movies) -->
-          ${(isAll || isMovie) && indianList.length > 0 ? `
-            <div class="space-y-3.5">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <span class="text-xl">🇮🇳</span> Desi Vibes: Indian & Regional Cinema
-                  </h4>
-                  <p class="text-xs text-slate-400">Tollywood, Mollywood, Kollywood, Bollywood & Sandalwood Masterpieces • Live Streaming Links</p>
-                </div>
-                <span class="text-xs text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-                  ${indianList.length} Titles
-                </span>
-              </div>
-
-              <!-- Regional Language Filter Pills -->
-              <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                ${[
-                  { label: 'All Indian', lang: null },
-                  { label: 'Hindi (Bollywood)', lang: 'hi' },
-                  { label: 'Telugu (Tollywood)', lang: 'te' },
-                  { label: 'Tamil (Kollywood)', lang: 'ta' },
-                  { label: 'Malayalam (Mollywood)', lang: 'ml' },
-                  { label: 'Kannada (Sandalwood)', lang: 'kn' }
-                ].map(p => `
-                  <button onclick="selectedIndianLang = ${p.lang ? `'${p.lang}'` : 'null'}; refreshViews();" 
-                    class="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${ (p.lang === selectedIndianLang) ? 'bg-emerald-600 text-white border-emerald-400 shadow-md' : 'bg-[#1D1D25] text-slate-400 border-[#2C2C3A] hover:text-white'}">
-                    ${p.label}
-                  </button>
-                `).join('')}
-              </div>
-
-              <!-- Horizontal Indian Cinema Cards -->
-              <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                ${indianList.map(item => {
-                  const dominant = VIBES[item.dominantVibe] || VIBES.must_watch;
-                  const pcts = getVibePercentages(item);
-                  return `
-                    <div onclick="openDetails('${item.id}')" class="shrink-0 w-44 sm:w-48 bg-[#1D1D25] rounded-2xl overflow-hidden border border-[#2C2C3A] hover:border-emerald-400/50 cursor-pointer transition flex flex-col group shadow-lg">
-                      <div class="relative h-56 overflow-hidden">
-                        <img src="${item.poster}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${item.title}" onerror="handleMediaPosterError(this)">
-                        <div class="absolute top-2.5 left-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-lg">
-                          ${item.region ? item.region.split(' ')[1].replace(/[()]/g, '') : item.language.toUpperCase()}
-                        </div>
-                        ${item.ottPlatform ? `
-                          <a href="${getProviderDirectLink(item.ottPlatform, item.title, item.type === 'Series', selectedCountry)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" class="absolute bottom-2.5 left-2.5 bg-black/90 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/50 hover:border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold transition shadow-lg flex items-center gap-1 z-10 cursor-pointer" title="Stream on ${item.ottPlatform}">
-                            <i class="fa-solid fa-play text-[8px]"></i> ${item.ottPlatform}
-                          </a>
-                        ` : ''}
-                        <div class="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold text-amber-400">
-                          ★ ${item.rating}
-                        </div>
-                      </div>
-                      <div class="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                        <div>
-                          <div class="text-xs font-black text-white truncate">${item.title}</div>
-                          <div class="text-[10px] text-slate-400 mt-0.5 truncate">${item.genres.join(', ')}</div>
-                        </div>
-                        <div class="space-y-1.5 pt-1 border-t border-[#2C2C3A]">
-                          <div class="flex items-center justify-between text-[10px] font-bold">
-                            <span style="color: ${dominant.color}" class="flex items-center gap-1">
-                              <i class="fa-solid ${dominant.icon}"></i> ${dominant.label}
-                            </span>
-                            <span class="text-slate-300">${pcts[item.dominantVibe] || 90}%</span>
-                          </div>
-                          <div class="w-full bg-[#16161E] h-1.5 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full" style="width: ${pcts[item.dominantVibe] || 90}%; background-color: ${dominant.color}"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 4. FEATURE: GROUP MOVIE NIGHT "TASTE BATTLE" BANNER (Visible for All or Movies) -->
-          ${(isAll || isMovie) ? `
-            <div class="bg-gradient-to-r from-indigo-950/60 via-[#1D1D25] to-purple-950/50 p-4 sm:p-5 rounded-3xl border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-              <div class="flex items-center gap-3.5">
-                <span class="w-12 h-12 rounded-2xl bg-indigo-600/30 text-indigo-300 flex items-center justify-center border border-indigo-400/30 text-xl shrink-0">
-                  <i class="fa-solid fa-users-viewfinder"></i>
-                </span>
-                <div>
-                  <h4 class="text-sm sm:text-base font-black text-white">Group Movie Night: Taste Battle</h4>
-                  <p class="text-xs text-slate-300">Can't agree on what to watch? Generate a 6-letter room code and let your friends vote in real-time.</p>
-                </div>
-              </div>
-              <button onclick="openPartyModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition shrink-0 flex items-center gap-2">
-                <i class="fa-solid fa-dice"></i> Open Movie Night Party
-              </button>
-            </div>
-          ` : ''}
-
-          <!-- 4.5 FEATURE: STAND-UP COMEDY SPECIALS SHELF (Visible ONLY for All or Stand-Up) -->
-          ${(isAll || isStandup) && standupList.length > 0 ? `
-            <div class="space-y-3.5">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-microphone-lines text-rose-400"></i> Stand-Up Comedy Specials & Punchline Vibes
-                  </h4>
-                  <p class="text-xs text-slate-400">Award-winning specials, raw crowd work, and unfiltered stand-up</p>
-                </div>
-                ${!isStandup ? `
-                  <button onclick="setTopCategory('Stand-Up')" class="text-xs text-purple-400 font-bold hover:underline flex items-center gap-1">
-                    View All Stand-Up <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                  </button>
-                ` : ''}
-              </div>
-
-              <!-- Stand-up Cards Row -->
-              <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                ${standupList.map(item => {
-                  const dominant = VIBES[item.dominantVibe] || VIBES.fun_time;
-                  const pcts = getVibePercentages(item);
-                  return `
-                    <div onclick="openDetails('${item.id}')" class="shrink-0 w-44 sm:w-48 bg-[#1D1D25] rounded-2xl overflow-hidden border border-[#2C2C3A] hover:border-rose-400/50 cursor-pointer transition flex flex-col group shadow-lg">
-                      <div class="relative h-56 overflow-hidden">
-                        <img src="${item.poster}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${item.title}" onerror="handleMediaPosterError(this)">
-                        <div class="absolute top-2.5 left-2.5 bg-gradient-to-r from-rose-600 to-pink-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-lg">
-                          🎤 STAND-UP
-                        </div>
-                        ${item.ottPlatform ? `
-                          <a href="${getProviderDirectLink(item.ottPlatform, item.title, item.type === 'Series', selectedCountry)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" class="absolute bottom-2.5 left-2.5 bg-black/90 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/50 hover:border-rose-300 px-2 py-0.5 rounded text-[10px] font-bold transition shadow-lg flex items-center gap-1 z-10 cursor-pointer" title="Stream on ${item.ottPlatform}">
-                            <i class="fa-solid fa-play text-[8px]"></i> ${item.ottPlatform}
-                          </a>
-                        ` : ''}
-                        <div class="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold text-amber-400">
-                          ★ ${item.rating}
-                        </div>
-                      </div>
-                      <div class="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                        <div>
-                          <div class="text-xs font-black text-white truncate">${item.title}</div>
-                          <div class="text-[10px] text-slate-400 mt-0.5 truncate">${item.cast[0] || 'Comedian'} • ${item.duration}</div>
-                        </div>
-                        <div class="space-y-1.5 pt-1 border-t border-[#2C2C3A]">
-                          <div class="flex items-center justify-between text-[10px] font-bold">
-                            <span style="color: ${dominant.color}" class="flex items-center gap-1">
-                              <i class="fa-solid ${dominant.icon}"></i> ${dominant.label}
-                            </span>
-                            <span class="text-slate-300">${pcts[item.dominantVibe] || 70}%</span>
-                          </div>
-                          <div class="w-full bg-[#16161E] h-1.5 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full" style="width: ${pcts[item.dominantVibe] || 70}%; background-color: ${dominant.color}"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 5. "WHAT SHOULD I WATCH?" MOOD ENGINE -->
-          <div class="bg-[#1D1D25] p-4 rounded-2xl border border-[#2C2C3A]">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                <i class="fa-solid fa-icons text-purple-400"></i> Browse ${isMovie ? 'Movies' : (isSeries ? 'Series' : (isStandup ? 'Stand-Up' : 'Titles'))} by Signature Vibe
-              </span>
-              ${activeMood ? `<button onclick="activeMood=null; refreshViews();" class="text-xs text-purple-400 font-bold hover:underline">Clear Filter</button>` : ''}
-            </div>
-            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              ${Object.values(VIBES).map(v => `
-                <button onclick="filterByVibe('${v.id}')" 
-                  class="vibe-chip shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition ${activeMood === v.id ? 'bg-purple-600 border-purple-400 text-white shadow-lg' : 'bg-[#16161E] border-[#2C2C3A] text-slate-300 hover:border-slate-500'}">
-                  <i class="fa-solid ${v.icon}" style="color: ${v.color}"></i>
-                  ${v.label}
-                </button>
-              `).join('')}
-            </div>
-          </div>
-
-          <!-- 6. FEATURE: FRESH ON OTT (JUST DROPPED RELEASES) (Filtered by Active Category) -->
-          ${ottList.length > 0 ? `
-            <div class="space-y-3.5">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-cyan-400"></i> Fresh on OTT (${isMovie ? 'Just Dropped Movies' : (isSeries ? 'Just Dropped Series' : (isStandup ? 'New Specials' : 'Just Dropped'))})
-                  </h4>
-                  <p class="text-xs text-slate-400">Landed on streaming recently • Auto-synced from TMDB</p>
-                </div>
-                <span class="text-xs text-cyan-400 font-bold bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-                  ${ottList.length} in ${selectedCountry}
-                </span>
-              </div>
-
-              <!-- OTT Platform Filter Pills -->
-              <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                ${['All', 'Netflix', 'Prime Video', 'Disney+ Hotstar', 'JioCinema', 'Apple TV+'].map(p => `
-                  <button onclick="selectedOttFilter = ('${p}'==='All'? null : '${p}'); refreshViews();" 
-                    class="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${ (p==='All' && !selectedOttFilter) || selectedOttFilter===p ? 'bg-cyan-600 text-white border-cyan-400 shadow-md' : 'bg-[#1D1D25] text-slate-400 border-[#2C2C3A] hover:text-white'}">
-                    ${p}
-                  </button>
-                `).join('')}
-              </div>
-
-              <!-- Horizontal OTT Cards -->
-              <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                ${ottList.map(item => {
-                  const dominant = VIBES[item.dominantVibe] || VIBES.must_watch;
-                  const pcts = getVibePercentages(item);
-                  return `
-                    <div onclick="openDetails('${item.id}')" class="shrink-0 w-44 sm:w-48 bg-[#1D1D25] rounded-2xl overflow-hidden border border-[#2C2C3A] hover:border-cyan-400/50 cursor-pointer transition flex flex-col group shadow-lg">
-                      <div class="relative h-56 overflow-hidden">
-                        <img src="${item.poster}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${item.title}" onerror="handleMediaPosterError(this)">
-                        <div class="absolute top-2.5 left-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-lg">
-                          ⚡ ${item.ottDaysAgo}d ago
-                        </div>
-                        ${item.ottPlatform ? `
-                          <a href="${getProviderDirectLink(item.ottPlatform, item.title, item.type === 'Series', selectedCountry)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); window.open(this.href, '_blank'); return false;" class="absolute bottom-2.5 left-2.5 bg-black/90 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/50 hover:border-cyan-300 px-2 py-0.5 rounded text-[10px] font-bold transition shadow-lg flex items-center gap-1 z-10 cursor-pointer" title="Stream on ${item.ottPlatform}">
-                            <i class="fa-solid fa-play text-[8px]"></i> ${item.ottPlatform}
-                          </a>
-                        ` : ''}
-                        <div class="absolute bottom-2.5 right-2.5 bg-black/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold text-amber-400">
-                          ★ ${item.rating}
-                        </div>
-                      </div>
-                      <div class="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                        <div>
-                          <div class="text-xs font-black text-white truncate">${item.title}</div>
-                          <div class="text-[10px] text-slate-400 mt-0.5 truncate">${item.genres.join(', ')}</div>
-                        </div>
-                        <div class="space-y-1.5 pt-1 border-t border-[#2C2C3A]">
-                          <div class="flex items-center justify-between text-[10px] font-bold">
-                            <span style="color: ${dominant.color}" class="flex items-center gap-1">
-                              <i class="fa-solid ${dominant.icon}"></i> ${dominant.label}
-                            </span>
-                            <span class="text-slate-300">${pcts[item.dominantVibe] || 85}%</span>
-                          </div>
-                          <div class="w-full bg-[#16161E] h-1.5 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full" style="width: ${pcts[item.dominantVibe] || 85}%; background-color: ${dominant.color}"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 7. FEATURE: HYPED & TRENDING STARS RADAR (Contextualized by Category) -->
-          <div class="space-y-3.5">
-            <div class="flex items-center justify-between">
-              <div>
-                <h4 class="text-base font-black text-white flex items-center gap-2">
-                  <i class="fa-solid fa-fire text-amber-400"></i> ${isStandup ? 'Hyped Stand-Up Comedians' : (isSeries ? 'Binge Series Superstars' : 'Hyped & Trending Stars')}
-                </h4>
-                <p class="text-xs text-slate-400">${isStandup ? 'Celebrated stand-up comedy artists and punchline masters' : 'Global & Indian cinema icons with viral box office & awards momentum'}</p>
-              </div>
-              <button onclick="switchTab('explore')" class="text-xs text-purple-400 font-bold hover:underline">
-                View All Stars
-              </button>
-            </div>
-
-            <!-- Horizontal Actor Cards -->
-            <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-              ${Object.values(ACTORS).slice(0, isStandup ? 5 : 8).map(actor => `
-                <div onclick="openActorProfile('${actor.id}')" 
-                  class="shrink-0 w-60 sm:w-64 bg-[#1D1D25] rounded-2xl p-4 border border-[#2C2C3A] hover:border-purple-400/60 cursor-pointer transition flex flex-col justify-between group shadow-lg">
-                  <div class="flex items-center gap-3.5 mb-3">
-                    <div class="relative">
-                      <img src="${actor.img}" alt="${actor.name}" class="w-14 h-14 rounded-2xl object-cover border border-purple-500/40 group-hover:scale-105 transition" onerror="handleActorImageError(this)">
-                      <span class="absolute -top-1.5 -left-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">
-                        #${actor.rank}
-                      </span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="text-sm font-black text-white truncate">${actor.name}</div>
-                      <div class="text-[11px] text-purple-300 font-semibold truncate">${actor.role}</div>
-                      <div class="text-[10px] text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                        <i class="fa-solid fa-arrow-trend-up"></i> +${actor.surge}% searches
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="bg-[#16161E] p-2.5 rounded-xl border border-[#262633] space-y-1">
-                    <div class="text-[10px] font-bold text-slate-400 truncate">${actor.hypeContext}</div>
-                    <div class="flex justify-between items-center text-[10px] font-bold text-slate-300">
-                      <span>Box Office:</span>
-                      <span class="text-amber-400">${actor.boxOfficeTotal}</span>
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-
-          <!-- 8. FEATURE: WEB SERIES & TV SHOWS BINGE HUB (Visible ONLY for All or Series) -->
-          ${(isAll || isSeries) && seriesList.length > 0 ? `
-            <div class="space-y-3.5">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-tv text-purple-400"></i> TV Series & Web Series Binge Hub
-                  </h4>
-                  <p class="text-xs text-slate-400">Format-aware binge metrics, air status, and Episode 1 hook rates</p>
-                </div>
-                <span class="text-xs text-purple-400 font-bold bg-purple-500/10 border border-purple-500/30 px-2.5 py-1 rounded-lg">
-                  ${seriesList.length} Series
-                </span>
-              </div>
-
-              <!-- Series Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${seriesList.map(item => `
-                  <div onclick="openDetails('${item.id}')" 
-                    class="bg-[#1D1D25] rounded-2xl overflow-hidden border border-[#2C2C3A] hover:border-purple-400/50 cursor-pointer transition flex flex-col group shadow-lg">
-                    <div class="relative h-44 overflow-hidden">
-                      <img src="${item.backdrop}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${item.title}" onerror="this.src='https://image.tmdb.org/t/p/w1280/iZ8EtGAqKWZdRJPzWfFseNfVxjh.jpg'">
-                      <div class="absolute inset-0 bg-gradient-to-t from-[#1D1D25] via-transparent to-transparent"></div>
-                      <div class="absolute top-3 left-3 bg-black/85 backdrop-blur px-2.5 py-1 rounded-lg text-[10px] font-black text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
-                        <i class="fa-solid fa-hourglass-half"></i> ${item.episodesCount ? Math.round(item.episodesCount * 0.8) : (item.seasonsCount ? item.seasonsCount * 8 : 12)} hrs total • ${item.duration || ((item.seasonsCount || 1) + ' Season' + ((item.seasonsCount || 1) > 1 ? 's' : ''))}
-                      </div>
-                      <div class="absolute top-3 right-3 bg-emerald-500/90 text-white px-2 py-0.5 rounded text-[10px] font-black shadow">
-                        🔥 ${item.hookRate || 95}% Ep1 Hook
-                      </div>
-                      <div class="absolute bottom-2 left-3">
-                        <div class="text-base font-black text-white leading-tight">${item.title}</div>
-                        <div class="text-[11px] text-slate-300">${item.genres.join(', ')}</div>
-                      </div>
-                    </div>
-                    <div class="p-3.5 space-y-2">
-                      <div class="flex items-center justify-between text-xs">
-                        <span class="text-slate-400 font-semibold">${item.airStatus || '🟢 In Production'}</span>
-                        <span class="text-amber-400 font-bold">★ ${item.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-
-          <!-- 9. FULL-WIDTH MULTI-COLUMN TRENDING GRID (Strictly matching Active Category) -->
-          <div class="space-y-3 pt-2">
-            <div class="flex items-center justify-between">
-              <h4 class="text-base font-black text-white flex items-center gap-2">
-                ${(selectedTopVibe !== 'all' ? (VIBES[selectedTopVibe]?.label + ' ') : '') + (isMovie ? '🎬 Movies' : (isSeries ? '📺 Series & TV Shows' : (isStandup ? '🎤 Stand-Up Specials' : '🌟 Curated Titles')))}
-              </h4>
-              <span class="text-xs text-slate-400 font-medium">${gridItems.length} titles available</span>
-            </div>
-
-            ${gridItems.length === 0 ? `
-              <div class="text-center py-12 space-y-3 bg-[#16161E] rounded-3xl border border-[#2C2C3A]">
-                <i class="fa-solid fa-film text-4xl text-purple-400/40"></i>
-                <div class="text-white font-bold text-sm">No titles match this specific category & language combination</div>
-                <button onclick="clearTopFilters()" class="text-xs text-purple-400 font-bold hover:underline">
-                  Show All Content
-                </button>
-              </div>
-            ` : `
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                ${gridItems.slice(0, window.currentFeedLimit || 36).map(item => {
-                  const dominant = VIBES[item.dominantVibe] || VIBES.must_watch;
-                  return `
-                    <div onclick="openDetails('${item.id}')" 
-                      class="bg-[#1D1D25] p-2.5 rounded-2xl border border-[#2C2C3A] hover:border-purple-400 cursor-pointer transition flex flex-col justify-between group shadow-lg">
-                      <div>
-                        <div class="relative overflow-hidden rounded-xl mb-2.5 h-48 bg-slate-900">
-                          <img src="${item.poster}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${item.title}" onerror="handleMediaPosterError(this)">
-                          <span class="absolute top-2 left-2 bg-black/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold text-purple-300 border border-purple-500/30">${item.type}</span>
-                          ${item.region ? `<span class="absolute bottom-2 left-2 bg-purple-950/80 px-1.5 py-0.5 rounded text-[9px] font-bold text-white">${item.region.split(' ')[0]}</span>` : ''}
-                        </div>
-                        <div class="text-xs font-black text-white truncate">${item.title}</div>
-                        <div class="text-[10px] text-slate-400 flex items-center justify-between mt-1">
-                          <span>${item.year}</span>
-                          <span class="text-amber-400 font-bold">★ ${item.rating}</span>
-                        </div>
-                      </div>
-                      <div class="mt-2.5 pt-2 border-t border-[#2C2C3A] flex items-center gap-1.5 text-[10px] font-bold" style="color: ${dominant.color}">
-                        <i class="fa-solid ${dominant.icon}"></i>
-                        <span class="truncate">${dominant.label}</span>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-              ${gridItems.length > (window.currentFeedLimit || 36) ? `
-                <div class="text-center pt-6 pb-2">
-                  <button onclick="loadMoreFeed()" class="bg-[#1D1D25] hover:bg-purple-600 border border-purple-500/40 text-white font-bold text-xs px-6 py-3 rounded-2xl transition shadow-lg flex items-center gap-2 mx-auto cursor-pointer">
-                    <i class="fa-solid fa-angles-down text-purple-400"></i> Load More Titles (Showing ${(window.currentFeedLimit || 36)} of ${gridItems.length})
-                  </button>
-                </div>
-              ` : ''}
-            `}
-          </div>
-
-        </div>
-      `;
+    function homeFooter() {
+      return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a></div>
+        <p class="mt-2 max-w-2xl">Film and TV data and images are provided by TMDB. WatchVibe uses the TMDB API but is not endorsed or certified by TMDB.</p>
+      </footer>`;
     }
 
     function openActorProfile(actorId) {
@@ -5094,35 +4562,17 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
     function handleMediaPosterError(imgEl, title, type) {
       if (!imgEl || imgEl.dataset.fallbackSet) return;
       imgEl.dataset.fallbackSet = "true";
-      const cleanTitle = (title || 'WatchVibe Cinema').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const cleanType = (type || 'Movie').toUpperCase();
-      const initials = cleanTitle.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'WV';
-      
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450">
-          <defs>
-            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#1A172B" />
-              <stop offset="50%" stop-color="#121218" />
-              <stop offset="100%" stop-color="#0A0A0F" />
-            </linearGradient>
-            <radialGradient id="glow" cx="50%" cy="30%" r="50%">
-              <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.35" />
-              <stop offset="100%" stop-color="#7C3AED" stop-opacity="0" />
-            </radialGradient>
-          </defs>
-          <rect width="300" height="450" fill="url(#grad)" />
-          <circle cx="150" cy="180" r="140" fill="url(#glow)" />
-          <rect x="20" y="20" width="260" height="410" rx="16" fill="none" stroke="#2C2C3A" stroke-width="2" />
-          <circle cx="150" cy="170" r="50" fill="#1E1B2E" stroke="#7C3AED" stroke-width="2" />
-          <text x="150" y="180" fill="#A78BFA" font-family="system-ui, sans-serif" font-size="28" font-weight="900" text-anchor="middle" dominant-baseline="middle">${initials}</text>
-          <text x="150" y="260" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="14" font-weight="800" text-anchor="middle" width="240">${cleanTitle.length > 22 ? cleanTitle.slice(0, 20) + '...' : cleanTitle}</text>
-          <rect x="100" y="285" width="100" height="22" rx="11" fill="#7C3AED" fill-opacity="0.25" stroke="#7C3AED" stroke-opacity="0.5" stroke-width="1" />
-          <text x="150" y="300" fill="#DDD6FE" font-family="system-ui, sans-serif" font-size="10" font-weight="800" text-anchor="middle" dominant-baseline="middle">${cleanType}</text>
-          <text x="150" y="405" fill="#6B7280" font-family="system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle">WATCHVIBE CINEMA</text>
-        </svg>
-      `.trim();
-
+      const raw = (title || imgEl.alt || 'Untitled').trim();
+      const esc2 = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // wrap the title onto up to 4 short lines
+      const words = raw.split(/\s+/); const lines = []; let cur = '';
+      for (const w of words) { if ((cur + ' ' + w).trim().length > 16 && cur) { lines.push(cur); cur = w; } else { cur = (cur + ' ' + w).trim(); } }
+      if (cur) lines.push(cur);
+      const shown = lines.slice(0, 4);
+      if (lines.length > 4) shown[3] = shown[3].replace(/.{0,2}$/, '') + '…';
+      const startY = 215 - (shown.length - 1) * 17;
+      const text = shown.map((l, i) => `<text x="150" y="${startY + i * 34}" fill="#F4F4F5" font-family="Georgia, 'Times New Roman', serif" font-size="25" text-anchor="middle">${esc2(l)}</text>`).join('');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450"><rect width="300" height="450" fill="#14141A"/><rect x="0.5" y="0.5" width="299" height="449" fill="none" stroke="#ffffff" stroke-opacity="0.06"/><rect x="130" y="64" width="40" height="2" fill="#A855F7"/>${text}<text x="150" y="410" fill="#ffffff" fill-opacity="0.35" font-family="system-ui, sans-serif" font-size="11" letter-spacing="3" text-anchor="middle">POSTER UNAVAILABLE</text></svg>`;
       imgEl.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     }
 
@@ -5773,8 +5223,8 @@ window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
         const deskBtn = document.getElementById(`desk-tab-${t}`);
         if (deskBtn) {
           deskBtn.className = (t === activeTab)
-            ? 'sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-md'
-            : 'sidebar-tab w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 font-bold text-xs text-slate-400 hover:text-white hover:bg-slate-800/40 transition';
+            ? 'sidebar-tab flex w-full items-center gap-3 rounded-lg bg-white/[0.08] px-3 py-2.5 text-left text-sm font-medium text-white transition'
+            : 'sidebar-tab flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-white/60 transition hover:bg-white/[0.05] hover:text-white';
         }
         const mobBtn = document.getElementById(`mob-tab-${t}`);
         if (mobBtn) {
