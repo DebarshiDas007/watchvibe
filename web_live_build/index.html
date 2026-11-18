@@ -34,6 +34,9 @@
   <link rel="stylesheet" href="/tailwind.css">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
+  <link rel="preconnect" href="https://www.youtube-nocookie.com">
+  <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.google.com">
   <style>
     :root {
       --bg: #0B0B0F;
@@ -2023,7 +2026,7 @@
     const PREVIEW_SECONDS = 30;
     const PV_DEFAULT = { slot: 'previewSlot', controls: 'previewControls', mute: 'previewMuteBtn', vol: 'previewVolume', volWrap: 'previewVolumeWrap', replay: 'previewReplayBtn' };
     const pv = k => document.getElementById(Preview.ids[k]);
-    const Preview = { ids: PV_DEFAULT, startMuted: false, silent: false, volume: 70, itemId: null, iframe: null, key: null, keys: null, keyIdx: 0, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
+    const Preview = { fixedStart: 0, durChecked: false, ids: PV_DEFAULT, startMuted: false, silent: false, volume: 70, itemId: null, iframe: null, key: null, keys: null, keyIdx: 0, token: 0, seeked: false, startAt: 0, muted: false, playing: false, retry: null, fallbackTimer: null };
 
     function prefersNoAutoplay() {
       try {
@@ -2041,7 +2044,15 @@
     function saveMute(v) { try { localStorage.setItem('watchvibe_preview_muted', v ? '1' : '0'); } catch (e) {} }
 
     // All embeddable-looking YouTube candidates for a title, best first (trailers, then teasers, then anything).
-    async function resolveTrailerKeys(item) {
+    const TRAILER_MEMO = new Map();
+    function resolveTrailerKeys(item) {
+      const id = item && item.id; if (!id) return resolveTrailerKeysRaw(item);
+      if (TRAILER_MEMO.has(id)) return TRAILER_MEMO.get(id);
+      const p = resolveTrailerKeysRaw(item); TRAILER_MEMO.set(id, p);
+      p.then(k => { if (!k.length) TRAILER_MEMO.delete(id); }, () => TRAILER_MEMO.delete(id));
+      return p;
+    }
+    async function resolveTrailerKeysRaw(item) {
       const keys = [];
       const add = k => { if (k && !keys.includes(k)) keys.push(k); };
       if (typeof TRAILER_FALLBACKS !== 'undefined') add(TRAILER_FALLBACKS[item.id]);
@@ -2101,6 +2112,7 @@
     }
 
     function showPreviewControls(show) {
+      if (Preview.ids !== PV_DEFAULT) return;   // the featured list keeps its volume button visible
       const bar = pv('controls');
       if (bar) bar.classList.toggle('hidden', !show);
     }
@@ -2127,6 +2139,12 @@
       if (typeof info.muted === 'boolean' && info.muted !== Preview.muted) { Preview.muted = info.muted; setPreviewUi(); }
       if (Preview.retry) { clearInterval(Preview.retry); Preview.retry = null; }
 
+      // a preset start (featured list): only check the video is long enough, and apply the remembered volume
+      if (Preview.fixedStart && !Preview.durChecked && info.duration > 0) {
+        Preview.durChecked = true;
+        if (!Preview.muted) previewCmd('setVolume', [Preview.volume]);
+        if (info.duration < Preview.fixedStart + 25) { Preview.startAt = Math.max(0, Math.floor(info.duration * 0.25)); if (Preview.startAt > 2) previewCmd('seekTo', [Preview.startAt, true]); }
+      }
       // 1) pick the highlight start once we know the duration (about 40% in, never in the last 32 s)
       if (!Preview.seeked && info.duration > 0) {
         Preview.seeked = true;
@@ -2156,9 +2174,9 @@
     function mountPreviewIframe(startMuted) {
       const slot = pv('slot');
       if (!slot || !Preview.key) return;
-      Preview.seeked = false; Preview.playing = false; Preview.muted = !!startMuted;
+      Preview.seeked = !!Preview.fixedStart; Preview.startAt = Preview.fixedStart || 0; Preview.durChecked = false; Preview.playing = false; Preview.muted = !!startMuted;
       slot.style.opacity = '0';
-      const params = `autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
+      const params = `${Preview.fixedStart ? 'start=' + Preview.fixedStart + '&' : ''}autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
       // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
       const box = slot.getBoundingClientRect();
       const cw = Math.max(box.width, (box.height * 16) / 9) * 1.25, ch = (cw * 9) / 16;
@@ -2199,6 +2217,7 @@
       Preview.ids = (opts && opts.ids) || PV_DEFAULT;
       Preview.startMuted = opts && opts.muted !== undefined ? !!opts.muted : getSavedMute();
       Preview.silent = !!(opts && opts.silent);
+      Preview.fixedStart = (opts && opts.startAt) || 0;
       if (!item || prefersNoAutoplay()) return;
       const token = Preview.token;
       Preview.itemId = item.id; Preview.reported = Preview.silent;
@@ -2220,8 +2239,19 @@
       Preview.iframe = null; Preview.key = null; Preview.keys = null; Preview.keyIdx = 0; Preview.playing = false; Preview.seeked = false;
     }
 
+    function heroSoundUi() {
+      const b = document.getElementById('heroMuteBtn'); if (!b) return;
+      b.innerHTML = `<i class="fa-solid ${HERO.sound ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>`;
+      b.setAttribute('aria-label', HERO.sound ? 'Mute trailer' : 'Unmute trailer'); b.setAttribute('aria-pressed', String(!!HERO.sound));
+    }
     function toggleTrailerMute() {
-      if (!Preview.iframe) return;
+      if (!Preview.iframe || (Preview.ids !== PV_DEFAULT && !Preview.playing)) {   // nothing playing yet: remember the choice, the trailer starts with it
+        if (typeof HERO !== 'undefined' && HERO.el) {
+          HERO.sound = !HERO.sound; saveMute(!HERO.sound); heroSoundUi();
+          if (Preview.iframe) { if (HERO.sound) { Preview.muted = false; previewCmd('unMute'); previewCmd('setVolume', [Preview.volume < 5 ? 60 : Preview.volume]); } else { Preview.muted = true; previewCmd('mute'); } }
+        }
+        return;
+      }
       const silent = Preview.muted || Preview.volume <= 0;
       if (silent) {
         if (Preview.volume < 5) Preview.volume = 60;
@@ -2233,7 +2263,7 @@
       }
       saveMute(Preview.muted); saveVolume(Preview.volume);
       if (Preview.ids !== PV_DEFAULT && typeof HERO !== 'undefined') HERO.sound = !(Preview.muted || Preview.volume <= 0);
-      setPreviewUi();
+      setPreviewUi(); if (Preview.ids !== PV_DEFAULT) heroSoundUi();
     }
 
     function setTrailerVolume(raw) {
@@ -3971,7 +4001,7 @@ function posterCard(item, opts) {
             </div>
             <div class="min-w-0 space-y-3">
               <div class="flex gap-2">
-                <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a comforting film for a rainy night" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
+                <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a cozy rainy-night film" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
                 <button type="button" onclick="runAiVibeMatcher()" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Match</button>
               </div>
               <div class="flex flex-wrap gap-2">${moodChips}</div>
@@ -4500,12 +4530,12 @@ function posterCard(item, opts) {
     // the home-page card
     function dailyCardHtml() {
       const streak = dcStreakNow();
-      const chips = DC_LEVELS.map(l => { const s = dcStateOf(l), c = DC_LEVEL[l]; const txt = !s ? 'not started' : s.finished ? s.score + ' pts' : (s.cur + 1) + '/' + DC_ROUND; return `<span class="rounded-full px-2.5 py-1 text-xs ring-1 ${c.cls}">${c.label}: ${txt}</span>`; }).join('');
+      const chips = DC_LEVELS.map(l => { const s = dcStateOf(l), c = DC_LEVEL[l]; const txt = !s ? '0/' + DC_ROUND : s.finished ? s.score + ' pts' : (s.cur + 1) + '/' + DC_ROUND; return `<span class="rounded-full px-2.5 py-1 text-xs ring-1 ${c.cls}">${c.label} ${txt}</span>`; }).join('');
       return `
-        <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:p-5">
-          <div class="flex items-center gap-4"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white"><i class="fa-solid fa-bolt"></i></span>
-            <div><div class="font-display text-lg text-white lg:text-xl">Daily Challenge #${dcNumber()}: Guess the film</div><div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-white/55"><span>3 levels, 20 questions each</span>${streak ? `<span>· ${streak}-day streak 🔥</span>` : ''}</div><div class="mt-2 flex flex-wrap gap-2">${chips}</div></div></div>
-          <button type="button" onclick="DC.level = null; switchTab('daily')" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Play now</button>
+        <section class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-5">
+          <div class="flex items-center gap-4"><span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white sm:flex"><i class="fa-solid fa-bolt"></i></span>
+            <div class="min-w-0"><div class="font-display text-[17px] leading-snug text-white lg:text-xl"><i class="fa-solid fa-bolt mr-1.5 text-[15px] text-purple-300 sm:hidden"></i>Daily Challenge #${dcNumber()}: Guess the film</div><div class="mt-1 text-sm text-white/55">3 levels, 20 questions each${streak ? ` · ${streak}-day streak 🔥` : ''}</div><div class="mt-2.5 flex flex-wrap gap-2">${chips}</div></div></div>
+          <button type="button" onclick="DC.level = null; switchTab('daily')" class="w-full shrink-0 rounded-full bg-white py-2.5 text-sm font-semibold text-black transition active:scale-[.98] sm:w-auto sm:px-6 sm:hover:bg-white/90">Play now</button>
         </section>`;
     }
 
@@ -4530,7 +4560,7 @@ function posterCard(item, opts) {
       return `
         <div class="hero-slide relative col-start-1 row-start-1 flex min-h-[360px] items-end sm:min-h-0 ${i === HERO.idx ? '' : 'pointer-events-none opacity-0'}" data-slide="${i}" ${i === HERO.idx ? '' : 'aria-hidden="true"'}>
           <img src="${esc(item.backdrop)}" alt="" ${i === 0 ? '' : 'loading="lazy"'} class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
-          <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
+          <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-500"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
           <div class="relative max-w-3xl px-14 pb-9 pt-6 sm:px-16 sm:pb-11 sm:pt-10 lg:pb-14 lg:pl-20">
@@ -4552,7 +4582,7 @@ function posterCard(item, opts) {
           ${arrow('heroPrev()', 'fa-chevron-left', 'Previous featured title')}
           ${arrow('heroNext()', 'fa-chevron-right', 'Next featured title')}
           <div class="absolute bottom-9 right-4 z-10 flex items-center gap-2 sm:right-8 lg:bottom-12 lg:right-16">
-            <div id="heroControls" class="hidden"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
+            <div id="heroControls" class="${heroTrailerAllowed() ? '' : 'hidden'}"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 transition active:scale-95 sm:hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
             <button id="heroPauseBtn" type="button" onclick="heroToggle()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Pause automatic changes"><i class="fa-solid fa-pause text-xs"></i></button>
           </div>
           <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10 lg:inset-x-16">${segs}</div>
@@ -4592,6 +4622,8 @@ function posterCard(item, opts) {
       el.addEventListener('touchstart', e => { HERO.touchX = e.touches[0].clientX; }, { passive: true });
       el.addEventListener('touchend', e => { if (HERO.touchX == null) return; const dx = e.changedTouches[0].clientX - HERO.touchX; HERO.touchX = null; if (Math.abs(dx) > 50) (dx < 0 ? heroNext() : heroPrev()); }, { passive: true });
       HERO.static = reduce; HERO.elapsed = 0; HERO.last = performance.now();
+      if (!reduce && heroTrailerAllowed()) pool.forEach((m, i) => setTimeout(() => { if (HERO.el === el) resolveTrailerKeys(m); }, i * 120));   // find every trailer now, so each slide can start the moment it shows
+      heroSoundUi();
       if (reduce) el.querySelectorAll('.hero-seg.is-active').forEach(s => s.classList.add('is-static'));   // no automatic changes for people who asked for less motion
       else HERO.timer = setInterval(heroTick, 50);
       heroApply();
@@ -4633,7 +4665,6 @@ function posterCard(item, opts) {
     // A playing video is the heaviest thing on the page. Phones, slow connections and data-saver get the still backdrop only.
     function heroTrailerAllowed() {
       try {
-        if (window.matchMedia('(pointer: coarse)').matches || innerWidth < 900) return false;
         const c = navigator.connection; if (c && (c.saveData || /(^|-)2g$|3g/.test(c.effectiveType || ''))) return false;
         if (navigator.deviceMemory && navigator.deviceMemory <= 2) return false;
       } catch (e) {}
@@ -4645,13 +4676,13 @@ function posterCard(item, opts) {
       const idx = HERO.idx;
       if (HERO.ttIdx === idx && HERO.tt) return;                         // already waiting to start this one
       clearTimeout(HERO.tt); HERO.ttIdx = idx;
-      // wait: the page first, then the first title for 2.5 s, later titles 1.2 s, so tapping through slides stays light
+      // a short wait only (so tapping quickly through slides stays light); the trailer lookups were done ahead of time
       HERO.tt = setTimeout(() => {
         HERO.tt = 0; HERO.ttIdx = -1; HERO.firstDone = true;
         if (!HERO.el || HERO.idx !== idx || ['hidden', 'offscreen', 'modal'].some(r => HERO.pause.has(r))) return;
         const ids = { slot: 'heroSlot' + idx, controls: 'heroControls', mute: 'heroMuteBtn', vol: null, volWrap: null, replay: null };
-        startTrailerPreview(item, { ids, muted: !HERO.sound, silent: true });
-      }, HERO.firstDone ? 1200 : 2500);
+        startTrailerPreview(item, { ids, muted: !HERO.sound, silent: true, startAt: 16 });
+      }, HERO.firstDone ? 150 : 350);
     }
     function heroGo(i, byUser) {
       if (!HERO.el || !HERO.pool.length) return;

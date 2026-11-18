@@ -152,3 +152,9 @@ Open / next, in the order we discussed:
 ## v75 - Daily Challenge phone layout
 - Phone: compact header, picture + all four options (2x2) visible together, one answer card with identical height before/after answering (clock row becomes the Next button), correct answer bright green (bg-green-500), no smooth scroll between questions (soft .22s fade via .dc-in), story clue capped at ~250 chars (dcPlot), picture height min(229px,31svh), stats box full width on phones.
 
+
+## v77 - Featured list trailer speed + phone home
+- Featured carousel: trailer starts 350 ms after mount (150 ms for later slides; was 2.5 s / 1.2 s), trailer lookups for all 5 slides are done at mount and memoised (TRAILER_MEMO), preconnect to youtube-nocookie/ytimg, fixed start at 16 s (no wait for duration/seek), fade 500 ms. Volume button is visible from the start and remembers the choice before the video plays (heroSoundUi). Phones now get muted inline trailers too (still off for data saver, 2g/3g, <=2 GB memory, reduced motion).
+- Phone home: compact Daily card, shorter mood placeholder.
+- Could not test real video playback in the hidden browser pane; logic tested with simulated player messages.
+

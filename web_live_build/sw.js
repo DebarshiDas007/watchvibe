@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'watchvibe-cache-v76';
+﻿const CACHE_NAME = 'watchvibe-cache-v77';
 const STATIC_ASSETS = [
   './',
   './index.html',
