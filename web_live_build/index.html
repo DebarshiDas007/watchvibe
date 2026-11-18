@@ -679,10 +679,11 @@
       <button type="button" onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Stand-Up</span></button>
       <span class="mx-2 h-5 w-px shrink-0 bg-white/15" aria-hidden="true"></span>
       <button type="button" onclick="openSwipeDeck()" id="top-deck" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Vibe Deck" aria-label="Vibe Deck"><i class="fa-solid fa-layer-group text-[13px]"></i><span class="hidden xl:inline">Vibe Deck</span></button>
-      <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Movie Night" aria-label="Movie Night"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden xl:inline">Movie Night</span></button>
+      <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watch together" aria-label="Watch together"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden xl:inline">Watch together</span></button>
       <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Taste Match" aria-label="Taste Match"><i class="fa-solid fa-heart-pulse text-[13px]"></i><span class="hidden xl:inline">Taste Match</span></button>
       <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watchlist" aria-label="Watchlist"><i class="fa-solid fa-bookmark text-[13px]"></i><span class="hidden xl:inline">Watchlist</span></button>
       <button type="button" onclick="switchTab('profile')" id="desk-tab-profile" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Profile" aria-label="Profile"><i class="fa-solid fa-user text-[13px]"></i><span class="hidden xl:inline">Profile</span></button>
+      <button type="button" onclick="toggleNavMore(event)" id="navMore" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white md:inline-flex lg:hidden" title="More" aria-label="More" aria-haspopup="menu"><i class="fa-solid fa-ellipsis"></i></button>
     </nav>
 
     <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -748,50 +749,38 @@
   </div>
 
   <!-- SWIPE TO VIBE DECK MODAL -->
-  <div id="swipeModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-3 sm:p-5">
-    <div class="bg-[#16161E] border border-purple-500/40 w-full max-w-md rounded-3xl p-5 shadow-2xl relative space-y-4">
-      <div class="flex justify-between items-center">
+  <div id="swipeModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/85 p-3 sm:p-5" onclick="if(event.target === this) closeSwipeDeck();" role="dialog" aria-modal="true" aria-label="Vibe Deck">
+    <div class="relative w-full max-w-md rounded-3xl bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10">
+      <div class="flex items-start justify-between gap-4">
         <div>
-          <h3 class="text-sm font-black text-white flex items-center gap-2">
-            <i class="fa-solid fa-layer-group text-purple-400"></i> Swipe to Vibe Deck
-          </h3>
-          <p class="text-[11px] text-slate-400">4-way gesture taste calibration</p>
+          <h3 class="font-display text-xl font-medium text-white">Vibe Deck</h3>
+          <p class="mt-0.5 text-sm text-white/45">Tell us how a title looks to you. Every tap teaches us your taste.</p>
         </div>
-        <button onclick="closeSwipeDeck()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" onclick="closeSwipeDeck()" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div id="swipeCardContainer" class="relative h-80 rounded-2xl overflow-hidden border border-[#2C2C3A] bg-[#1D1D25] shadow-xl flex flex-col justify-end p-4">
-        <img id="swipePoster" class="absolute inset-0 w-full h-full object-cover" alt="Poster">
+      <div id="swipeCardContainer" class="relative mt-4 flex h-[360px] flex-col justify-end overflow-hidden rounded-2xl bg-[#14141A] p-4 ring-1 ring-white/10 sm:h-[420px]">
+        <img id="swipePoster" class="absolute inset-0 h-full w-full object-cover" alt="Poster">
         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
         <div id="swipeFeedbackStamp" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 rounded-xl px-4 py-2 font-black text-lg tracking-wider uppercase hidden rotate-[-12deg] z-20"></div>
-
         <div class="relative z-10">
-          <div id="swipeBadge" class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/30 text-purple-300 border border-purple-400/50 mb-1"></div>
-          <h4 id="swipeTitle" class="text-xl font-black text-white leading-tight"></h4>
-          <p id="swipeSubtitle" class="text-xs text-slate-300 mt-0.5"></p>
+          <div id="swipeBadge" class="mb-1.5 inline-block rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white"></div>
+          <h4 id="swipeTitle" class="font-display text-2xl leading-tight text-white"></h4>
+          <p id="swipeSubtitle" class="mt-0.5 text-sm text-white/65"></p>
         </div>
       </div>
 
-      <!-- 4-WAY INTERACTIVE BUTTONS -->
-      <div class="grid grid-cols-2 gap-2 text-xs font-bold">
-        <button onclick="handleSwipe('skip_it')" class="p-3 bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-400 rounded-xl flex items-center justify-center gap-2 transition">
-          <i class="fa-solid fa-arrow-left"></i> Skip It (Left)
-        </button>
-        <button onclick="handleSwipe('must_watch')" class="p-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 rounded-xl flex items-center justify-center gap-2 transition">
-          Must Watch (Right) <i class="fa-solid fa-arrow-right"></i>
-        </button>
-        <button onclick="handleSwipe('mind_blown')" class="p-3 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-400 rounded-xl flex items-center justify-center gap-2 transition">
-          <i class="fa-solid fa-arrow-up"></i> Mind Blown (Up)
-        </button>
-        <button onclick="handleSwipe('want_to_watch')" class="p-3 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-400 rounded-xl flex items-center justify-center gap-2 transition">
-          Want to Watch (Down) <i class="fa-solid fa-arrow-down"></i>
-        </button>
+      <div class="mt-4 grid grid-cols-2 gap-2.5 text-sm font-medium">
+        <button type="button" onclick="handleSwipe('skip_it')" class="flex items-center justify-center gap-2 rounded-full bg-rose-500/15 px-4 py-3 text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/25 active:scale-95"><i class="fa-solid fa-xmark text-xs"></i>Skip it</button>
+        <button type="button" onclick="handleSwipe('must_watch')" class="flex items-center justify-center gap-2 rounded-full bg-emerald-500/15 px-4 py-3 text-emerald-200 ring-1 ring-emerald-400/30 transition hover:bg-emerald-500/25 active:scale-95"><i class="fa-solid fa-check text-xs"></i>Must watch</button>
+        <button type="button" onclick="handleSwipe('mind_blown')" class="flex items-center justify-center gap-2 rounded-full bg-purple-500/15 px-4 py-3 text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/25 active:scale-95"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i>Mind blown</button>
+        <button type="button" onclick="handleSwipe('want_to_watch')" class="flex items-center justify-center gap-2 rounded-full bg-cyan-500/15 px-4 py-3 text-cyan-200 ring-1 ring-cyan-400/30 transition hover:bg-cyan-500/25 active:scale-95"><i class="fa-solid fa-bookmark text-xs"></i>Want to watch</button>
       </div>
     </div>
   </div>
 
   <!-- MOVIE NIGHT MODAL -->
-  <div id="movieNightModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 sm:p-5" onclick="if(event.target === this) closePartyModal();" role="dialog" aria-modal="true" aria-label="Movie Night">
+  <div id="movieNightModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 sm:p-5" onclick="if(event.target === this) closePartyModal();" role="dialog" aria-modal="true" aria-label="Watch together">
     <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div class="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-6 py-5">
         <div>
@@ -3883,6 +3872,10 @@ function posterCard(item, opts) {
       // ---------- Filtered / "see all" grid ----------
       if (gridTitle) {
         const limit = window.currentFeedLimit || 36;
+        const fs = window.feedSort || 'default';
+        if (fs === 'top') gridItems = [...gridItems].sort((a, b) => imdbSortVal(b) - imdbSortVal(a));
+        else if (fs === 'new') gridItems = [...gridItems].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0) || imdbSortVal(b) - imdbSortVal(a));
+        else if (fs === 'pop') gridItems = [...gridItems].sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
         return `
           <div class="space-y-8">
             ${mobileTabs}
@@ -3892,7 +3885,12 @@ function posterCard(item, opts) {
                 <h1 class="font-display text-3xl font-medium text-white">${esc(gridTitle)}</h1>
                 <p class="mt-1 text-sm text-white/45">${gridItems.length} titles</p>
               </div>
-              ${toolbar}
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <select onchange="setFeedSort(this.value)" class="${selectCls}" aria-label="Sort">
+                  ${[['default', 'Featured order'], ['top', 'Top rated (IMDb)'], ['new', 'Newest first'], ['pop', 'Most voted']].map(([v, l]) => `<option value="${v}" class="bg-[#14141A]" ${(window.feedSort || 'default') === v ? 'selected' : ''}>${l}</option>`).join('')}
+                </select>
+                ${toolbar}
+              </div>
             </div>
             ${gridItems.length === 0 ? `
               <div class="rounded-2xl bg-white/[0.03] py-16 text-center ring-1 ring-white/[0.06]">
@@ -3931,18 +3929,20 @@ function posterCard(item, opts) {
         `<button type="button" onclick="setAiRuntime(${mins})" aria-pressed="${aiMaxRuntime === mins}" class="rounded-full px-3 py-1 text-xs ring-1 transition ${aiMaxRuntime === mins ? 'bg-white/90 text-black ring-white' : 'text-white/60 ring-white/10 hover:text-white'}">${lbl}</button>`).join('');
       const moodHtml = `
         <section class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] sm:p-6">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="grid gap-5 lg:grid-cols-[minmax(230px,300px)_1fr] lg:items-center lg:gap-10">
             <div>
-              <h2 class="font-display text-[22px] font-medium text-white">What are you in the mood for?</h2>
+              <h2 class="font-display text-[22px] font-medium text-white lg:text-2xl">What are you in the mood for?</h2>
               <p class="mt-1 text-sm text-white/45">Pick a feeling, or describe it in your own words.</p>
             </div>
-            <div class="flex w-full gap-2 lg:max-w-md">
-              <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a comforting film for a rainy night" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
-              <button type="button" onclick="runAiVibeMatcher()" class="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Match</button>
+            <div class="min-w-0 space-y-3">
+              <div class="flex gap-2">
+                <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a comforting film for a rainy night" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
+                <button type="button" onclick="runAiVibeMatcher()" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Match</button>
+              </div>
+              <div class="flex flex-wrap gap-2">${moodChips}</div>
+              <details ${aiMaxRuntime ? 'open' : ''}><summary class="cursor-pointer select-none text-xs text-white/40 hover:text-white/70">Runtime</summary><div class="mt-2 flex flex-wrap gap-2">${runtimeChips}</div></details>
             </div>
           </div>
-          <div class="mt-4 flex flex-wrap gap-2">${moodChips}</div>
-          <details class="mt-3" ${aiMaxRuntime ? 'open' : ''}><summary class="cursor-pointer select-none text-xs text-white/40 hover:text-white/70">Runtime</summary><div class="mt-2 flex flex-wrap gap-2">${runtimeChips}</div></details>
           ${aiVibeResults && aiVibeResults.length > 0 ? `
             <div id="aiVibeResultsSection" class="mt-6 border-t border-white/[0.06] pt-5">
               <div class="mb-4 flex items-center justify-between gap-3">
@@ -3971,6 +3971,7 @@ function posterCard(item, opts) {
           <div class="space-y-5">${mobileTabs}<div class="flex justify-end">${toolbar}</div>${heroHtml}</div>
           ${moodHtml}
           <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
+          ${watchRowHtml()}
           ${homeRowSection('Indian & regional cinema', 'Hindi, Tamil, Telugu, Malayalam and Kannada', desiAll.slice(0, 16), "setHomeRow('desi')")}
           ${homeRowSection('Series worth bingeing', null, seriesAll.slice(0, 16), "setHomeRow('series')")}
           ${homeRowSection('Stand-up specials', null, standupAll.slice(0, 14), "setHomeRow('standup')")}
@@ -4227,6 +4228,33 @@ function posterCard(item, opts) {
     function heroPrev() { heroGo(HERO.idx - 1, true); }
     // the daily picks only make sense on the plain home page: not inside a filtered or language-limited view
     function homeFeaturedAllowed() { return !selectedTopLanguage && selectedTopCategory === 'all' && selectedTopVibe === 'all'; }
+
+    // returning visitors see what they saved right on the home page
+    function watchRowHtml() {
+      const items = (userWatchlistIds || []).map(id => findLibItem(id)).filter(m => m && m.poster && m.title).slice(0, 16);
+      return items.length ? homeRowSection('From your watchlist', 'Saved for later', items, "switchTab('watchlist')") : '';
+    }
+    // today's most opened titles, for pages that would otherwise be empty
+    function trendingPicks(n) {
+      const yr = new Date().getFullYear();
+      return mediaDatabase.filter(m => m.poster && Number(m.year) >= yr - 1 && (m.totalVotes || 0) > 0).sort((a, b) => imdbSortVal(b) - imdbSortVal(a)).slice(0, n);
+    }
+    function browseVibe(id) { selectedTopVibe = id; selectedTopCategory = 'all'; selectedTopLanguage = ''; window.homeRow = null; window.currentFeedLimit = 36; switchTab('discover'); window.scrollTo({ top: 0 }); }
+    function setFeedSort(v) { window.feedSort = v; window.currentFeedLimit = 36; refreshViews(); }
+
+    function closeNavMore() { const m = document.getElementById('navMoreMenu'); if (m) m.remove(); }
+    function toggleNavMore(ev) {
+      if (ev) ev.stopPropagation();
+      if (document.getElementById('navMoreMenu')) { closeNavMore(); return; }
+      const b = document.getElementById('navMore'); const r = b.getBoundingClientRect();
+      const m = document.createElement('div'); m.id = 'navMoreMenu'; m.setAttribute('role', 'menu');
+      m.className = 'fixed z-[55] w-56 overflow-hidden rounded-2xl bg-[#14141A] p-1.5 shadow-2xl ring-1 ring-white/10';
+      m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(innerWidth - 232, r.left)) + 'px';
+      const item = (icon, label, fn) => `<button type="button" role="menuitem" onclick="closeNavMore(); ${fn}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"><i class="fa-solid ${icon} w-4 text-center text-[13px] text-white/50"></i>${label}</button>`;
+      m.innerHTML = item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
+      document.body.appendChild(m);
+      setTimeout(() => document.addEventListener('click', closeNavMore, { once: true }), 0);
+    }
 
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
@@ -5103,8 +5131,13 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
           <div id="searchResultsContainer"></div>
 
-          <div id="exploreDefaultSections" class="space-y-6">
-            <h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2>
+          <div id="exploreDefaultSections" class="space-y-10">
+            ${homeRowSection('Trending titles', 'What people are opening this week', trendingPicks(14), "setHomeRow('fresh')")}
+            <section>
+              <h2 class="mb-4 font-display text-[22px] font-medium text-white lg:text-2xl">Browse by vibe</h2>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">${Object.values(VIBES).map(v => `<button type="button" onclick="browseVibe('${v.id}')" class="group flex items-center gap-2.5 rounded-2xl bg-white/[0.04] px-4 py-3.5 text-left text-sm font-medium text-white/85 ring-1 ring-white/[0.07] transition hover:bg-white/[0.08] hover:text-white"><span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${v.color}"></span><span class="truncate">${esc(v.label)}</span></button>`).join('')}</div>
+            </section>
+            <h2 class="font-display text-[22px] font-medium text-white lg:text-2xl">Trending stars</h2>
             <div class="grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-5 lg:grid-cols-8">
               ${Object.values(ACTORS).slice(0, 16).map(a => `
                 <button type="button" onclick="openActorProfile('${a.id}')" class="group text-center focus:outline-none">
@@ -5511,16 +5544,27 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
 
     function renderCommunity() {
+      const s = getProfileStats();
+      const top = s.dist.slice(0, 3).map(d => `<span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3 py-1 text-[13px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('');
       return `
-        <div class="max-w-2xl space-y-10">
+        <div class="max-w-5xl space-y-8">
           <div>
             <h1 class="font-display text-3xl font-medium text-white">Taste Match</h1>
-            <p class="mt-2 text-[15px] leading-relaxed text-white/55">Compare your vibe profile with friends and find the film you'll both love. This is coming soon. In the meantime, every vibe you vote on builds your own taste profile.</p>
+            <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/55">Find what you and your friends will both enjoy. Watch together live today; compare tastes is on the way.</p>
           </div>
-          <div class="rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
-            <h2 class="font-display text-xl font-medium text-white">Movie Night</h2>
-            <p class="mt-1.5 text-sm text-white/50">Start a room and vote on a shortlist with friends.</p>
-            <button type="button" onclick="openPartyModal()" class="mt-4 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Open Movie Night</button>
+          <div class="grid gap-5 md:grid-cols-2">
+            <div class="flex flex-col rounded-2xl bg-gradient-to-br from-purple-500/15 to-blue-500/10 p-6 ring-1 ring-white/10">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"><i class="fa-solid fa-people-group"></i></div>
+              <h2 class="mt-4 font-display text-xl font-medium text-white">Watch together</h2>
+              <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">Start a live room, share a link (no phone numbers), vote on a film everyone can watch, then press play at the same moment with reactions and chat.</p>
+              <button type="button" onclick="openPartyModal()" class="mt-5 self-start rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Start a watch party</button>
+            </div>
+            <div class="flex flex-col rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"><i class="fa-solid fa-heart-pulse"></i></div>
+              <h2 class="mt-4 flex items-center gap-2 font-display text-xl font-medium text-white">Taste duel <span class="rounded-full bg-white/10 px-2 py-0.5 font-sans text-[11px] font-medium text-white/60">Coming soon</span></h2>
+              <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">You and a friend swipe the same ten titles and get a compatibility score, plus three films you would both love.</p>
+              <div class="mt-5">${s.dist.length ? `<div class="mb-2 text-xs text-white/40">Your taste so far</div><div class="flex flex-wrap gap-2">${top}</div>` : '<div class="text-sm text-white/40">Vote on a few titles in the Vibe Deck to start your taste profile.</div>'}</div>
+            </div>
           </div>
         </div>`;
     }
@@ -5995,6 +6039,23 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && TN.open) tonightClose(); });
 
+    function watchlistEmptyHtml() {
+      const step = (icon, title, text) => `<div class="flex gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm text-white/70 ring-1 ring-white/10"><i class="fa-solid ${icon}"></i></span><div><div class="text-sm font-medium text-white">${title}</div><div class="mt-0.5 text-sm text-white/45">${text}</div></div></div>`;
+      return `
+        <div class="space-y-10">
+          <div class="rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06] sm:p-8">
+            <div class="font-display text-2xl text-white">Your watchlist is empty</div>
+            <p class="mt-1.5 max-w-xl text-[15px] text-white/50">Save what you want to see and WatchVibe keeps it for you, shows where it streams and picks one for tonight.</p>
+            <div class="mt-6 grid gap-5 sm:grid-cols-3">
+              ${step('fa-magnifying-glass', 'Find something', 'Browse the home page or search for a title.')}
+              ${step('fa-bookmark', 'Tap Watchlist', 'Open any title and tap the Watchlist button.')}
+              ${step('fa-shuffle', 'Let us choose', '"Pick one for tonight" chooses from your list.')}
+            </div>
+            <button type="button" onclick="goHome()" class="mt-7 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Browse titles</button>
+          </div>
+          ${homeRowSection('Start with these', 'Popular right now', trendingPicks(12), "setHomeRow('fresh')")}
+        </div>`;
+    }
     function renderWatchlist() {
       const wantList = userWatchlistIds.map(id => { const it = findLibItem(id); return it ? libCard(it) : { id, title: libGuessTitle(id), poster: '', year: '', rating: '', __pending: /^tmdb-(m|tv)-\d+$/.test(id) }; });
       const watchedList = userWatchedHistory || [];
@@ -6011,7 +6072,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const grid = 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9';
       let body = '';
       if (currentWatchlistSubTab === 'want') {
-        if (wantList.length === 0) body = empty('Nothing saved yet', 'Open any title and tap Watchlist to save it for later.', 'Browse titles');
+        if (wantList.length === 0) body = watchlistEmptyHtml();
         else {
           setTimeout(() => hydrateWant(wantList.filter(m => !m.__pending)), 0);
           let rows = wantList.map((m, idx) => ({ m, idx, a: wantAvail(m) }));
@@ -6149,7 +6210,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">${s.dist.map(d => `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('')}</div>`
         : `<p class="text-sm text-white/45">Vote on a few titles and your taste breakdown will appear here.</p>`;
       return `
-        <div class="max-w-2xl space-y-10">
+        <div class="grid max-w-5xl gap-8 lg:grid-cols-[340px_1fr] lg:items-start">
+         <div class="space-y-6">
           <div class="flex items-center gap-5">
             ${avatar}
             <div class="min-w-0">
@@ -6158,14 +6220,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               ${sess ? '<button type="button" onclick="userSignOut()" class="mt-2 text-sm text-white/50 transition hover:text-white">Sign out</button>' : '<button type="button" onclick="openAuthModal()" class="mt-3 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90">Sign in to sync</button>'}
             </div>
           </div>
-          ${sess ? `<div id="profileAvatarPicker" class="rounded-2xl bg-[#0F0F14] p-5 ring-1 ring-white/[0.06] sm:p-6">${avatarPickerHtml()}</div>` : ''}
-          <div class="grid grid-cols-3 gap-4 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
-            ${stat(s.movies, 'Movies watched')}${stat(s.series, 'Series watched')}${stat(s.wantCount, 'On watchlist')}
+          <div class="grid grid-cols-3 gap-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+            ${stat(s.movies, 'Movies')}${stat(s.series, 'Series')}${stat(s.wantCount, 'Saved')}
           </div>
+         </div>
+         <div class="min-w-0 space-y-8">
           <section>
             <h2 class="font-display text-xl font-medium text-white">Your taste</h2>
             <div class="mt-4 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">${bar}</div>
           </section>
+          ${sess ? `<div id="profileAvatarPicker" class="rounded-2xl bg-[#0F0F14] p-5 ring-1 ring-white/[0.06] sm:p-6">${avatarPickerHtml()}</div>` : ''}
+         </div>
         </div>`;
     }
 
@@ -6192,7 +6257,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     // Leaving the plain home page keeps its finished DOM for a few minutes; coming back puts it straight back (no rebuild, no image re-decode)
     const HOME = { node: null, t: 0, key: '', pool: null, reuse: false };
     function homeCacheable() { return !window.homeRow && selectedTopCategory === 'all' && selectedTopVibe === 'all' && !selectedTopLanguage && !activeMood && !aiVibeQuery && !(aiMoods && aiMoods.length) && !aiMaxRuntime; }
-    function homeKey() { return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length].join('|'); }
+    function homeKey() { return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length, (userWatchlistIds || []).length].join('|'); }
     function switchTab(tab) {
       if (tab !== activeTab) Track.event('view', {}, tab);
       if (activeTab === 'discover' && tab !== 'discover' && homeCacheable() && FEAT.state !== 'loading') {
