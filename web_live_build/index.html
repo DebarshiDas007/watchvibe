@@ -1872,7 +1872,7 @@
         // Save last sync date
         const todayStr = new Date().toISOString().split('T')[0];
         localStorage.setItem('watchvibe_last_sync_date', todayStr);
-        localStorage.setItem('watchvibe_cached_media_v3', JSON.stringify(mediaDatabase, (k, v) => (typeof k === 'string' && k.startsWith('__')) ? undefined : v));   // never save runtime-only fields
+        localStorage.setItem('watchvibe_cached_media_v3', JSON.stringify(mediaDatabase.filter(m => !m.__x), (k, v) => (typeof k === 'string' && k.startsWith('__')) ? undefined : v));   // never save runtime-only fields
 
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (label) label.innerText = `Synced at ${timeStr}`;
@@ -1943,6 +1943,37 @@
       }
       
       scheduleMidnightIstRefresh();
+    }
+
+    // ---- The extra catalogue: thousands more Hollywood and Indian films live in catalog_extra.json (same fields as the built-in films),
+    // loaded right after the first screen. A film already present (same TMDB id, or same title and year) is never added twice.
+    const CAT = { state: 'idle', added: 0, v: 1 };
+    const catNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
+    function catMerge(list) {
+      const ids = new Set(), keys = new Set();
+      const idOf = m => { const t = /^tmdb-(m|tv)-(\d+)$/.exec(String(m.id)); return t ? t[1] + t[2] : (m.tmdbId ? (m.type === 'Movie' ? 'm' : 'tv') + m.tmdbId : ''); };   // movie and TV ids overlap, so they are told apart
+      mediaDatabase.forEach(m => { const i = idOf(m); if (i) ids.add(i); keys.add(catNorm(m.title) + '|' + m.year); });
+      let n = 0;
+      for (const x of list) {
+        const k = catNorm(x.title) + '|' + x.year, i = idOf(x);
+        if (ids.has(i) || keys.has(k)) continue;
+        ids.add(i); keys.add(k); x.__x = 1; mediaDatabase.push(x); n++;
+      }
+      return n;
+    }
+    async function loadExtraCatalog() {
+      if (CAT.state !== 'idle') return;
+      CAT.state = 'loading';
+      for (let attempt = 0; attempt < 3 && CAT.state === 'loading'; attempt++) {
+        try {
+          const r = await fetch('catalog_extra.json?v=' + CAT.v);
+          if (!r.ok) throw new Error('catalogue ' + r.status);
+          CAT.added = catMerge(await r.json()); CAT.state = 'done';
+        } catch (e) { if (attempt === 2) CAT.state = 'failed'; else await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+      }
+      HOME.node = null;
+      const ae = document.activeElement, typing = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
+      if (!typing && (activeTab === 'daily' || (window.scrollY < 100 && (activeTab === 'discover' || activeTab === 'explore')))) refreshViews();
     }
 
     function openApiSettings() {
@@ -4083,14 +4114,14 @@ function posterCard(item, opts) {
     function dcPools() {
       if (!DC._p || DC._pn !== mediaDatabase.length) {
         const base = mediaDatabase.filter(dcBase), v = m => m.totalVotes || 0;
-        DC._p = { hw: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 5000), ind: base.filter(m => dcIsIndian(m) && v(m) >= 250), hwWide: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 3000), indWide: base.filter(m => dcIsIndian(m) && v(m) >= 100) };
+        DC._p = { hw: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 2500), ind: base.filter(m => dcIsIndian(m) && v(m) >= 150), hwWide: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 1200), indWide: base.filter(m => dcIsIndian(m) && v(m) >= 40) };
         DC._pn = mediaDatabase.length; DC._cache = {};
       }
       return DC._p;
     }
     // each level's 20 films: the more famous a film, the easier the level it goes to (Easy = top third by votes, Hard = bottom third); even slots Hollywood, odd slots Indian
     function dcRoundSpecs(level) {
-      const day = featDay(); let st = dcLS('wv_daily_round_v3', null);
+      const day = featDay(); let st = dcLS('wv_daily_round_v4', null);
       if (!st || st.day !== day) st = { day, levels: {} };
       if (st.levels[level] && st.levels[level].length === DC_ROUND) return st.levels[level];
       const P = dcPools(), byVotes = a => [...a].sort((x, y) => (y.totalVotes || 0) - (x.totalVotes || 0));
@@ -4103,7 +4134,7 @@ function posterCard(item, opts) {
         const pick = cands.map(m => ({ m, h: dcHash(day + '|' + level + '|' + i + '|' + m.id) })).sort((x, y) => x.h - y.h)[0].m;
         used.add(pick.id); specs.push({ id: pick.id, type });
       });
-      st.levels[level] = specs; dcSave('wv_daily_round_v3', st); return specs;
+      st.levels[level] = specs; dcSave('wv_daily_round_v4', st); return specs;
     }
     function dcAll() { const day = featDay(); let a = dcLS('wv_daily_play_v5', null); if (!a || a.day !== day) { a = { day, levels: {} }; dcSave('wv_daily_play_v5', a); } return a; }
     function dcSaveState(s) { const a = dcAll(); a.levels[s.level] = s; dcSave('wv_daily_play_v5', a); }
@@ -4238,7 +4269,9 @@ function posterCard(item, opts) {
       else { s.cur++; s.rounds[s.cur] = { guesses: [], done: false, won: false, pts: 0 }; dcSaveState(s); }
       if (typeof activeTab !== 'undefined' && activeTab === 'daily') { refreshViews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     }
-    function dcChoose(level) { clearTimeout(DC.auto); DC.level = level; DC.boardLevel = level; dcState(level); refreshViews(); window.scrollTo({ top: 0 }); }
+    // the questions are drawn from the full catalogue, so every player must have it loaded before a round is built
+    const dcReady = () => CAT.state === 'done' || CAT.state === 'failed';
+    function dcChoose(level) { clearTimeout(DC.auto); DC.level = level; DC.boardLevel = level; if (dcReady()) dcState(level); refreshViews(); window.scrollTo({ top: 0 }); }
     function dcLevels() { clearTimeout(DC.auto); DC.level = null; refreshViews(); window.scrollTo({ top: 0 }); }
 
     // ---- leaderboard: one board per level
@@ -4336,6 +4369,7 @@ function posterCard(item, opts) {
     }
     const DC_STEP_BACK = '<button type="button" onclick="dcLevels()" class="mb-1 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>All levels</button>';
     function renderDaily() {
+      if (!dcReady()) { loadExtraCatalog(); return '<div class="mx-auto max-w-5xl py-24 text-center text-white/55">Getting today\'s films ready…</div>'; }
       if (!DC.level) return renderDailyLanding();
       const s = dcState();
       const m = s.finished ? null : dcFilm(s);
@@ -4438,7 +4472,7 @@ function posterCard(item, opts) {
         </div>`;
     }
     function dcPreload() { const s = dcState(); if (!s) return; [s.specs[s.cur + 1], s.specs[s.cur + 2]].forEach(sp => { const x = sp && dcFind(sp.id); if (x) { new Image().src = x.backdrop; new Image().src = ps(x.poster); } }); }
-    function dcAfterRender() { dcPreload(); dcRenderBoard(); dcLoadBoard(DC.boardLevel); clearInterval(DC.tick); DC.tick = setInterval(dcTickUpdate, 1000); dcTickUpdate(); clearInterval(DC.qTick); DC.qTick = setInterval(dcQTickUpdate, 100); dcQTickUpdate(); }
+    function dcAfterRender() { if (!dcReady()) return; dcPreload(); dcRenderBoard(); dcLoadBoard(DC.boardLevel); clearInterval(DC.tick); DC.tick = setInterval(dcTickUpdate, 1000); dcTickUpdate(); clearInterval(DC.qTick); DC.qTick = setInterval(dcQTickUpdate, 100); dcQTickUpdate(); }
     // an invite from the share text opens today's levels
     (function () {
       if (new URLSearchParams(location.search).get('daily') !== '1') return;
@@ -6749,6 +6783,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     loadUserWatchlistStore(false);
     syncUserDataFromSupabaseCloud();
     refreshViews();
+    (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
 </body>
 </html>

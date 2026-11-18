@@ -141,3 +141,10 @@ Open / next, in the order we discussed:
 - Supabase: daily_scores has a level column, pk (day,user_id,level); daily_submit(date,text,int,int), daily_board(date,text). SQL in supabase/daily_challenge.sql, applied.
 - Known: only ~62 usable Indian films so they repeat across levels/days; scores are client-trusted.
 
+
+## v73-74 - Catalogue expansion
+- Added web_live_build/catalog_extra.json (5,054 films; built by scripts/build_catalog.mjs from TMDB discover + credits; same fields as built-in films, ids slug-tmdbId). Now ~3,390 Hollywood (English) and ~2,496 Indian films (Hindi/Tamil/Malayalam/Telugu/Bengali plus the built-in Kannada/Marathi/Punjabi).
+- Loaded after first screen by loadExtraCatalog() (3 retries); catMerge() dedupes by TMDB id (movie/tv kept apart) and by normalised title+year; extras carry __x so they are not saved into localStorage. Bump CAT.v when the file is rebuilt.
+- Daily Challenge waits for the catalogue (dcReady) so every player draws the same films; pool thresholds lowered (hw 2500 votes, ind 150); round key now wv_daily_round_v4.
+- Ratings of extras with few votes are weighted toward the average (100 votes at 6.3). Regional languages (Telugu, Kannada, Marathi, Punjabi) are thin because TMDB has few rated films.
+
