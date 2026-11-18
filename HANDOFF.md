@@ -118,3 +118,5 @@ Open / next, in the order we discussed:
 4. Retention ideas not started: watchlist "now streaming" alerts (web push/email), weekly OTT digest, per-title SEO pages with share cards, "Tonight" shortcut.
 5. Custom domain: watchvibe.app (about $9/yr) or watchvibe.co.in looked free by DNS check; nothing bought. When chosen, replace the pages.dev address in index.html (canonical, og, JSON-LD), robots.txt, sitemap.xml.
 6. Known: OMDb free key allows 1,000 lookups a day (non-commercial); Movie Night rooms are now live, not device-local; TMDB key is public.
+
+- (SW v62) New favicon/app icon: neon gradient 'W' on a dark tile (favicon.svg + PNGs 32/48/192/512, maskable, apple-touch). Design options and speed findings are in the chat of that day: JS is fast (renderDiscover 3 ms, details open 55 ms, no long tasks); suspected lag = backdrop-blur over the playing trailer, always-on trailer iframe, oversized posters (w500 shown at 180 px), full innerHTML rebuild on tab switch.
