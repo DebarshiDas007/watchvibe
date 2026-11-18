@@ -4059,7 +4059,7 @@ function posterCard(item, opts) {
 
     // ================= DAILY CHALLENGE: guess the film =================
     // One film a day for everyone (the day turns over at midnight India time). Each wrong guess unlocks a clue and sharpens the picture; five tries.
-    const DC_EPOCH = Date.UTC(2026, 10, 1), DC_BLUR = [26, 19, 12, 6, 2];
+    const DC_EPOCH = Date.UTC(2026, 10, 1), DC_BLUR = [6, 2, 0], DC_MAX = 3;
     const DC_LANG = { en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', ko: 'Korean', ja: 'Japanese', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian', zh: 'Chinese', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi', tr: 'Turkish', ar: 'Arabic', pt: 'Portuguese' };
     const DC = { board: null, boardDay: '', boardState: 'idle', tick: 0 };
     const dcLS = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? def : v; } catch (e) { return def; } };
@@ -4082,7 +4082,7 @@ function posterCard(item, opts) {
       let best = null, bh = Infinity; for (const m of pool) { const h = dcHash(day + '|' + m.id); if (h < bh) { bh = h; best = m; } }
       dcSave('wv_daily_pick_v1', { day, id: best.id }); return best;
     }
-    function dcPlay(m) { const day = featDay(); const s = dcLS('wv_daily_play_v1', null); return (s && s.day === day && s.id === m.id) ? s : { day, id: m.id, guesses: [], done: false, won: false, counted: false }; }
+    function dcPlay(m) { const day = featDay(); const s = dcLS('wv_daily_play_v2', null); return (s && s.day === day && s.id === m.id) ? s : { day, id: m.id, guesses: [], done: false, won: false, counted: false }; }
     function dcStats() { const s = dcLS('wv_daily_stats_v1', null) || { played: 0, wins: 0, streak: 0, best: 0, lastWin: '', dist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 } }; s.dist = s.dist || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 }; return s; }
     function dcStreakNow() { const s = dcStats(), d = featDay(); return (s.lastWin === d || s.lastWin === dcYesterday(d)) ? s.streak : 0; }
     function dcNorm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ''); }
@@ -4094,7 +4094,7 @@ function posterCard(item, opts) {
     function dcSquares(st) { return st.guesses.map(g => g.ok ? '🟩' : '🟥').join(''); }
     function dcShareText(st) {
       const tries = st.won ? st.guesses.length : 'X';
-      return `WatchVibe Daily #${dcNumber()} 🎬 ${tries}/5\n${dcSquares(st)}\n${location.origin}/?daily=1`;
+      return `WatchVibe Daily #${dcNumber()} 🎬 ${tries}/3\n${dcSquares(st)}\n${location.origin}/?daily=1`;
     }
     function dcFinish(st, m) {
       if (st.counted) return;
@@ -4104,7 +4104,22 @@ function posterCard(item, opts) {
       if (st.won) { s.wins++; s.streak = (s.lastWin === dcYesterday(day)) ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.lastWin = day; s.dist[st.guesses.length] = (s.dist[st.guesses.length] || 0) + 1; }
       else { s.streak = 0; s.dist.x++; }
       dcSave('wv_daily_stats_v1', s);
-      dcSave('wv_daily_play_v1', st);   // remember that this result is counted
+      dcSave('wv_daily_play_v2', st);   // remember that this result is counted
+    }
+    function dcOptions(m) {
+      const day = featDay(), pool = dcPool().filter(x => x.id !== m.id && x.type === m.type);
+      const genres = new Set((m.genres || []).map(g => g.toLowerCase()));
+      const scored = pool.map(x => {
+        let s = 0;
+        if (x.language && x.language === m.language) s += 3;
+        if ((x.genres || []).some(g => genres.has(String(g).toLowerCase()))) s += 2;
+        if (Math.abs((Number(x.year) || 0) - (Number(m.year) || 0)) <= 15) s += 1;
+        return { x, s, h: dcHash(day + '|d|' + x.id) };
+      }).sort((a, b) => b.s - a.s || a.h - b.h);
+      const best = scored.filter(r => r.s >= (scored[0] ? Math.max(1, scored[0].s - 1) : 0)).slice(0, 8);
+      const picks = best.sort((a, b) => a.h - b.h).slice(0, 3).map(r => r.x);
+      while (picks.length < 3 && scored.length > picks.length) { const nx = scored.find(r => !picks.includes(r.x)); if (!nx) break; picks.push(nx.x); }
+      return [m, ...picks].sort((a, b) => dcHash(day + '|o|' + a.id) - dcHash(day + '|o|' + b.id));
     }
     function dcGuess(title) {
       const m = dcPuzzle(); if (!m) return;
@@ -4114,8 +4129,8 @@ function posterCard(item, opts) {
       if (st.guesses.some(g => dcNorm(g.t) === dcNorm(raw))) { showToast('You already tried that one'); return; }
       const ok = dcNorm(raw) === dcNorm(m.title);
       st.guesses.push({ t: raw.trim().slice(0, 80), ok });
-      if (ok || st.guesses.length >= 5) { st.done = true; st.won = ok; }
-      dcSave('wv_daily_play_v1', st);
+      if (ok || st.guesses.length >= DC_MAX) { st.done = true; st.won = ok; }
+      dcSave('wv_daily_play_v2', st);
       if (st.done) { dcFinish(st, m); dcSubmit(st); Track.event('daily_done', { n: dcNumber(), w: st.won ? 1 : 0, g: st.guesses.length }); }
       else showToast(ok ? '' : 'Not that one. A new clue is unlocked.');
       refreshViews();
@@ -4135,7 +4150,7 @@ function posterCard(item, opts) {
     async function dcSubmit(st) {
       if (!currentAuthUser || !sbc() || !st.done || dcLS('wv_daily_sub_v1', '') === st.day) return;
       try {
-        const { error } = await sbc().rpc('daily_submit', { p_day: st.day, p_tries: st.won ? st.guesses.length : 5, p_won: st.won });
+        const { error } = await sbc().rpc('daily_submit', { p_day: st.day, p_tries: st.won ? st.guesses.length : DC_MAX, p_won: st.won });
         if (!error) { dcSave('wv_daily_sub_v1', st.day); DC.boardState = 'idle'; dcLoadBoard(); }
       } catch (e) {}
     }
@@ -4156,7 +4171,7 @@ function posterCard(item, opts) {
       if (DC.boardState === 'failed') { el.innerHTML = '<div class="text-sm text-white/40">The leaderboard is not available right now.</div>'; return; }
       if (DC.boardState !== 'ready') { el.innerHTML = '<div class="text-sm text-white/40">Loading today\'s board…</div>'; return; }
       if (!DC.board.length) { el.innerHTML = '<div class="text-sm text-white/45">Nobody on the board yet. Finish today\'s puzzle while signed in to be first.</div>'; return; }
-      el.innerHTML = `<div class="divide-y divide-white/[0.06] overflow-hidden rounded-xl ring-1 ring-white/[0.06]">${DC.board.map(r => `<div class="flex items-center gap-3 px-4 py-2.5 text-sm ${r.is_me ? 'bg-purple-500/15' : 'bg-white/[0.02]'}"><span class="w-6 text-right tabular-nums text-white/40">${r.rank}</span><span class="min-w-0 flex-1 truncate ${r.is_me ? 'font-medium text-white' : 'text-white/80'}">${esc(r.name)}${r.is_me ? ' (you)' : ''}</span><span class="tabular-nums ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? r.tries + '/5' : 'X/5'}</span></div>`).join('')}</div>`;
+      el.innerHTML = `<div class="divide-y divide-white/[0.06] overflow-hidden rounded-xl ring-1 ring-white/[0.06]">${DC.board.map(r => `<div class="flex items-center gap-3 px-4 py-2.5 text-sm ${r.is_me ? 'bg-purple-500/15' : 'bg-white/[0.02]'}"><span class="w-6 text-right tabular-nums text-white/40">${r.rank}</span><span class="min-w-0 flex-1 truncate ${r.is_me ? 'font-medium text-white' : 'text-white/80'}">${esc(r.name)}${r.is_me ? ' (you)' : ''}</span><span class="tabular-nums ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? r.tries + '/3' : 'X/3'}</span></div>`).join('')}</div>`;
     }
     function dcCopy() { const m = dcPuzzle(); if (!m) return; const txt = dcShareText(dcPlay(m)); try { navigator.clipboard.writeText(txt); showToast('Result copied'); } catch (e) { prompt('Copy your result', txt); } }
     function dcWhatsApp() { const m = dcPuzzle(); if (!m) return; window.open('https://wa.me/?text=' + encodeURIComponent(dcShareText(dcPlay(m))), '_blank', 'noopener'); }
@@ -4171,28 +4186,32 @@ function posterCard(item, opts) {
       const m = dcPuzzle();
       if (!m) return '<div class="rounded-2xl bg-white/[0.03] p-8 text-center text-white/55 ring-1 ring-white/[0.06]">Today\'s puzzle is still loading. Try again in a moment.</div>';
       const st = dcPlay(m), wrong = st.guesses.filter(g => !g.ok).length, done = st.done;
-      const blur = done ? 0 : DC_BLUR[Math.min(wrong, 4)];
+      const blur = done ? 0 : DC_BLUR[Math.min(wrong, DC_BLUR.length - 1)];
       const stats = dcStats();
       if (done) { dcFinish(st, m); dcSubmit(st); dcLoadBoard(); }
-      const clue = (i, label, body) => i <= wrong || done
+      const clue = (need, label, body) => wrong >= need || done
         ? `<div class="rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.07]"><div class="text-[11px] uppercase tracking-[0.14em] text-purple-300/80">${label}</div><div class="mt-1 text-[15px] text-white/90">${body}</div></div>`
-        : `<div class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/30">${label}: unlocks after a wrong guess</div>`;
+        : `<div class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/30">${label}: unlocks after a wrong pick</div>`;
       const lang = DC_LANG[m.language] || (m.language ? String(m.language).toUpperCase() : '');
       const clues = [
-        clue(0, 'Clue 1 · Type and genre', `${esc(m.type)} · ${esc((m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ') || 'Drama')}`),
-        clue(1, 'Clue 2 · Year and length', `${esc(m.year)}${m.duration ? ' · ' + esc(m.duration) : ''}${lang ? ' · ' + esc(lang) : ''}`),
-        clue(2, 'Clue 3 · Starring', esc((m.cast || []).slice(0, 3).join(', '))),
-        clue(3, 'Clue 4 · Directed by', esc(m.director)),
-        clue(4, 'Clue 5 · The story (title hidden)', esc(dcMask(m.synopsis, m.title)))
+        clue(0, 'Clue 1 · What it is', `${esc(m.type)} · ${esc((m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ') || 'Drama')}<div class="mt-1 text-sm text-white/60">${esc(m.year)}${m.duration ? ' · ' + esc(m.duration) : ''}${lang ? ' · ' + esc(lang) : ''}</div>`),
+        clue(1, 'Clue 2 · Starring', esc((m.cast || []).slice(0, 3).join(', '))),
+        clue(2, 'Clue 3 · Directed by', esc(m.director)),
+        clue(2, 'Clue 4 · The story (title hidden)', esc(dcMask(m.synopsis, m.title)))
       ].join('');
-      const dots = Array.from({ length: 5 }, (_, i) => { const g = st.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
+      const dots = Array.from({ length: DC_MAX }, (_, i) => { const g = st.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
       const picture = `
         <div class="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#14141A] ring-1 ring-white/10">
-          <img src="${esc(m.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" style="filter:blur(${blur}px);transform:scale(${blur ? 1.15 : 1});transition:filter .6s ease, transform .6s ease">
+          <img src="${esc(m.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" style="filter:blur(${blur}px);transform:scale(${blur ? 1.08 : 1});transition:filter .6s ease, transform .6s ease">
           ${done ? `<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div><div class="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:p-6"><img src="${esc(ps(m.poster))}" alt="" class="hidden h-28 w-[76px] rounded-lg object-cover ring-1 ring-white/20 sm:block"><div class="min-w-0"><div class="text-xs uppercase tracking-[0.16em] ${st.won ? 'text-emerald-300' : 'text-rose-300'}">${st.won ? 'You got it' : 'Not this time'}</div><div class="font-display text-2xl text-white sm:text-4xl">${esc(m.title)}</div><div class="text-sm text-white/70">${esc(m.year)}${rtHtml(m, '', ' · ')}</div></div></div>` : ''}
         </div>`;
-      const dist = stats.dist, maxd = Math.max(1, ...Object.values(dist));
-      const distHtml = ['1', '2', '3', '4', '5', 'x'].map(k => `<div class="flex items-center gap-2 text-xs"><span class="w-3 text-white/45">${k === 'x' ? '✕' : k}</span><div class="h-4 flex-1 rounded bg-white/[0.04]"><div class="h-4 rounded ${k === 'x' ? 'bg-rose-400/60' : 'bg-emerald-400/60'}" style="width:${Math.max(dist[k] ? 6 : 0, Math.round((dist[k] || 0) / maxd * 100))}%"></div></div><span class="w-5 text-right tabular-nums text-white/55">${dist[k] || 0}</span></div>`).join('');
+      const dist = stats.dist, maxd = Math.max(1, ...['1', '2', '3', 'x'].map(k => dist[k] || 0));
+      const distHtml = ['1', '2', '3', 'x'].map(k => `<div class="flex items-center gap-2 text-xs"><span class="w-3 text-white/45">${k === 'x' ? '✕' : k}</span><div class="h-4 flex-1 rounded bg-white/[0.04]"><div class="h-4 rounded ${k === 'x' ? 'bg-rose-400/60' : 'bg-emerald-400/60'}" style="width:${Math.max(dist[k] ? 6 : 0, Math.round((dist[k] || 0) / maxd * 100))}%"></div></div><span class="w-5 text-right tabular-nums text-white/55">${dist[k] || 0}</span></div>`).join('');
+      const tried = new Set(st.guesses.map(g => dcNorm(g.t)));
+      const options = dcOptions(m).map(o => {
+        const out = tried.has(dcNorm(o.title));
+        return `<button type="button" ${out ? 'disabled' : ''} onclick="dcGuess(${esc(JSON.stringify(o.title))})" class="flex min-h-[64px] items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition ${out ? 'cursor-not-allowed bg-rose-500/10 text-white/35 ring-1 ring-rose-400/20 line-through' : 'bg-white/[0.05] text-white ring-1 ring-white/10 hover:bg-white/[0.1] active:scale-[.98]'}"><span class="min-w-0"><span class="block text-[15px] font-medium leading-snug">${esc(o.title)}</span><span class="block text-xs text-white/40">${esc(o.year)}</span></span>${out ? '<i class="fa-solid fa-xmark text-rose-300"></i>' : '<i class="fa-solid fa-chevron-right text-xs text-white/30"></i>'}</button>`;
+      }).join('');
       const play = done ? `
         <div class="space-y-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
           <div class="flex flex-wrap items-center gap-2 font-mono text-lg">${dcSquares(st)}</div>
@@ -4204,16 +4223,14 @@ function posterCard(item, opts) {
           <div class="text-sm text-white/50">Next film in <span id="dcCountdown" class="tabular-nums text-white">--:--:--</span></div>
         </div>` : `
         <div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
-          <div class="mb-3 flex items-center justify-between"><div class="text-sm text-white/60">Guess ${st.guesses.length + 1} of 5</div><div class="flex gap-1.5">${dots}</div></div>
-          <div class="relative"><input id="dcInput" type="text" autocomplete="off" placeholder="Type a title…" oninput="dcType(this.value)" onkeydown="if(event.key==='Enter')dcGuess()" class="w-full rounded-full bg-white/[0.05] py-3 pl-5 pr-28 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30"><button type="button" onclick="dcGuess()" class="absolute right-1.5 top-1.5 rounded-full bg-white px-5 py-1.5 text-sm font-semibold text-black transition hover:bg-white/90">Guess</button></div>
-          <div id="dcSuggest" class="mt-2 space-y-0.5"></div>
-          ${st.guesses.length ? `<div class="mt-3 flex flex-wrap gap-2">${st.guesses.map(g => `<span class="rounded-full bg-rose-500/15 px-3 py-1 text-[13px] text-rose-200 ring-1 ring-rose-400/30">✕ ${esc(g.t)}</span>`).join('')}</div>` : ''}
+          <div class="mb-3 flex items-center justify-between"><div class="text-sm font-medium text-white/80">Which film is it?</div><div class="flex items-center gap-3"><span class="text-xs text-white/45">Try ${st.guesses.length + 1} of ${DC_MAX}</span><span class="flex gap-1.5">${dots}</span></div></div>
+          <div class="grid gap-2.5 sm:grid-cols-2">${options}</div>
         </div>`;
       const signedIn = !!currentAuthUser;
       return `
         <div class="mx-auto max-w-5xl space-y-6">
           <div class="flex flex-wrap items-end justify-between gap-4">
-            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 text-sm text-white/50">Five tries. Every wrong guess unlocks a clue and sharpens the picture. A new film every day at midnight (India time).</p></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 text-sm text-white/50">Look at the picture and pick the right film from four. A wrong pick unlocks a clue and the picture gets clearer. A new film every day at midnight (India time).</p></div>
             <div class="flex items-center gap-5 rounded-2xl bg-white/[0.04] px-5 py-3 ring-1 ring-white/[0.07]"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.best}</div><div class="text-[11px] text-white/45">Best</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.played ? Math.round(stats.wins / stats.played * 100) : 0}%</div><div class="text-[11px] text-white/45">Won</div></div></div>
           </div>
           <div class="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
@@ -4237,7 +4254,7 @@ function posterCard(item, opts) {
     function dailyCardHtml() {
       const m = dcPuzzle(); if (!m) return '';
       const st = dcPlay(m), streak = dcStreakNow();
-      const line = st.done ? (st.won ? `Solved in ${st.guesses.length}/5` : 'Today\'s film was ' + esc(m.title)) : 'Guess today\'s film from five clues';
+      const line = st.done ? (st.won ? `Solved in ${st.guesses.length}/3` : 'Today\'s film was ' + esc(m.title)) : 'Pick today\'s film from four options';
       return `
         <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:p-5">
           <div class="flex items-center gap-4"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white"><i class="fa-solid fa-bolt"></i></span>
