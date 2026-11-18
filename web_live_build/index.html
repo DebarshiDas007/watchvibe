@@ -6720,8 +6720,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         if (v && v.firstElementChild && v.querySelector('#heroCarousel')) { HOME.node = v.firstElementChild; HOME.t = Date.now(); HOME.key = homeKey(); HOME.pool = HERO.pool.slice(); }
       }
       HOME.reuse = (tab === 'discover' && tab !== activeTab);
+      const changed = tab !== activeTab;
       activeTab = tab;
       refreshViews();
+      // a new page starts at its top: otherwise a short page opened from a long, scrolled one shows its bottom with the title hidden under the header
+      if (changed && tab !== 'discover') window.scrollTo(0, 0);
     }
 
     function refreshViews() {
