@@ -4058,57 +4058,96 @@ function posterCard(item, opts) {
     document.addEventListener('visibilitychange', () => { if (!document.hidden && FEAT.state === 'ready' && FEAT.day !== featDay() && activeTab === 'discover' && !window.homeRow) { FEAT.state = 'idle'; refreshViews(); } });
 
     // ================= DAILY CHALLENGE: guess the film =================
-    // One film a day for everyone (the day turns over at midnight India time). Each wrong guess unlocks a clue and sharpens the picture; five tries.
-    const DC_EPOCH = Date.UTC(2026, 10, 1), DC_BLUR = [6, 2, 0], DC_MAX = 3;
+    // Every day (the day turns over at midnight India time) there is a round of 20 films, alternating Hollywood and Indian cinema, the same for everyone.
+    // Each film: look at the picture, pick it from four options; a wrong pick unlocks a clue and the picture gets clearer; 3 tries. 3 / 2 / 1 points.
+    const DC_EPOCH = Date.UTC(2026, 10, 1), DC_BLUR = [6, 2, 0], DC_MAX = 3, DC_ROUND = 20, DC_PTS = [3, 2, 1], DC_TOP = DC_ROUND * 3;
     const DC_LANG = { en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', ko: 'Korean', ja: 'Japanese', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian', zh: 'Chinese', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi', tr: 'Turkish', ar: 'Arabic', pt: 'Portuguese' };
-    const DC = { board: null, boardDay: '', boardState: 'idle', tick: 0 };
+    const DC_IN_LANGS = new Set(['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa']);
+    const DC = { board: null, boardDay: '', boardState: 'idle', tick: 0, auto: 0 };
     const dcLS = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? def : v; } catch (e) { return def; } };
     const dcSave = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
     function dcHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
     function dcYesterday(day) { return new Date(Date.parse(day + 'T00:00:00Z') - 864e5).toISOString().slice(0, 10); }
     function dcNumber() { return Math.floor((Date.parse(featDay() + 'T00:00:00Z') - DC_EPOCH) / 864e5) + 1; }
-    function dcPool() {
-      if (!DC._pool || DC._poolN !== mediaDatabase.length) {
-        DC._pool = mediaDatabase.filter(m => m.backdrop && m.poster && m.synopsis && m.synopsis.length > 60 && Array.isArray(m.cast) && m.cast.length >= 3 && m.director && !/^(Director|Showrunner)$/.test(m.director) && (m.totalVotes || 0) >= 5000);
-        DC._poolN = mediaDatabase.length;
+    const dcIsIndian = m => (m.region && String(m.region).startsWith('Indian')) || DC_IN_LANGS.has(m.language);
+    const dcBase = m => m.type === 'Movie' && m.backdrop && m.poster && m.synopsis && m.synopsis.length > 60 && Array.isArray(m.cast) && m.cast.length >= 3 && m.director && !/^(Director|Showrunner)$/.test(m.director);
+    function dcPools() {
+      if (!DC._p || DC._pn !== mediaDatabase.length) {
+        const base = mediaDatabase.filter(dcBase), v = m => m.totalVotes || 0;
+        DC._p = { hw: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 5000), ind: base.filter(m => dcIsIndian(m) && v(m) >= 250), hwWide: base.filter(m => !dcIsIndian(m) && m.language === 'en' && v(m) >= 3000), indWide: base.filter(m => dcIsIndian(m) && v(m) >= 100) };
+        DC._pn = mediaDatabase.length;
       }
-      return DC._pool;
+      return DC._p;
     }
-    // the film of the day: the candidate whose hash with today's date is smallest, so it does not depend on the catalogue's order
-    function dcPuzzle() {
-      const day = featDay(), stored = dcLS('wv_daily_pick_v1', null);
-      if (stored && stored.day === day) { const m = mediaDatabase.find(x => x.id === stored.id); if (m) return m; }
-      const pool = dcPool(); if (!pool.length) return null;
-      let best = null, bh = Infinity; for (const m of pool) { const h = dcHash(day + '|' + m.id); if (h < bh) { bh = h; best = m; } }
-      dcSave('wv_daily_pick_v1', { day, id: best.id }); return best;
+    // today's 20 films: ten of each kind (all the Indian ones there are if fewer), alternating, chosen by hash so the same list comes out everywhere
+    function dcRoundIds() {
+      const day = featDay(), stored = dcLS('wv_daily_round_v1', null);
+      if (stored && stored.day === day && stored.ids.length >= 10) return stored.ids;
+      const P = dcPools(), take = (arr, n) => arr.map(m => ({ m, h: dcHash(day + '|r|' + m.id) })).sort((x, y) => x.h - y.h).slice(0, n).map(r => r.m);
+      const ind = take(P.ind, DC_ROUND / 2), hw = take(P.hw, DC_ROUND - ind.length);
+      const ids = []; for (let i = 0; i < Math.max(hw.length, ind.length); i++) { if (hw[i]) ids.push(hw[i].id); if (ind[i]) ids.push(ind[i].id); }
+      const out = ids.slice(0, DC_ROUND); dcSave('wv_daily_round_v1', { day, ids: out }); return out;
     }
-    function dcPlay(m) { const day = featDay(); const s = dcLS('wv_daily_play_v2', null); return (s && s.day === day && s.id === m.id) ? s : { day, id: m.id, guesses: [], done: false, won: false, counted: false }; }
-    function dcStats() { const s = dcLS('wv_daily_stats_v1', null) || { played: 0, wins: 0, streak: 0, best: 0, lastWin: '', dist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 } }; s.dist = s.dist || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 }; return s; }
-    function dcStreakNow() { const s = dcStats(), d = featDay(); return (s.lastWin === d || s.lastWin === dcYesterday(d)) ? s.streak : 0; }
+    function dcState() {
+      const day = featDay(); let s = dcLS('wv_daily_play_v3', null);
+      if (s && s.day === day) return s;
+      const ids = dcRoundIds();
+      s = { day, ids, cur: 0, rounds: [{ guesses: [], done: false, won: false, pts: 0 }], score: 0, finished: false, counted: false };
+      dcSave('wv_daily_play_v3', s); return s;
+    }
+    function dcFilm(s) {
+      // skip films that have dropped out of the catalogue since the list was made
+      while (s.cur < s.ids.length) { const m = mediaDatabase.find(x => x.id === s.ids[s.cur]); if (m) return m; s.rounds[s.cur] = s.rounds[s.cur] || { guesses: [], done: true, won: false, pts: 0 }; s.rounds[s.cur].done = true; s.cur++; if (s.cur < s.ids.length) s.rounds[s.cur] = s.rounds[s.cur] || { guesses: [], done: false, won: false, pts: 0 }; }
+      return null;
+    }
+    function dcStats() { const s = dcLS('wv_daily_stats_v2', null) || { played: 0, streak: 0, best: 0, bestScore: 0, lastPlay: '', recent: [] }; s.recent = s.recent || []; return s; }
+    function dcStreakNow() { const s = dcStats(), d = featDay(); return (s.lastPlay === d || s.lastPlay === dcYesterday(d)) ? s.streak : 0; }
     function dcNorm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ''); }
     function dcMask(text, title) {
       let out = String(text);
       String(title).split(/[\s:,\-–—]+/).filter(w => w.length >= 3).forEach(w => { out = out.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '▇▇▇'); });
       return out;
     }
-    function dcSquares(st) { return st.guesses.map(g => g.ok ? '🟩' : '🟥').join(''); }
-    function dcShareText(st) {
-      const tries = st.won ? st.guesses.length : 'X';
-      return `WatchVibe Daily #${dcNumber()} 🎬 ${tries}/3\n${dcSquares(st)}\n${location.origin}/?daily=1`;
+    const dcSquare = r => !r || !r.done ? '⬜' : (r.won ? ['🟩', '🟨', '🟧'][Math.min(2, r.guesses.length - 1)] : '🟥');
+    function dcSquares(s) { const rows = []; for (let i = 0; i < DC_ROUND; i += 5) rows.push(Array.from({ length: Math.min(5, DC_ROUND - i) }, (_, k) => dcSquare(s.rounds[i + k])).join('')); return rows.join('\n'); }
+    function dcShareText(s) { return `WatchVibe Daily #${dcNumber()} 🎬 ${s.score}/${DC_TOP}\n${dcSquares(s)}\n${location.origin}/?daily=1`; }
+    function dcSolved(s) { return s.rounds.filter(r => r && r.won).length; }
+    function dcFinish(s) {
+      if (s.counted) return;
+      s.counted = true;
+      const st = dcStats(), day = featDay();
+      st.played++; st.streak = (st.lastPlay === dcYesterday(day)) ? st.streak + 1 : 1; st.best = Math.max(st.best, st.streak); st.bestScore = Math.max(st.bestScore, s.score); st.lastPlay = day;
+      st.recent = [...st.recent.filter(r => r.day !== day), { day, score: s.score }].slice(-7);
+      dcSave('wv_daily_stats_v2', st); dcSave('wv_daily_play_v3', s);
     }
-    function dcFinish(st, m) {
-      if (st.counted) return;
-      st.counted = true;
-      const s = dcStats(), day = featDay();
-      s.played++;
-      if (st.won) { s.wins++; s.streak = (s.lastWin === dcYesterday(day)) ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.lastWin = day; s.dist[st.guesses.length] = (s.dist[st.guesses.length] || 0) + 1; }
-      else { s.streak = 0; s.dist.x++; }
-      dcSave('wv_daily_stats_v1', s);
-      dcSave('wv_daily_play_v2', st);   // remember that this result is counted
+    function dcGuess(title) {
+      const s = dcState(); if (s.finished) return;
+      const m = dcFilm(s); if (!m) return;
+      const r = s.rounds[s.cur]; if (r.done) return;
+      const raw = String(title || '').trim(); if (!raw) return;
+      if (r.guesses.some(g => dcNorm(g.t) === dcNorm(raw))) return;
+      const ok = dcNorm(raw) === dcNorm(m.title);
+      r.guesses.push({ t: raw.slice(0, 80), ok });
+      if (ok || r.guesses.length >= DC_MAX) { r.done = true; r.won = ok; r.pts = ok ? DC_PTS[r.guesses.length - 1] : 0; s.score += r.pts; }
+      dcSave('wv_daily_play_v3', s);
+      clearTimeout(DC.auto);
+      if (r.done) DC.auto = setTimeout(dcNext, r.won ? 2200 : 3400);       // after a short look at the answer, on to the next film
+      else showToast('Not that one. A new clue is unlocked.');
+      refreshViews();
     }
+    function dcNext() {
+      clearTimeout(DC.auto);
+      const s = dcState(); const r = s.rounds[s.cur];
+      if (s.finished || !r || !r.done) return;
+      if (s.cur + 1 >= s.ids.length) { s.finished = true; dcFinish(s); dcSave('wv_daily_play_v3', s); dcSubmit(s); Track.event('daily_done', { n: dcNumber(), s: s.score, w: dcSolved(s) }); }
+      else { s.cur++; s.rounds[s.cur] = { guesses: [], done: false, won: false, pts: 0 }; dcSave('wv_daily_play_v3', s); }
+      if (typeof activeTab !== 'undefined' && activeTab === 'daily') { refreshViews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }
+    // four options: the film and three look-alikes of the same kind (Hollywood with Hollywood, Indian with Indian), the same for everyone
     function dcOptions(m) {
-      const day = featDay(), pool = dcPool().filter(x => x.id !== m.id && x.type === m.type);
-      const genres = new Set((m.genres || []).map(g => g.toLowerCase()));
+      const day = featDay(), P = dcPools(), isIn = dcIsIndian(m);
+      const pool = (isIn ? P.indWide : P.hwWide).filter(x => x.id !== m.id);
+      const genres = new Set((m.genres || []).map(g => String(g).toLowerCase()));
       const scored = pool.map(x => {
         let s = 0;
         if (x.language && x.language === m.language) s += 3;
@@ -4121,37 +4160,11 @@ function posterCard(item, opts) {
       while (picks.length < 3 && scored.length > picks.length) { const nx = scored.find(r => !picks.includes(r.x)); if (!nx) break; picks.push(nx.x); }
       return [m, ...picks].sort((a, b) => dcHash(day + '|o|' + a.id) - dcHash(day + '|o|' + b.id));
     }
-    function dcGuess(title) {
-      const m = dcPuzzle(); if (!m) return;
-      const st = dcPlay(m); if (st.done) return;
-      const raw = (title != null ? title : (document.getElementById('dcInput') || {}).value) || '';
-      if (!raw.trim()) return;
-      if (st.guesses.some(g => dcNorm(g.t) === dcNorm(raw))) { showToast('You already tried that one'); return; }
-      const ok = dcNorm(raw) === dcNorm(m.title);
-      st.guesses.push({ t: raw.trim().slice(0, 80), ok });
-      if (ok || st.guesses.length >= DC_MAX) { st.done = true; st.won = ok; }
-      dcSave('wv_daily_play_v2', st);
-      if (st.done) { dcFinish(st, m); dcSubmit(st); Track.event('daily_done', { n: dcNumber(), w: st.won ? 1 : 0, g: st.guesses.length }); }
-      else showToast(ok ? '' : 'Not that one. A new clue is unlocked.');
-      refreshViews();
-      if (!st.done) setTimeout(() => { const i = document.getElementById('dcInput'); if (i) i.focus(); }, 50);
-    }
-    let dcSuggestT = 0;
-    function dcType(v) {
-      clearTimeout(dcSuggestT);
-      dcSuggestT = setTimeout(() => {
-        const box = document.getElementById('dcSuggest'); if (!box) return;
-        const q = dcNorm(v);
-        if (q.length < 2) { box.innerHTML = ''; return; }
-        const hits = mediaDatabase.filter(m => dcNorm(m.title).includes(q)).sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0)).slice(0, 6);
-        box.innerHTML = hits.map(m => `<button type="button" onclick="dcGuess(${esc(JSON.stringify(m.title))})" class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-white/85 transition hover:bg-white/[0.07]"><span class="truncate">${esc(m.title)}</span><span class="shrink-0 text-xs text-white/40">${esc(m.year)}</span></button>`).join('');
-      }, 90);
-    }
-    async function dcSubmit(st) {
-      if (!currentAuthUser || !sbc() || !st.done || dcLS('wv_daily_sub_v1', '') === st.day) return;
+    async function dcSubmit(s) {
+      if (!currentAuthUser || !sbc() || !s.finished || dcLS('wv_daily_sub_v2', '') === s.day) return;
       try {
-        const { error } = await sbc().rpc('daily_submit', { p_day: st.day, p_tries: st.won ? st.guesses.length : DC_MAX, p_won: st.won });
-        if (!error) { dcSave('wv_daily_sub_v1', st.day); DC.boardState = 'idle'; dcLoadBoard(); }
+        const { error } = await sbc().rpc('daily_submit', { p_day: s.day, p_score: s.score, p_solved: dcSolved(s) });
+        if (!error) { dcSave('wv_daily_sub_v2', s.day); DC.boardState = 'idle'; dcLoadBoard(); }
       } catch (e) {}
     }
     async function dcLoadBoard() {
@@ -4170,11 +4183,11 @@ function posterCard(item, opts) {
       const el = document.getElementById('dcBoard'); if (!el) return;
       if (DC.boardState === 'failed') { el.innerHTML = '<div class="text-sm text-white/40">The leaderboard is not available right now.</div>'; return; }
       if (DC.boardState !== 'ready') { el.innerHTML = '<div class="text-sm text-white/40">Loading today\'s board…</div>'; return; }
-      if (!DC.board.length) { el.innerHTML = '<div class="text-sm text-white/45">Nobody on the board yet. Finish today\'s puzzle while signed in to be first.</div>'; return; }
-      el.innerHTML = `<div class="divide-y divide-white/[0.06] overflow-hidden rounded-xl ring-1 ring-white/[0.06]">${DC.board.map(r => `<div class="flex items-center gap-3 px-4 py-2.5 text-sm ${r.is_me ? 'bg-purple-500/15' : 'bg-white/[0.02]'}"><span class="w-6 text-right tabular-nums text-white/40">${r.rank}</span><span class="min-w-0 flex-1 truncate ${r.is_me ? 'font-medium text-white' : 'text-white/80'}">${esc(r.name)}${r.is_me ? ' (you)' : ''}</span><span class="tabular-nums ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? r.tries + '/3' : 'X/3'}</span></div>`).join('')}</div>`;
+      if (!DC.board.length) { el.innerHTML = '<div class="text-sm text-white/45">Nobody on the board yet. Finish today\'s 20 films while signed in to be first.</div>'; return; }
+      el.innerHTML = `<div class="divide-y divide-white/[0.06] overflow-hidden rounded-xl ring-1 ring-white/[0.06]">${DC.board.map(r => `<div class="flex items-center gap-3 px-4 py-2.5 text-sm ${r.is_me ? 'bg-purple-500/15' : 'bg-white/[0.02]'}"><span class="w-6 text-right tabular-nums text-white/40">${r.rank}</span><span class="min-w-0 flex-1 truncate ${r.is_me ? 'font-medium text-white' : 'text-white/80'}">${esc(r.name)}${r.is_me ? ' (you)' : ''}</span><span class="text-xs text-white/40">${r.solved}/${DC_ROUND}</span><span class="w-14 text-right tabular-nums text-emerald-300">${r.score}/${DC_TOP}</span></div>`).join('')}</div>`;
     }
-    function dcCopy() { const m = dcPuzzle(); if (!m) return; const txt = dcShareText(dcPlay(m)); try { navigator.clipboard.writeText(txt); showToast('Result copied'); } catch (e) { prompt('Copy your result', txt); } }
-    function dcWhatsApp() { const m = dcPuzzle(); if (!m) return; window.open('https://wa.me/?text=' + encodeURIComponent(dcShareText(dcPlay(m))), '_blank', 'noopener'); }
+    function dcCopy() { const txt = dcShareText(dcState()); try { navigator.clipboard.writeText(txt); showToast('Result copied'); } catch (e) { prompt('Copy your result', txt); } }
+    function dcWhatsApp() { window.open('https://wa.me/?text=' + encodeURIComponent(dcShareText(dcState())), '_blank', 'noopener'); }
     function dcTickUpdate() {
       const el = document.getElementById('dcCountdown');
       if (!el) { clearInterval(DC.tick); DC.tick = 0; return; }
@@ -4182,56 +4195,66 @@ function posterCard(item, opts) {
       el.textContent = [Math.floor(left / 3600), Math.floor(left / 60) % 60, left % 60].map(x => String(x).padStart(2, '0')).join(':');
       if (left <= 1 && typeof refreshViews === 'function') setTimeout(refreshViews, 1500);
     }
+    function dcStatsBox() {
+      const st = dcStats();
+      return `<div class="flex items-center gap-5 rounded-2xl bg-white/[0.04] px-5 py-3 ring-1 ring-white/[0.07]"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Day streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${st.bestScore}</div><div class="text-[11px] text-white/45">Best score</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${st.played}</div><div class="text-[11px] text-white/45">Days played</div></div></div>`;
+    }
+    function dcRecentBox() {
+      const st = dcStats();
+      const rows = st.recent.slice().reverse().map(r => `<div class="flex items-center gap-2 text-xs"><span class="w-16 text-white/45">${esc(r.day.slice(5))}</span><div class="h-4 flex-1 rounded bg-white/[0.04]"><div class="h-4 rounded bg-emerald-400/60" style="width:${Math.max(4, Math.round(r.score / DC_TOP * 100))}%"></div></div><span class="w-10 text-right tabular-nums text-white/60">${r.score}</span></div>`).join('');
+      return `<section><h2 class="mb-3 font-display text-xl font-medium text-white">Your recent days</h2><div class="space-y-1.5 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">${rows || '<div class="text-sm text-white/40">Finish a round to see your scores here.</div>'}</div></section>`;
+    }
     function renderDaily() {
-      const m = dcPuzzle();
-      if (!m) return '<div class="rounded-2xl bg-white/[0.03] p-8 text-center text-white/55 ring-1 ring-white/[0.06]">Today\'s puzzle is still loading. Try again in a moment.</div>';
-      const st = dcPlay(m), wrong = st.guesses.filter(g => !g.ok).length, done = st.done;
+      const s = dcState();
+      const m = s.finished ? null : dcFilm(s);
+      if (s.finished || !m) { if (!s.finished) { s.finished = true; dcFinish(s); dcSave('wv_daily_play_v3', s); } return renderDailyFinal(s); }
+      const r = s.rounds[s.cur] = s.rounds[s.cur] || { guesses: [], done: false, won: false, pts: 0 };
+      const wrong = r.guesses.filter(g => !g.ok).length, done = r.done;
       const blur = done ? 0 : DC_BLUR[Math.min(wrong, DC_BLUR.length - 1)];
-      const stats = dcStats();
-      if (done) { dcFinish(st, m); dcSubmit(st); dcLoadBoard(); }
+      const group = dcIsIndian(m) ? 'Indian cinema' : 'Hollywood';
       const clue = (need, label, body) => wrong >= need || done
         ? `<div class="rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.07]"><div class="text-[11px] uppercase tracking-[0.14em] text-purple-300/80">${label}</div><div class="mt-1 text-[15px] text-white/90">${body}</div></div>`
         : `<div class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/30">${label}: unlocks after a wrong pick</div>`;
       const lang = DC_LANG[m.language] || (m.language ? String(m.language).toUpperCase() : '');
       const clues = [
-        clue(0, 'Clue 1 · What it is', `${esc(m.type)} · ${esc((m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ') || 'Drama')}<div class="mt-1 text-sm text-white/60">${esc(m.year)}${m.duration ? ' · ' + esc(m.duration) : ''}${lang ? ' · ' + esc(lang) : ''}</div>`),
+        clue(0, 'Clue 1 · What it is', `${esc(group)} · ${esc((m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ') || 'Drama')}<div class="mt-1 text-sm text-white/60">${esc(m.year)}${m.duration ? ' · ' + esc(m.duration) : ''}${lang ? ' · ' + esc(lang) : ''}</div>`),
         clue(1, 'Clue 2 · Starring', esc((m.cast || []).slice(0, 3).join(', '))),
         clue(2, 'Clue 3 · Directed by', esc(m.director)),
         clue(2, 'Clue 4 · The story (title hidden)', esc(dcMask(m.synopsis, m.title)))
       ].join('');
-      const dots = Array.from({ length: DC_MAX }, (_, i) => { const g = st.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
+      const dots = Array.from({ length: DC_MAX }, (_, i) => { const g = r.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
       const picture = `
         <div class="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#14141A] ring-1 ring-white/10">
           <img src="${esc(m.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" style="filter:blur(${blur}px);transform:scale(${blur ? 1.08 : 1});transition:filter .6s ease, transform .6s ease">
-          ${done ? `<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div><div class="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:p-6"><img src="${esc(ps(m.poster))}" alt="" class="hidden h-28 w-[76px] rounded-lg object-cover ring-1 ring-white/20 sm:block"><div class="min-w-0"><div class="text-xs uppercase tracking-[0.16em] ${st.won ? 'text-emerald-300' : 'text-rose-300'}">${st.won ? 'You got it' : 'Not this time'}</div><div class="font-display text-2xl text-white sm:text-4xl">${esc(m.title)}</div><div class="text-sm text-white/70">${esc(m.year)}${rtHtml(m, '', ' · ')}</div></div></div>` : ''}
+          <span class="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15">${esc(group)}</span>
+          ${done ? `<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div><div class="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:p-6"><img src="${esc(ps(m.poster))}" alt="" class="hidden h-28 w-[76px] rounded-lg object-cover ring-1 ring-white/20 sm:block"><div class="min-w-0"><div class="text-xs uppercase tracking-[0.16em] ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? 'You got it · +' + r.pts : 'It was'}</div><div class="font-display text-2xl text-white sm:text-4xl">${esc(m.title)}</div><div class="text-sm text-white/70">${esc(m.year)}${rtHtml(m, '', ' · ')}</div></div></div>` : ''}
         </div>`;
-      const dist = stats.dist, maxd = Math.max(1, ...['1', '2', '3', 'x'].map(k => dist[k] || 0));
-      const distHtml = ['1', '2', '3', 'x'].map(k => `<div class="flex items-center gap-2 text-xs"><span class="w-3 text-white/45">${k === 'x' ? '✕' : k}</span><div class="h-4 flex-1 rounded bg-white/[0.04]"><div class="h-4 rounded ${k === 'x' ? 'bg-rose-400/60' : 'bg-emerald-400/60'}" style="width:${Math.max(dist[k] ? 6 : 0, Math.round((dist[k] || 0) / maxd * 100))}%"></div></div><span class="w-5 text-right tabular-nums text-white/55">${dist[k] || 0}</span></div>`).join('');
-      const tried = new Set(st.guesses.map(g => dcNorm(g.t)));
+      const tried = new Set(r.guesses.map(g => dcNorm(g.t)));
       const options = dcOptions(m).map(o => {
         const out = tried.has(dcNorm(o.title));
         return `<button type="button" ${out ? 'disabled' : ''} onclick="dcGuess(${esc(JSON.stringify(o.title))})" class="flex min-h-[64px] items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition ${out ? 'cursor-not-allowed bg-rose-500/10 text-white/35 ring-1 ring-rose-400/20 line-through' : 'bg-white/[0.05] text-white ring-1 ring-white/10 hover:bg-white/[0.1] active:scale-[.98]'}"><span class="min-w-0"><span class="block text-[15px] font-medium leading-snug">${esc(o.title)}</span><span class="block text-xs text-white/40">${esc(o.year)}</span></span>${out ? '<i class="fa-solid fa-xmark text-rose-300"></i>' : '<i class="fa-solid fa-chevron-right text-xs text-white/30"></i>'}</button>`;
       }).join('');
+      const last = s.cur + 1 >= s.ids.length;
       const play = done ? `
-        <div class="space-y-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
-          <div class="flex flex-wrap items-center gap-2 font-mono text-lg">${dcSquares(st)}</div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" onclick="dcCopy()" class="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-copy mr-2 text-xs"></i>Copy result</button>
-            <button type="button" onclick="dcWhatsApp()" class="rounded-full px-5 py-2.5 text-sm text-white/85 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-brands fa-whatsapp mr-2 text-xs"></i>Share</button>
-            <button type="button" onclick="openDetails('${esc(m.id)}')" class="rounded-full px-5 py-2.5 text-sm text-white/85 ring-1 ring-white/15 transition hover:bg-white/10">Where to watch it</button>
-          </div>
-          <div class="text-sm text-white/50">Next film in <span id="dcCountdown" class="tabular-nums text-white">--:--:--</span></div>
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
+          <div class="text-sm text-white/60">${r.won ? 'Nice. ' : ''}Score so far <span class="font-medium text-white">${s.score}</span> / ${DC_TOP}</div>
+          <button type="button" onclick="dcNext()" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${last ? 'See my result' : 'Next film'} <i class="fa-solid fa-arrow-right ml-1.5 text-xs"></i></button>
         </div>` : `
         <div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
-          <div class="mb-3 flex items-center justify-between"><div class="text-sm font-medium text-white/80">Which film is it?</div><div class="flex items-center gap-3"><span class="text-xs text-white/45">Try ${st.guesses.length + 1} of ${DC_MAX}</span><span class="flex gap-1.5">${dots}</span></div></div>
+          <div class="mb-3 flex items-center justify-between"><div class="text-sm font-medium text-white/80">Which film is it?</div><div class="flex items-center gap-3"><span class="text-xs text-white/45">Try ${r.guesses.length + 1} of ${DC_MAX}</span><span class="flex gap-1.5">${dots}</span></div></div>
           <div class="grid gap-2.5 sm:grid-cols-2">${options}</div>
         </div>`;
+      const pct = Math.round(s.cur / DC_ROUND * 100);
       const signedIn = !!currentAuthUser;
       return `
         <div class="mx-auto max-w-5xl space-y-6">
           <div class="flex flex-wrap items-end justify-between gap-4">
-            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 text-sm text-white/50">Look at the picture and pick the right film from four. A wrong pick unlocks a clue and the picture gets clearer. A new film every day at midnight (India time).</p></div>
-            <div class="flex items-center gap-5 rounded-2xl bg-white/[0.04] px-5 py-3 ring-1 ring-white/[0.07]"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.best}</div><div class="text-[11px] text-white/45">Best</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.played ? Math.round(stats.wins / stats.played * 100) : 0}%</div><div class="text-[11px] text-white/45">Won</div></div></div>
+            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 max-w-xl text-sm text-white/50">20 films today, Hollywood and Indian. Pick each one from four options. A wrong pick unlocks a clue and the picture gets clearer. 3 points for the first try, 2 for the second, 1 for the third.</p></div>
+            ${dcStatsBox()}
+          </div>
+          <div class="rounded-2xl bg-white/[0.03] px-5 py-3 ring-1 ring-white/[0.06]">
+            <div class="flex items-center justify-between text-sm"><span class="font-medium text-white">Film ${s.cur + 1} of ${DC_ROUND}</span><span class="text-white/55">Score <span class="font-medium text-white">${s.score}</span> / ${DC_TOP}</span></div>
+            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-purple-400 to-blue-400 transition-all" style="width:${pct}%"></div></div>
           </div>
           <div class="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
             <div class="min-w-0 space-y-4">${picture}${play}</div>
@@ -4239,27 +4262,58 @@ function posterCard(item, opts) {
           </div>
           <div class="grid gap-6 md:grid-cols-2">
             <section><h2 class="mb-3 font-display text-xl font-medium text-white">Today's leaderboard</h2><div id="dcBoard"></div>${signedIn ? '' : '<button type="button" onclick="openAuthModal()" class="mt-3 text-sm text-purple-300 underline underline-offset-2 hover:text-white">Sign in to put your score on the board</button>'}</section>
-            <section><h2 class="mb-3 font-display text-xl font-medium text-white">Your results</h2><div class="space-y-1.5 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">${distHtml}</div></section>
+            ${dcRecentBox()}
           </div>
         </div>`;
     }
-    function dcAfterRender() { dcRenderBoard(); dcLoadBoard(); clearInterval(DC.tick); DC.tick = setInterval(dcTickUpdate, 1000); dcTickUpdate(); }
-    // an invite from the share text opens today's puzzle
+    function renderDailyFinal(s) {
+      dcSubmit(s); dcLoadBoard();
+      const solved = dcSolved(s), signedIn = !!currentAuthUser;
+      const grade = s.score >= 50 ? 'Film buff' : s.score >= 38 ? 'Movie fan' : s.score >= 24 ? 'Casual viewer' : 'Keep watching';
+      const rows = s.ids.map((id, i) => { const mm = mediaDatabase.find(x => x.id === id), rr = s.rounds[i]; return mm ? `<div class="flex items-center gap-3 px-4 py-2 text-sm"><span class="w-5 text-right text-white/35">${i + 1}</span><span class="w-6 text-center">${dcSquare(rr)}</span><span class="min-w-0 flex-1 truncate text-white/80">${esc(mm.title)}</span><span class="text-xs text-white/40">${dcIsIndian(mm) ? 'Indian' : 'Hollywood'}</span></div>` : ''; }).join('');
+      return `
+        <div class="mx-auto max-w-5xl space-y-6">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()} · finished</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">${s.score} / ${DC_TOP} · ${grade}</h1><p class="mt-1 text-sm text-white/50">You got ${solved} of ${DC_ROUND} films. A new round of 20 starts at midnight (India time).</p></div>
+            ${dcStatsBox()}
+          </div>
+          <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <div class="space-y-4 rounded-2xl bg-gradient-to-br from-purple-500/15 to-blue-500/10 p-6 ring-1 ring-white/10">
+              <div class="font-mono text-2xl leading-relaxed tracking-wide">${dcSquares(s).split('\n').join('<br>')}</div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="dcCopy()" class="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-copy mr-2 text-xs"></i>Copy result</button>
+                <button type="button" onclick="dcWhatsApp()" class="rounded-full px-5 py-2.5 text-sm text-white/85 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-brands fa-whatsapp mr-2 text-xs"></i>Share</button>
+              </div>
+              <div class="text-sm text-white/50">Next round in <span id="dcCountdown" class="tabular-nums text-white">--:--:--</span></div>
+              <div class="text-xs text-white/35">🟩 first try · 🟨 second · 🟧 third · 🟥 missed</div>
+            </div>
+            <section><h2 class="mb-3 font-display text-xl font-medium text-white">Today's leaderboard</h2><div id="dcBoard"></div>${signedIn ? '' : '<button type="button" onclick="openAuthModal()" class="mt-3 text-sm text-purple-300 underline underline-offset-2 hover:text-white">Sign in to put your score on the board</button>'}</section>
+          </div>
+          <div class="grid gap-6 md:grid-cols-2">
+            <section><h2 class="mb-3 font-display text-xl font-medium text-white">Today's 20 films</h2><div class="divide-y divide-white/[0.05] overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06]">${rows}</div></section>
+            ${dcRecentBox()}
+          </div>
+        </div>`;
+    }
+    // load the next film's picture while this one is being played, so the next screen is not dark for a moment
+    function dcPreload() { const s = dcState(); [s.ids[s.cur + 1], s.ids[s.cur + 2]].forEach(id => { const x = id && mediaDatabase.find(m => m.id === id); if (x) { new Image().src = x.backdrop; new Image().src = ps(x.poster); } }); }
+    function dcAfterRender() { dcPreload(); dcRenderBoard(); dcLoadBoard(); clearInterval(DC.tick); DC.tick = setInterval(dcTickUpdate, 1000); dcTickUpdate(); }
+    // an invite from the share text opens today's round
     (function () {
       if (new URLSearchParams(location.search).get('daily') !== '1') return;
       let tries = 0; const iv = setInterval(() => { if (typeof mediaDatabase !== 'undefined' && mediaDatabase.length && typeof switchTab === 'function') { clearInterval(iv); switchTab('daily'); } else if (++tries > 40) clearInterval(iv); }, 300);
     })();
+    function dcProgressKey() { const s = dcState(); return s.finished ? 'f' + s.score : s.cur + ':' + s.score; }
 
     // the home-page card
     function dailyCardHtml() {
-      const m = dcPuzzle(); if (!m) return '';
-      const st = dcPlay(m), streak = dcStreakNow();
-      const line = st.done ? (st.won ? `Solved in ${st.guesses.length}/3` : 'Today\'s film was ' + esc(m.title)) : 'Pick today\'s film from four options';
+      const s = dcState(), streak = dcStreakNow();
+      const line = s.finished ? `Finished: ${s.score}/${DC_TOP}` : (s.cur || s.rounds[0].guesses.length ? `Film ${s.cur + 1} of ${DC_ROUND} · score ${s.score}` : '20 films, Hollywood and Indian, four options each');
       return `
         <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:p-5">
           <div class="flex items-center gap-4"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white"><i class="fa-solid fa-bolt"></i></span>
-            <div><div class="font-display text-lg text-white lg:text-xl">Daily Challenge #${dcNumber()}</div><div class="text-sm text-white/55">${line}${streak ? ` · ${streak}-day streak 🔥` : ''}</div></div></div>
-          <button type="button" onclick="switchTab('daily')" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${st.done ? 'See result' : (st.guesses.length ? 'Continue' : 'Play now')}</button>
+            <div><div class="font-display text-lg text-white lg:text-xl">Daily Challenge #${dcNumber()}: Guess the film</div><div class="text-sm text-white/55">${line}${streak ? ` · ${streak}-day streak 🔥` : ''}</div></div></div>
+          <button type="button" onclick="switchTab('daily')" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${s.finished ? 'See result' : (s.cur || s.rounds[0].guesses.length ? 'Continue' : 'Play now')}</button>
         </section>`;
     }
 
@@ -6466,7 +6520,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     // Leaving the plain home page keeps its finished DOM for a few minutes; coming back puts it straight back (no rebuild, no image re-decode)
     const HOME = { node: null, t: 0, key: '', pool: null, reuse: false };
     function homeCacheable() { return !window.homeRow && selectedTopCategory === 'all' && selectedTopVibe === 'all' && !selectedTopLanguage && !activeMood && !aiVibeQuery && !(aiMoods && aiMoods.length) && !aiMaxRuntime; }
-    function homeKey() { const m = dcPuzzle(); const p = m ? dcPlay(m) : null; return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length, (userWatchlistIds || []).length, p ? p.guesses.length + (p.done ? 'd' : '') : '-', typeof dcStreakNow === 'function' ? dcStreakNow() : 0].join('|'); }
+    function homeKey() { return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length, (userWatchlistIds || []).length, typeof dcProgressKey === 'function' ? dcProgressKey() : '-', typeof dcStreakNow === 'function' ? dcStreakNow() : 0].join('|'); }
     function switchTab(tab) {
       if (tab !== activeTab) Track.event('view', {}, tab);
       if (activeTab === 'discover' && tab !== 'discover' && homeCacheable() && FEAT.state !== 'loading') {
