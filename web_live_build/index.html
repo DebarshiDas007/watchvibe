@@ -678,17 +678,18 @@
       <button type="button" onclick="setTopCategory('Series')" id="top-cat-series" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Series</span></button>
       <button type="button" onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Stand-Up</span></button>
       <span class="mx-2 h-5 w-px shrink-0 bg-white/15" aria-hidden="true"></span>
-      <button type="button" onclick="openSwipeDeck()" id="top-deck" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Vibe Deck" aria-label="Vibe Deck"><i class="fa-solid fa-layer-group text-[13px]"></i><span class="hidden xl:inline">Vibe Deck</span></button>
-      <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watch together" aria-label="Watch together"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden xl:inline">Watch together</span></button>
-      <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Taste Match" aria-label="Taste Match"><i class="fa-solid fa-heart-pulse text-[13px]"></i><span class="hidden xl:inline">Taste Match</span></button>
-      <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watchlist" aria-label="Watchlist"><i class="fa-solid fa-bookmark text-[13px]"></i><span class="hidden xl:inline">Watchlist</span></button>
-      <button type="button" onclick="switchTab('profile')" id="desk-tab-profile" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Profile" aria-label="Profile"><i class="fa-solid fa-user text-[13px]"></i><span class="hidden xl:inline">Profile</span></button>
+      <button type="button" onclick="openSwipeDeck()" id="top-deck" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Vibe Deck" aria-label="Vibe Deck"><i class="fa-solid fa-layer-group text-[13px]"></i><span class="hidden min-[1500px]:inline">Vibe Deck</span></button>
+      <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watch together" aria-label="Watch together"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden min-[1500px]:inline">Watch together</span></button>
+      <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Taste Match" aria-label="Taste Match"><i class="fa-solid fa-heart-pulse text-[13px]"></i><span class="hidden min-[1500px]:inline">Taste Match</span></button>
+      <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watchlist" aria-label="Watchlist"><i class="fa-solid fa-bookmark text-[13px]"></i><span class="hidden min-[1500px]:inline">Watchlist</span></button>
+      <button type="button" onclick="switchTab('profile')" id="desk-tab-profile" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Profile" aria-label="Profile"><i class="fa-solid fa-user text-[13px]"></i><span class="hidden min-[1500px]:inline">Profile</span></button>
+      <button type="button" onclick="switchTab('daily')" id="top-daily" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white lg:inline-flex lg:px-3" title="Daily Challenge" aria-label="Daily Challenge"><i class="fa-solid fa-bolt text-[13px]"></i><span class="hidden min-[1500px]:inline">Daily</span></button>
       <button type="button" onclick="toggleNavMore(event)" id="navMore" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white md:inline-flex lg:hidden" title="More" aria-label="More" aria-haspopup="menu"><i class="fa-solid fa-ellipsis"></i></button>
     </nav>
 
     <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-      <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden h-10 items-center justify-center gap-2.5 rounded-full bg-white/[0.05] text-sm text-white/55 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white md:flex md:w-10 2xl:w-64 2xl:justify-start 2xl:px-4" aria-label="Search" title="Search">
-        <i class="fa-solid fa-magnifying-glass text-[13px]"></i><span class="hidden text-white/45 2xl:inline">Search titles, actors, moods</span>
+      <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden h-10 items-center justify-center gap-2.5 rounded-full bg-white/[0.05] text-sm text-white/55 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white md:flex md:w-10 min-[1800px]:w-64 min-[1800px]:justify-start min-[1800px]:px-4" aria-label="Search" title="Search">
+        <i class="fa-solid fa-magnifying-glass text-[13px]"></i><span class="hidden text-white/45 min-[1800px]:inline">Search titles, actors, moods</span>
       </button>
       <button id="cloudAuthBtn" type="button" onclick="openAuthModal()" class="flex items-center gap-2.5 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-4 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10" title="Account">
         <span id="userProfileAvatar" class="flex h-7 w-7 items-center overflow-hidden justify-center rounded-full bg-purple-500/30 text-[11px] font-semibold text-white"><i class="fa-solid fa-user text-xs"></i></span>
@@ -3187,7 +3188,8 @@
         'top-cat-standup': onDiscover && selectedTopCategory === 'Stand-Up',
         'desk-tab-community': activeTab === 'community',
         'desk-tab-watchlist': activeTab === 'watchlist',
-        'desk-tab-profile': activeTab === 'profile'
+        'desk-tab-profile': activeTab === 'profile',
+        'top-daily': activeTab === 'daily'
       };
       Object.entries(lit).forEach(([id, on]) => { const b = document.getElementById(id); if (b) { b.className = on ? NAV_ON : NAV_OFF; if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); } });
     }
@@ -3969,6 +3971,7 @@ function posterCard(item, opts) {
       return `
         <div class="space-y-14">
           <div class="space-y-5">${mobileTabs}<div class="flex justify-end">${toolbar}</div>${heroHtml}</div>
+          ${dailyCardHtml()}
           ${moodHtml}
           <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
           ${watchRowHtml()}
@@ -4053,6 +4056,195 @@ function posterCard(item, opts) {
     }
     // an open page rolls over to the new day by itself
     document.addEventListener('visibilitychange', () => { if (!document.hidden && FEAT.state === 'ready' && FEAT.day !== featDay() && activeTab === 'discover' && !window.homeRow) { FEAT.state = 'idle'; refreshViews(); } });
+
+    // ================= DAILY CHALLENGE: guess the film =================
+    // One film a day for everyone (the day turns over at midnight India time). Each wrong guess unlocks a clue and sharpens the picture; five tries.
+    const DC_EPOCH = Date.UTC(2026, 10, 1), DC_BLUR = [26, 19, 12, 6, 2];
+    const DC_LANG = { en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', ko: 'Korean', ja: 'Japanese', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian', zh: 'Chinese', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi', tr: 'Turkish', ar: 'Arabic', pt: 'Portuguese' };
+    const DC = { board: null, boardDay: '', boardState: 'idle', tick: 0 };
+    const dcLS = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? def : v; } catch (e) { return def; } };
+    const dcSave = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    function dcHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+    function dcYesterday(day) { return new Date(Date.parse(day + 'T00:00:00Z') - 864e5).toISOString().slice(0, 10); }
+    function dcNumber() { return Math.floor((Date.parse(featDay() + 'T00:00:00Z') - DC_EPOCH) / 864e5) + 1; }
+    function dcPool() {
+      if (!DC._pool || DC._poolN !== mediaDatabase.length) {
+        DC._pool = mediaDatabase.filter(m => m.backdrop && m.poster && m.synopsis && m.synopsis.length > 60 && Array.isArray(m.cast) && m.cast.length >= 3 && m.director && !/^(Director|Showrunner)$/.test(m.director) && (m.totalVotes || 0) >= 5000);
+        DC._poolN = mediaDatabase.length;
+      }
+      return DC._pool;
+    }
+    // the film of the day: the candidate whose hash with today's date is smallest, so it does not depend on the catalogue's order
+    function dcPuzzle() {
+      const day = featDay(), stored = dcLS('wv_daily_pick_v1', null);
+      if (stored && stored.day === day) { const m = mediaDatabase.find(x => x.id === stored.id); if (m) return m; }
+      const pool = dcPool(); if (!pool.length) return null;
+      let best = null, bh = Infinity; for (const m of pool) { const h = dcHash(day + '|' + m.id); if (h < bh) { bh = h; best = m; } }
+      dcSave('wv_daily_pick_v1', { day, id: best.id }); return best;
+    }
+    function dcPlay(m) { const day = featDay(); const s = dcLS('wv_daily_play_v1', null); return (s && s.day === day && s.id === m.id) ? s : { day, id: m.id, guesses: [], done: false, won: false, counted: false }; }
+    function dcStats() { const s = dcLS('wv_daily_stats_v1', null) || { played: 0, wins: 0, streak: 0, best: 0, lastWin: '', dist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 } }; s.dist = s.dist || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, x: 0 }; return s; }
+    function dcStreakNow() { const s = dcStats(), d = featDay(); return (s.lastWin === d || s.lastWin === dcYesterday(d)) ? s.streak : 0; }
+    function dcNorm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ''); }
+    function dcMask(text, title) {
+      let out = String(text);
+      String(title).split(/[\s:,\-–—]+/).filter(w => w.length >= 3).forEach(w => { out = out.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '▇▇▇'); });
+      return out;
+    }
+    function dcSquares(st) { return st.guesses.map(g => g.ok ? '🟩' : '🟥').join(''); }
+    function dcShareText(st) {
+      const tries = st.won ? st.guesses.length : 'X';
+      return `WatchVibe Daily #${dcNumber()} 🎬 ${tries}/5\n${dcSquares(st)}\n${location.origin}/?daily=1`;
+    }
+    function dcFinish(st, m) {
+      if (st.counted) return;
+      st.counted = true;
+      const s = dcStats(), day = featDay();
+      s.played++;
+      if (st.won) { s.wins++; s.streak = (s.lastWin === dcYesterday(day)) ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.lastWin = day; s.dist[st.guesses.length] = (s.dist[st.guesses.length] || 0) + 1; }
+      else { s.streak = 0; s.dist.x++; }
+      dcSave('wv_daily_stats_v1', s);
+      dcSave('wv_daily_play_v1', st);   // remember that this result is counted
+    }
+    function dcGuess(title) {
+      const m = dcPuzzle(); if (!m) return;
+      const st = dcPlay(m); if (st.done) return;
+      const raw = (title != null ? title : (document.getElementById('dcInput') || {}).value) || '';
+      if (!raw.trim()) return;
+      if (st.guesses.some(g => dcNorm(g.t) === dcNorm(raw))) { showToast('You already tried that one'); return; }
+      const ok = dcNorm(raw) === dcNorm(m.title);
+      st.guesses.push({ t: raw.trim().slice(0, 80), ok });
+      if (ok || st.guesses.length >= 5) { st.done = true; st.won = ok; }
+      dcSave('wv_daily_play_v1', st);
+      if (st.done) { dcFinish(st, m); dcSubmit(st); Track.event('daily_done', { n: dcNumber(), w: st.won ? 1 : 0, g: st.guesses.length }); }
+      else showToast(ok ? '' : 'Not that one. A new clue is unlocked.');
+      refreshViews();
+      if (!st.done) setTimeout(() => { const i = document.getElementById('dcInput'); if (i) i.focus(); }, 50);
+    }
+    let dcSuggestT = 0;
+    function dcType(v) {
+      clearTimeout(dcSuggestT);
+      dcSuggestT = setTimeout(() => {
+        const box = document.getElementById('dcSuggest'); if (!box) return;
+        const q = dcNorm(v);
+        if (q.length < 2) { box.innerHTML = ''; return; }
+        const hits = mediaDatabase.filter(m => dcNorm(m.title).includes(q)).sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0)).slice(0, 6);
+        box.innerHTML = hits.map(m => `<button type="button" onclick="dcGuess(${esc(JSON.stringify(m.title))})" class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-white/85 transition hover:bg-white/[0.07]"><span class="truncate">${esc(m.title)}</span><span class="shrink-0 text-xs text-white/40">${esc(m.year)}</span></button>`).join('');
+      }, 90);
+    }
+    async function dcSubmit(st) {
+      if (!currentAuthUser || !sbc() || !st.done || dcLS('wv_daily_sub_v1', '') === st.day) return;
+      try {
+        const { error } = await sbc().rpc('daily_submit', { p_day: st.day, p_tries: st.won ? st.guesses.length : 5, p_won: st.won });
+        if (!error) { dcSave('wv_daily_sub_v1', st.day); DC.boardState = 'idle'; dcLoadBoard(); }
+      } catch (e) {}
+    }
+    async function dcLoadBoard() {
+      const day = featDay();
+      if (DC.boardState === 'loading' || (DC.boardState === 'ready' && DC.boardDay === day)) return;
+      if (!sbc()) return;
+      DC.boardState = 'loading';
+      try {
+        const { data, error } = await sbc().rpc('daily_board', { p_day: day });
+        if (error) throw error;
+        DC.board = data || []; DC.boardDay = day; DC.boardState = 'ready';
+      } catch (e) { DC.boardState = 'failed'; }
+      dcRenderBoard();
+    }
+    function dcRenderBoard() {
+      const el = document.getElementById('dcBoard'); if (!el) return;
+      if (DC.boardState === 'failed') { el.innerHTML = '<div class="text-sm text-white/40">The leaderboard is not available right now.</div>'; return; }
+      if (DC.boardState !== 'ready') { el.innerHTML = '<div class="text-sm text-white/40">Loading today\'s board…</div>'; return; }
+      if (!DC.board.length) { el.innerHTML = '<div class="text-sm text-white/45">Nobody on the board yet. Finish today\'s puzzle while signed in to be first.</div>'; return; }
+      el.innerHTML = `<div class="divide-y divide-white/[0.06] overflow-hidden rounded-xl ring-1 ring-white/[0.06]">${DC.board.map(r => `<div class="flex items-center gap-3 px-4 py-2.5 text-sm ${r.is_me ? 'bg-purple-500/15' : 'bg-white/[0.02]'}"><span class="w-6 text-right tabular-nums text-white/40">${r.rank}</span><span class="min-w-0 flex-1 truncate ${r.is_me ? 'font-medium text-white' : 'text-white/80'}">${esc(r.name)}${r.is_me ? ' (you)' : ''}</span><span class="tabular-nums ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? r.tries + '/5' : 'X/5'}</span></div>`).join('')}</div>`;
+    }
+    function dcCopy() { const m = dcPuzzle(); if (!m) return; const txt = dcShareText(dcPlay(m)); try { navigator.clipboard.writeText(txt); showToast('Result copied'); } catch (e) { prompt('Copy your result', txt); } }
+    function dcWhatsApp() { const m = dcPuzzle(); if (!m) return; window.open('https://wa.me/?text=' + encodeURIComponent(dcShareText(dcPlay(m))), '_blank', 'noopener'); }
+    function dcTickUpdate() {
+      const el = document.getElementById('dcCountdown');
+      if (!el) { clearInterval(DC.tick); DC.tick = 0; return; }
+      const n = new Date(Date.now() + 5.5 * 3600 * 1000), left = 86400 - (n.getUTCHours() * 3600 + n.getUTCMinutes() * 60 + n.getUTCSeconds());
+      el.textContent = [Math.floor(left / 3600), Math.floor(left / 60) % 60, left % 60].map(x => String(x).padStart(2, '0')).join(':');
+      if (left <= 1 && typeof refreshViews === 'function') setTimeout(refreshViews, 1500);
+    }
+    function renderDaily() {
+      const m = dcPuzzle();
+      if (!m) return '<div class="rounded-2xl bg-white/[0.03] p-8 text-center text-white/55 ring-1 ring-white/[0.06]">Today\'s puzzle is still loading. Try again in a moment.</div>';
+      const st = dcPlay(m), wrong = st.guesses.filter(g => !g.ok).length, done = st.done;
+      const blur = done ? 0 : DC_BLUR[Math.min(wrong, 4)];
+      const stats = dcStats();
+      if (done) { dcFinish(st, m); dcSubmit(st); dcLoadBoard(); }
+      const clue = (i, label, body) => i <= wrong || done
+        ? `<div class="rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.07]"><div class="text-[11px] uppercase tracking-[0.14em] text-purple-300/80">${label}</div><div class="mt-1 text-[15px] text-white/90">${body}</div></div>`
+        : `<div class="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/30">${label}: unlocks after a wrong guess</div>`;
+      const lang = DC_LANG[m.language] || (m.language ? String(m.language).toUpperCase() : '');
+      const clues = [
+        clue(0, 'Clue 1 · Type and genre', `${esc(m.type)} · ${esc((m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ') || 'Drama')}`),
+        clue(1, 'Clue 2 · Year and length', `${esc(m.year)}${m.duration ? ' · ' + esc(m.duration) : ''}${lang ? ' · ' + esc(lang) : ''}`),
+        clue(2, 'Clue 3 · Starring', esc((m.cast || []).slice(0, 3).join(', '))),
+        clue(3, 'Clue 4 · Directed by', esc(m.director)),
+        clue(4, 'Clue 5 · The story (title hidden)', esc(dcMask(m.synopsis, m.title)))
+      ].join('');
+      const dots = Array.from({ length: 5 }, (_, i) => { const g = st.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
+      const picture = `
+        <div class="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#14141A] ring-1 ring-white/10">
+          <img src="${esc(m.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" style="filter:blur(${blur}px);transform:scale(${blur ? 1.15 : 1});transition:filter .6s ease, transform .6s ease">
+          ${done ? `<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div><div class="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:p-6"><img src="${esc(ps(m.poster))}" alt="" class="hidden h-28 w-[76px] rounded-lg object-cover ring-1 ring-white/20 sm:block"><div class="min-w-0"><div class="text-xs uppercase tracking-[0.16em] ${st.won ? 'text-emerald-300' : 'text-rose-300'}">${st.won ? 'You got it' : 'Not this time'}</div><div class="font-display text-2xl text-white sm:text-4xl">${esc(m.title)}</div><div class="text-sm text-white/70">${esc(m.year)}${rtHtml(m, '', ' · ')}</div></div></div>` : ''}
+        </div>`;
+      const dist = stats.dist, maxd = Math.max(1, ...Object.values(dist));
+      const distHtml = ['1', '2', '3', '4', '5', 'x'].map(k => `<div class="flex items-center gap-2 text-xs"><span class="w-3 text-white/45">${k === 'x' ? '✕' : k}</span><div class="h-4 flex-1 rounded bg-white/[0.04]"><div class="h-4 rounded ${k === 'x' ? 'bg-rose-400/60' : 'bg-emerald-400/60'}" style="width:${Math.max(dist[k] ? 6 : 0, Math.round((dist[k] || 0) / maxd * 100))}%"></div></div><span class="w-5 text-right tabular-nums text-white/55">${dist[k] || 0}</span></div>`).join('');
+      const play = done ? `
+        <div class="space-y-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+          <div class="flex flex-wrap items-center gap-2 font-mono text-lg">${dcSquares(st)}</div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="dcCopy()" class="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-copy mr-2 text-xs"></i>Copy result</button>
+            <button type="button" onclick="dcWhatsApp()" class="rounded-full px-5 py-2.5 text-sm text-white/85 ring-1 ring-white/15 transition hover:bg-white/10"><i class="fa-brands fa-whatsapp mr-2 text-xs"></i>Share</button>
+            <button type="button" onclick="openDetails('${esc(m.id)}')" class="rounded-full px-5 py-2.5 text-sm text-white/85 ring-1 ring-white/15 transition hover:bg-white/10">Where to watch it</button>
+          </div>
+          <div class="text-sm text-white/50">Next film in <span id="dcCountdown" class="tabular-nums text-white">--:--:--</span></div>
+        </div>` : `
+        <div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
+          <div class="mb-3 flex items-center justify-between"><div class="text-sm text-white/60">Guess ${st.guesses.length + 1} of 5</div><div class="flex gap-1.5">${dots}</div></div>
+          <div class="relative"><input id="dcInput" type="text" autocomplete="off" placeholder="Type a title…" oninput="dcType(this.value)" onkeydown="if(event.key==='Enter')dcGuess()" class="w-full rounded-full bg-white/[0.05] py-3 pl-5 pr-28 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30"><button type="button" onclick="dcGuess()" class="absolute right-1.5 top-1.5 rounded-full bg-white px-5 py-1.5 text-sm font-semibold text-black transition hover:bg-white/90">Guess</button></div>
+          <div id="dcSuggest" class="mt-2 space-y-0.5"></div>
+          ${st.guesses.length ? `<div class="mt-3 flex flex-wrap gap-2">${st.guesses.map(g => `<span class="rounded-full bg-rose-500/15 px-3 py-1 text-[13px] text-rose-200 ring-1 ring-rose-400/30">✕ ${esc(g.t)}</span>`).join('')}</div>` : ''}
+        </div>`;
+      const signedIn = !!currentAuthUser;
+      return `
+        <div class="mx-auto max-w-5xl space-y-6">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 text-sm text-white/50">Five tries. Every wrong guess unlocks a clue and sharpens the picture. A new film every day at midnight (India time).</p></div>
+            <div class="flex items-center gap-5 rounded-2xl bg-white/[0.04] px-5 py-3 ring-1 ring-white/[0.07]"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.best}</div><div class="text-[11px] text-white/45">Best</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${stats.played ? Math.round(stats.wins / stats.played * 100) : 0}%</div><div class="text-[11px] text-white/45">Won</div></div></div>
+          </div>
+          <div class="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+            <div class="min-w-0 space-y-4">${picture}${play}</div>
+            <div class="min-w-0 space-y-3">${clues}</div>
+          </div>
+          <div class="grid gap-6 md:grid-cols-2">
+            <section><h2 class="mb-3 font-display text-xl font-medium text-white">Today's leaderboard</h2><div id="dcBoard"></div>${signedIn ? '' : '<button type="button" onclick="openAuthModal()" class="mt-3 text-sm text-purple-300 underline underline-offset-2 hover:text-white">Sign in to put your score on the board</button>'}</section>
+            <section><h2 class="mb-3 font-display text-xl font-medium text-white">Your results</h2><div class="space-y-1.5 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">${distHtml}</div></section>
+          </div>
+        </div>`;
+    }
+    function dcAfterRender() { dcRenderBoard(); dcLoadBoard(); clearInterval(DC.tick); DC.tick = setInterval(dcTickUpdate, 1000); dcTickUpdate(); }
+    // an invite from the share text opens today's puzzle
+    (function () {
+      if (new URLSearchParams(location.search).get('daily') !== '1') return;
+      let tries = 0; const iv = setInterval(() => { if (typeof mediaDatabase !== 'undefined' && mediaDatabase.length && typeof switchTab === 'function') { clearInterval(iv); switchTab('daily'); } else if (++tries > 40) clearInterval(iv); }, 300);
+    })();
+
+    // the home-page card
+    function dailyCardHtml() {
+      const m = dcPuzzle(); if (!m) return '';
+      const st = dcPlay(m), streak = dcStreakNow();
+      const line = st.done ? (st.won ? `Solved in ${st.guesses.length}/5` : 'Today\'s film was ' + esc(m.title)) : 'Guess today\'s film from five clues';
+      return `
+        <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:p-5">
+          <div class="flex items-center gap-4"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white"><i class="fa-solid fa-bolt"></i></span>
+            <div><div class="font-display text-lg text-white lg:text-xl">Daily Challenge #${dcNumber()}</div><div class="text-sm text-white/55">${line}${streak ? ` · ${streak}-day streak 🔥` : ''}</div></div></div>
+          <button type="button" onclick="switchTab('daily')" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${st.done ? 'See result' : (st.guesses.length ? 'Continue' : 'Play now')}</button>
+        </section>`;
+    }
 
     // ================= Featured carousel =================
     const HERO_COUNT = 5;          // 5 titles x 15 s = a 75 s loop: enough variety, and every title still gets its turn
@@ -4251,7 +4443,7 @@ function posterCard(item, opts) {
       m.className = 'fixed z-[55] w-56 overflow-hidden rounded-2xl bg-[#14141A] p-1.5 shadow-2xl ring-1 ring-white/10';
       m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(innerWidth - 232, r.left)) + 'px';
       const item = (icon, label, fn) => `<button type="button" role="menuitem" onclick="closeNavMore(); ${fn}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"><i class="fa-solid ${icon} w-4 text-center text-[13px] text-white/50"></i>${label}</button>`;
-      m.innerHTML = item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
+      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
       document.body.appendChild(m);
       setTimeout(() => document.addEventListener('click', closeNavMore, { once: true }), 0);
     }
@@ -6257,7 +6449,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     // Leaving the plain home page keeps its finished DOM for a few minutes; coming back puts it straight back (no rebuild, no image re-decode)
     const HOME = { node: null, t: 0, key: '', pool: null, reuse: false };
     function homeCacheable() { return !window.homeRow && selectedTopCategory === 'all' && selectedTopVibe === 'all' && !selectedTopLanguage && !activeMood && !aiVibeQuery && !(aiMoods && aiMoods.length) && !aiMaxRuntime; }
-    function homeKey() { return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length, (userWatchlistIds || []).length].join('|'); }
+    function homeKey() { const m = dcPuzzle(); const p = m ? dcPlay(m) : null; return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length, (userWatchlistIds || []).length, p ? p.guesses.length + (p.done ? 'd' : '') : '-', typeof dcStreakNow === 'function' ? dcStreakNow() : 0].join('|'); }
     function switchTab(tab) {
       if (tab !== activeTab) Track.event('view', {}, tab);
       if (activeTab === 'discover' && tab !== 'discover' && homeCacheable() && FEAT.state !== 'loading') {
@@ -6285,6 +6477,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         else if (activeTab === 'community') content = renderCommunity();
         else if (activeTab === 'watchlist') content = renderWatchlist();
         else if (activeTab === 'profile') content = renderProfile();
+        else if (activeTab === 'daily') content = renderDaily();
         viewport.innerHTML = content;
         // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
         viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
@@ -6292,6 +6485,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       updateSidebarUserCard();
       syncTopNav();
 
+      if (activeTab === 'daily') dcAfterRender();
       // Update the mobile bottom bar
       const tabs = ['discover', 'explore', 'community', 'watchlist', 'profile'];
       tabs.forEach(t => {
