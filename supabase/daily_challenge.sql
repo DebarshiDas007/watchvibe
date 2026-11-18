@@ -1,4 +1,4 @@
--- Daily Challenge leaderboard (v2: a round of 20 films, scored out of 60).
+-- Daily Challenge leaderboard (v2: a round of 20 timed questions, score up to 200).
 -- Run in the Supabase SQL editor. Everything goes through two functions; the table is closed to direct access.
 -- Only the FIRST result a person submits for a day counts, and only for the current day in India time.
 
@@ -9,15 +9,17 @@ create table if not exists public.daily_scores (
   day        date        not null,
   user_id    uuid        not null references auth.users(id) on delete cascade,
   name       text        not null,
-  score      int         not null default 0 check (score between 0 and 60),
+  score      int         not null default 0 check (score between 0 and 200),
   solved     int         not null default 0 check (solved between 0 and 20),
   created_at timestamptz not null default now(),
   primary key (day, user_id)
 );
 alter table public.daily_scores drop column if exists tries;
 alter table public.daily_scores drop column if exists won;
-alter table public.daily_scores add column if not exists score  int not null default 0 check (score between 0 and 60);
+alter table public.daily_scores add column if not exists score  int not null default 0 check (score between 0 and 200);
 alter table public.daily_scores add column if not exists solved int not null default 0 check (solved between 0 and 20);
+alter table public.daily_scores drop constraint if exists daily_scores_score_check;
+alter table public.daily_scores add constraint daily_scores_score_check check (score between 0 and 200);
 alter table public.daily_scores enable row level security;
 revoke all on public.daily_scores from anon, authenticated;
 
@@ -34,7 +36,7 @@ declare
 begin
   if uid is null then raise exception 'not signed in'; end if;
   if p_day <> (now() at time zone 'Asia/Kolkata')::date then raise exception 'wrong day'; end if;
-  if p_score < 0 or p_score > 60 or p_solved < 0 or p_solved > 20 then raise exception 'bad score'; end if;
+  if p_score < 0 or p_score > 200 or p_solved < 0 or p_solved > 20 then raise exception 'bad score'; end if;
   select coalesce(nullif(trim(p.full_name), ''), nullif(trim(u.raw_user_meta_data ->> 'full_name'), ''), nullif(trim(u.raw_user_meta_data ->> 'name'), ''))
     into full_nm
     from auth.users u left join public.profiles p on p.id = u.id where u.id = uid;
