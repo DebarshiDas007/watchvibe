@@ -83,9 +83,15 @@
     .hero-fill { transform: scaleX(0); transform-origin: left center; transition: transform .1s linear; will-change: transform; }
     .hero-seg.is-done .hero-fill { transform: scaleX(1); }
     .hero-seg.is-active.is-static .hero-fill { transform: scaleX(1) !important; }
-    .hero-slide { transition: opacity .7s ease; }
+    .hero-slide { transition: opacity .3s ease; }
     @keyframes wtFloat { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; transform: translateY(-20px) scale(1.1); } 100% { transform: translateY(-190px) scale(1); opacity: 0; } }
     .wt-float { position: absolute; bottom: 8px; font-size: 30px; pointer-events: none; animation: wtFloat 2.3s ease-out forwards; }
+    /* snappy taps: no 300 ms double-tap wait, no grey flash, a small press response */
+    button, a, [role="button"], select, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .top-nav-pill, #heroCarousel button, #heroCarousel .hero-seg { transition: transform .12s ease, background-color .15s ease, color .15s ease; }
+    .top-nav-pill:active, #heroCarousel button:active { transform: scale(.94); }
+    button.group { transition: transform .12s ease; }
+    button.group:active { transform: scale(.98); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -663,7 +669,7 @@
     <noscript><div style="padding:24px;max-width:640px;margin:0 auto;font-family:sans-serif"><h1>WatchVibe: find what to watch by vibe</h1><p>WatchVibe suggests movies and series that fit your mood, shows IMDb ratings and where each title streams in your country, and keeps a watchlist of what you want to see. Please turn on JavaScript to use it.</p></div></noscript>
 
     <!-- TOP HEADER: wordmark, category tabs, search, profile -->
-  <header class="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-[#0B0B0F]/85 px-4 backdrop-blur-xl sm:gap-3 sm:px-6 lg:gap-6 lg:px-8">
+  <header class="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-[#0B0B0F]/95 px-4 sm:gap-3 sm:px-6 lg:gap-6 lg:px-8">
     <button type="button" onclick="goHome()" class="shrink-0 select-none font-display text-[19px] font-medium tracking-[0.1em] text-white sm:text-[20px] lg:text-[22px] lg:tracking-[0.18em]" aria-label="WatchVibe home">WATCH<span class="text-purple-400">VIBE</span></button>
 
     <nav id="topCategoryNavBar" class="no-scrollbar hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto md:flex" aria-label="Primary">
@@ -702,7 +708,7 @@
   </div>
 
   <!-- MOBILE BOTTOM NAVIGATION (SHOWN ONLY ON SCREENS < 768px) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#16161E]/95 backdrop-blur-md border-t border-[#2C2C3A] px-2 py-2 flex justify-around items-center z-40 shadow-2xl">
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#16161E]/95 border-t border-[#2C2C3A] px-2 py-2 flex justify-around items-center z-40 shadow-2xl">
     <button onclick="switchTab('discover')" id="mob-tab-discover" class="nav-btn flex flex-col items-center gap-1 text-purple-400 text-xs font-semibold py-1 px-2">
       <i class="fa-solid fa-house text-base"></i>
       <span>Home</span>
@@ -728,21 +734,21 @@
   </nav>
 
   <!-- ACTOR PROFILE MODAL -->
-  <div id="actorModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-6">
+  <div id="actorModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-3 sm:p-6">
     <div class="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="actorModalContent"></div>
     </div>
   </div>
 
   <!-- TITLE DETAIL MODAL -->
-  <div id="detailModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-6" onclick="if(event.target === this) closeDetails();" role="dialog" aria-modal="true" aria-label="Title details">
+  <div id="detailModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 p-3 sm:p-6" onclick="if(event.target === this) closeDetails();" role="dialog" aria-modal="true" aria-label="Title details">
     <div id="detailScroll" class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto overflow-x-hidden rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="modalContent"></div>
     </div>
   </div>
 
   <!-- SWIPE TO VIBE DECK MODAL -->
-  <div id="swipeModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
+  <div id="swipeModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-3 sm:p-5">
     <div class="bg-[#16161E] border border-purple-500/40 w-full max-w-md rounded-3xl p-5 shadow-2xl relative space-y-4">
       <div class="flex justify-between items-center">
         <div>
@@ -785,7 +791,7 @@
   </div>
 
   <!-- MOVIE NIGHT MODAL -->
-  <div id="movieNightModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-5" onclick="if(event.target === this) closePartyModal();" role="dialog" aria-modal="true" aria-label="Movie Night">
+  <div id="movieNightModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 sm:p-5" onclick="if(event.target === this) closePartyModal();" role="dialog" aria-modal="true" aria-label="Movie Night">
     <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div class="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-6 py-5">
         <div>
@@ -799,7 +805,7 @@
   </div>
 
   <!-- SIGN IN / PROFILE WINDOW -->
-  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 backdrop-blur-md sm:p-5" onclick="if(event.target === this) closeAuthModal();">
+  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-3 sm:p-5" onclick="if(event.target === this) closeAuthModal();">
     <div class="auth-card relative w-full max-w-[440px] md:max-w-[800px] max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-[#0F0F14] shadow-2xl shadow-black/60 ring-1 ring-white/10" role="dialog" aria-modal="true" aria-labelledby="authModalHeaderTitle">
       <div class="auth-glow pointer-events-none absolute -top-24 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-full bg-purple-500/20 blur-3xl"></div>
 
@@ -925,7 +931,7 @@
   </div>
 
   <!-- TMDB API & DATABASE CONFIG MODAL -->
-  <div id="apiConfigModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-5">
+  <div id="apiConfigModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-3 sm:p-5">
     <div class="bg-[#16161E] border border-[#2C2C3A] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative space-y-4">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-2">
@@ -1357,7 +1363,7 @@
       if (!toast) {
         toast = document.createElement('div');
         toast.id = 'watchvibeToast';
-        toast.className = 'fixed bottom-20 md:bottom-8 right-6 z-[90] bg-[#1A1A20]/95 text-white px-5 py-3 rounded-full ring-1 ring-white/15 shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none backdrop-blur-md';
+        toast.className = 'fixed bottom-20 md:bottom-8 right-6 z-[90] bg-[#1A1A20]/95 text-white px-5 py-3 rounded-full ring-1 ring-white/15 shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 pointer-events-none';
         document.body.appendChild(toast);
       }
       toast.innerHTML = '<span class="text-sm"></span>';
@@ -3699,7 +3705,7 @@
             <div class="text-sm text-white/55">Vote for what to watch. You can change your vote any time.</div>
             <div class="space-y-2">${s.short.map((m, i) => `
               <div class="flex items-center gap-3 rounded-2xl p-2.5 ring-1 transition ${mine === i ? 'bg-purple-500/15 ring-purple-400/50' : 'bg-white/[0.03] ring-white/[0.06]'}">
-                <img src="${esc(m.poster)}" alt="" class="h-16 w-11 shrink-0 rounded-lg object-cover" onerror="handleMediaPosterError(this)">
+                <img src="${esc(ps(m.poster, 185))}" alt="" class="h-16 w-11 shrink-0 rounded-lg object-cover" onerror="handleMediaPosterError(this)">
                 <div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-white">${esc(m.title)}</div><div class="text-xs text-white/45">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-0.5 text-xs">${wtAvailHtml(m)}</div>${wtWhoHtml(m)}</div>
                 <div class="w-6 text-center text-sm tabular-nums text-white/70">${votes[i]}</div>
                 <button type="button" onclick="wtVote(${i})" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition ${mine === i ? 'bg-purple-500 text-white' : 'bg-white text-black hover:bg-white/90'}">${mine === i ? 'Voted' : 'Vote'}</button>
@@ -3712,7 +3718,7 @@
           </div>`;
       } else {
         const m = s.short[s.pick];
-        const poster = `<img src="${esc(m.poster)}" alt="" class="h-40 w-28 shrink-0 rounded-xl object-cover ring-1 ring-white/10 sm:h-48 sm:w-32" onerror="handleMediaPosterError(this)">`;
+        const poster = `<img src="${esc(ps(m.poster))}" alt="" class="h-40 w-28 shrink-0 rounded-xl object-cover ring-1 ring-white/10 sm:h-48 sm:w-32" onerror="handleMediaPosterError(this)">`;
         const info = `<div class="min-w-0"><div class="font-display text-2xl text-white">${esc(m.title)}</div><div class="mt-1 text-sm text-white/50">${esc(m.year)}${rtHtml(m, '', ' · ')}</div><div class="mt-1.5 text-sm">${wtAvailHtml(m)}</div><div class="text-sm">${wtWhoHtml(m)}</div><button type="button" onclick="openDetails('${esc(m.id)}')" class="mt-3 rounded-full px-4 py-1.5 text-sm text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Where to watch</button></div>`;
         let body = '';
         if (ph === 'lobby') {
@@ -3787,6 +3793,8 @@
     })();
 
         // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
+// TMDB serves posters in several widths: ask for the one that fits the card instead of the 500 px original
+function ps(u, w) { return typeof u === 'string' ? u.replace('/t/p/w500/', '/t/p/w' + (w || 342) + '/') : u; }
 function posterCard(item, opts) {
       opts = opts || {};
       const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
@@ -3794,9 +3802,9 @@ function posterCard(item, opts) {
       const sizing = opts.wide ? 'w-full' : 'w-[150px] shrink-0 sm:w-[180px] lg:w-[210px] xl:w-[235px] 2xl:w-[270px]';
       return `
         <button type="button" onclick="openDetails('${item.id}')" class="group self-start ${sizing} text-left focus:outline-none">
-          <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
-            <img src="${esc(item.poster)}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
-            ${opts.badge ? `<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">${esc(opts.badge)}</span>` : ''}
+          <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-200 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
+            <img src="${esc(ps(item.poster))}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
+            ${opts.badge ? `<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">${esc(opts.badge)}</span>` : ''}
             <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-2.5 pt-12 opacity-0 transition duration-300 group-hover:opacity-100">
               <div class="flex items-center gap-1.5 text-[11px] font-medium text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>${esc(dom.label)}</div>
             </div>
@@ -4048,7 +4056,7 @@ function posterCard(item, opts) {
     // ================= Featured carousel =================
     const HERO_COUNT = 5;          // 5 titles x 15 s = a 75 s loop: enough variety, and every title still gets its turn
     const HERO_SECONDS = 15;
-    const HERO = { pool: [], idx: 0, el: null, pause: new Set(), sound: false, io: null, mounted: 0, touchX: null, elapsed: 0, last: 0, timer: 0, static: false };
+    const HERO = { pool: [], idx: 0, el: null, pause: new Set(), sound: false, io: null, mounted: 0, touchX: null, tt: 0, ttIdx: -1, firstDone: false, elapsed: 0, last: 0, timer: 0, static: false };
 
     function heroTitleHtml(item, i) {
       const ex = EXTRAS.cache.get(extrasKeyOf(item));
@@ -4080,7 +4088,7 @@ function posterCard(item, opts) {
         </div>`;
     }
     function heroCarouselHtml(pool) {
-      const arrow = (dir, icon, label) => `<button type="button" onclick="${dir}" aria-label="${label}" class="absolute ${dir === 'heroPrev()' ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 sm:h-11 sm:w-11"><i class="fa-solid ${icon} text-sm"></i></button>`;
+      const arrow = (dir, icon, label) => `<button type="button" onclick="${dir}" aria-label="${label}" class="absolute ${dir === 'heroPrev()' ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/15 transition hover:bg-black/70 sm:h-11 sm:w-11"><i class="fa-solid ${icon} text-sm"></i></button>`;
       const segs = pool.map((m, i) => `<button type="button" onclick="heroGo(${i}, true)" aria-label="Show featured title ${i + 1} of ${pool.length}: ${esc(m.title)}" class="hero-seg group flex-1 py-2.5 ${i < HERO.idx ? 'is-done' : i === HERO.idx ? 'is-active' : ''}"><span class="block h-1 overflow-hidden rounded-full bg-white/30 transition-all group-hover:h-[6px] lg:h-[5px]"><span class="hero-fill block h-full bg-white"></span></span></button>`).join('');
       return `
         <section id="heroCarousel" data-paused="0" aria-roledescription="carousel" aria-label="Featured titles" class="relative -mx-4 grid overflow-hidden rounded-none sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]">
@@ -4088,8 +4096,8 @@ function posterCard(item, opts) {
           ${arrow('heroPrev()', 'fa-chevron-left', 'Previous featured title')}
           ${arrow('heroNext()', 'fa-chevron-right', 'Next featured title')}
           <div class="absolute bottom-9 right-4 z-10 flex items-center gap-2 sm:right-8 lg:bottom-12 lg:right-16">
-            <div id="heroControls" class="hidden"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
-            <button id="heroPauseBtn" type="button" onclick="heroToggle()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Pause automatic changes"><i class="fa-solid fa-pause text-xs"></i></button>
+            <div id="heroControls" class="hidden"><button id="heroMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Unmute trailer"><i class="fa-solid fa-volume-xmark"></i></button></div>
+            <button id="heroPauseBtn" type="button" onclick="heroToggle()" class="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Pause automatic changes"><i class="fa-solid fa-pause text-xs"></i></button>
           </div>
           <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10 lg:inset-x-16">${segs}</div>
         </section>`;
@@ -4166,13 +4174,32 @@ function posterCard(item, opts) {
       if (trailerOk && item && !playing) heroStartTrailer();
       else if (!trailerOk && Preview.ids !== PV_DEFAULT) stopTrailerPreview();
     }
+    // A playing video is the heaviest thing on the page. Phones, slow connections and data-saver get the still backdrop only.
+    function heroTrailerAllowed() {
+      try {
+        if (window.matchMedia('(pointer: coarse)').matches || innerWidth < 900) return false;
+        const c = navigator.connection; if (c && (c.saveData || /(^|-)2g$|3g/.test(c.effectiveType || ''))) return false;
+        if (navigator.deviceMemory && navigator.deviceMemory <= 2) return false;
+      } catch (e) {}
+      return true;
+    }
     function heroStartTrailer() {
       const item = HERO.pool[HERO.idx]; if (!item) return;
-      const ids = { slot: 'heroSlot' + HERO.idx, controls: 'heroControls', mute: 'heroMuteBtn', vol: null, volWrap: null, replay: null };
-      startTrailerPreview(item, { ids, muted: !HERO.sound, silent: true });
+      if (!heroTrailerAllowed()) return;
+      const idx = HERO.idx;
+      if (HERO.ttIdx === idx && HERO.tt) return;                         // already waiting to start this one
+      clearTimeout(HERO.tt); HERO.ttIdx = idx;
+      // wait: the page first, then the first title for 2.5 s, later titles 1.2 s, so tapping through slides stays light
+      HERO.tt = setTimeout(() => {
+        HERO.tt = 0; HERO.ttIdx = -1; HERO.firstDone = true;
+        if (!HERO.el || HERO.idx !== idx || ['hidden', 'offscreen', 'modal'].some(r => HERO.pause.has(r))) return;
+        const ids = { slot: 'heroSlot' + idx, controls: 'heroControls', mute: 'heroMuteBtn', vol: null, volWrap: null, replay: null };
+        startTrailerPreview(item, { ids, muted: !HERO.sound, silent: true });
+      }, HERO.firstDone ? 1200 : 2500);
     }
     function heroGo(i, byUser) {
       if (!HERO.el || !HERO.pool.length) return;
+      clearTimeout(HERO.tt); HERO.tt = 0; HERO.ttIdx = -1;
       const n = HERO.pool.length, next = ((i % n) + n) % n;
       if (next === HERO.idx && !byUser) return;
       if (Preview.ids !== PV_DEFAULT) stopTrailerPreview();
@@ -4266,7 +4293,7 @@ function posterCard(item, opts) {
       const sorts = [['boxOffice', 'Highest box office'], ['rating', 'Highest rating'], ['popularity', 'Most popular here'], ['releaseDateNew', 'Newest first'], ['releaseDateOld', 'Oldest first']];
       const html = `
         <div class="relative">
-          <button type="button" onclick="closeActorProfile()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/80 ring-1 ring-white/10 backdrop-blur transition hover:bg-black hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" onclick="closeActorProfile()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/80 ring-1 ring-white/10 transition hover:bg-black hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
 
           <div class="relative overflow-hidden px-5 pb-6 pt-8 sm:px-8 sm:pt-10">
             <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-purple-500/[0.12] via-transparent to-transparent"></div>
@@ -4322,9 +4349,9 @@ function posterCard(item, opts) {
                   const dominant = VIBES[movie.dominantVibe] || VIBES.fun_time;
                   return `
                   <button type="button" onclick="openDetails('${esc(movie.id)}')" class="group block w-full self-start text-left focus:outline-none">
-                    <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
-                      <img src="${esc(movie.poster)}" alt="${esc(movie.title)}" class="h-full w-full object-cover" onerror="fixFilmPoster(this, ${esc(JSON.stringify(movie.title))}, ${esc(JSON.stringify(String(movie.year)))})">
-                      <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
+                    <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-200 group-hover:-translate-y-1 group-hover:ring-white/25">
+                      <img src="${esc(ps(movie.poster))}" alt="${esc(movie.title)}" class="h-full w-full object-cover" onerror="fixFilmPoster(this, ${esc(JSON.stringify(movie.title))}, ${esc(JSON.stringify(String(movie.year)))})">
+                      <span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${dominant.color}"></span>${esc(dominant.label)}</span>
                     </div>
                     <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
                     <div class="px-0.5 text-xs text-white/45">${esc(movie.year)}${rtHtml(movie, '', ' · ')}</div>
@@ -4978,18 +5005,18 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
           <div id="previewSlot" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0F0F14] via-[#0F0F14]/45 to-[#0F0F14]/10"></div>
-          <button type="button" onclick="closeDetails()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" onclick="closeDetails()" class="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
           <div class="relative z-[1] flex w-full flex-col gap-4 p-5 pt-20 sm:flex-row sm:items-end sm:justify-between sm:p-8 sm:pt-24">
             <div class="min-w-0 flex-1">
               <h2 id="detailTitle" class="break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
               <p id="detailMeta" class="mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
             </div>
             <div id="previewControls" class="flex shrink-0 flex-wrap items-center gap-2">
-              <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25 backdrop-blur">
+              <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25">
                 <button id="previewMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10" aria-label="Mute trailer"><i class="fa-solid fa-volume-high"></i></button>
                 <input id="previewVolume" type="range" min="0" max="100" step="1" value="70" oninput="setTrailerVolume(this.value)" class="h-1 w-24 cursor-pointer accent-white sm:w-32" aria-label="Trailer volume">
               </div>
-              <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 backdrop-blur transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
+              <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
             </div>
           </div>
         </div>
@@ -5551,9 +5578,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const legacy = VIBES[(mode === 'watched' ? (m.myVibe || m.dominantVibe) : m.dominantVibe)] || VIBES.must_watch;
       const sub = esc(m.year || '') + rtHtml(m, '', ' · ');
       const poster = m.poster
-        ? `<img src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">`
+        ? `<img src="${esc(ps(m.poster))}" alt="${esc(m.title)}" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">`
         : `<div class="flex h-full w-full items-center justify-center p-3 text-center text-xs text-white/35">${m.__pending ? 'Loading…' : esc(m.title)}</div>`;
-      let badge = `<span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur"><span class="h-1.5 w-1.5 rounded-full" style="background:${legacy.color}"></span>${esc(legacy.label)}</span>`;
+      let badge = `<span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${legacy.color}"></span>${esc(legacy.label)}</span>`;
       let extra = '', actions;
       if (mode === 'want') {
         badge = '';
@@ -5566,8 +5593,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         const tr = vote ? TIERS[vote.tier - 1] : null;
         if (signedIn) {
           badge = tr
-            ? `<span class="absolute left-2 top-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-full bg-black/75 px-2.5 py-0.5 text-[10px] font-medium backdrop-blur" style="color:${tr.color}">${tr.n === 1 ? '<i class="fa-solid fa-star text-[9px]"></i>' : `<span class="h-1.5 w-1.5 rounded-full" style="background:${tr.color}"></span>`}<span class="truncate">${esc(tr.label)}</span></span>`
-            : (LIB.loaded ? '<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white/55 backdrop-blur">Not rated yet</span>' : '');
+            ? `<span class="absolute left-2 top-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-full bg-black/75 px-2.5 py-0.5 text-[10px] font-medium" style="color:${tr.color}">${tr.n === 1 ? '<i class="fa-solid fa-star text-[9px]"></i>' : `<span class="h-1.5 w-1.5 rounded-full" style="background:${tr.color}"></span>`}<span class="truncate">${esc(tr.label)}</span></span>`
+            : (LIB.loaded ? '<span class="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white/55">Not rated yet</span>' : '');
           const f = vote && feelingOf((vote.feelings || [])[0]);
           extra = `${f ? `<div class="mt-1.5 px-0.5"><span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}</span></div>` : ''}
             ${rev ? `<p class="mt-1.5 line-clamp-2 break-words px-0.5 text-xs leading-snug text-white/55">${rev.spoiler ? '<i class="fa-solid fa-eye-slash mr-1 text-[10px]"></i>Review with spoilers' : '“' + esc(rev.headline) + '”'}</p>` : ''}`;
@@ -5578,7 +5605,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       return `
         <div class="group flex h-full flex-col">
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="block w-full text-left focus:outline-none">
-            <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-300 group-hover:-translate-y-1 group-hover:ring-white/25">
+            <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-200 group-hover:-translate-y-1 group-hover:ring-white/25">
               ${poster}
               ${badge}
             </div>
@@ -5625,12 +5652,12 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       let el = document.getElementById('rateSheet');
       if (!el) { el = document.createElement('div'); el.id = 'rateSheet'; document.body.appendChild(el); }
       const it = RS.item;
-      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 backdrop-blur-md sm:items-center sm:p-5';
+      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 sm:items-center sm:p-5';
       el.onclick = e => { if (e.target === el) rateSheetClose(); };
       el.innerHTML = `<div class="rs-card relative max-h-[94vh] w-full max-w-[560px] overflow-y-auto overflow-x-hidden rounded-t-[28px] bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10 sm:rounded-[28px] sm:p-7" role="dialog" aria-modal="true" aria-labelledby="rsTitle">
           <button type="button" onclick="rateSheetClose()" aria-label="Close" class="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>
           <div class="flex items-center gap-4 pr-10">
-            ${it.poster ? `<img src="${esc(it.poster)}" alt="" class="h-[72px] w-12 shrink-0 rounded-lg object-cover ring-1 ring-white/10" onerror="this.style.display='none'">` : ''}
+            ${it.poster ? `<img src="${esc(ps(it.poster, 185))}" alt="" class="h-[72px] w-12 shrink-0 rounded-lg object-cover ring-1 ring-white/10" onerror="this.style.display='none'">` : ''}
             <div class="min-w-0"><div class="text-xs uppercase tracking-[0.14em] text-white/40">${RS.mark ? 'Marking as seen' : 'Your verdict'}</div><h2 id="rsTitle" class="mt-0.5 break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2></div>
           </div>
           <h3 class="mt-6 text-sm font-medium text-white">How was it?</h3>
@@ -5781,7 +5808,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     // one row of the list view: poster, verdict, feeling and your full review
     function libraryRow(m) {
       const key = libKeyOf(m), vote = LIB.votes.get(key), rev = LIB.reviews.get(key), tr = vote ? TIERS[vote.tier - 1] : null, f = vote && feelingOf((vote.feelings || [])[0]);
-      const poster = m.poster ? `<img src="${esc(m.poster)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : '';
+      const poster = m.poster ? `<img src="${esc(ps(m.poster))}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : '';
       return `<article class="flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-[#14141A] ring-1 ring-white/10 focus:outline-none" aria-label="Open ${esc(m.title)}">${poster}</button>
           <div class="min-w-0 flex-1">
@@ -5813,7 +5840,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const it = libItemForReview(r), vote = LIB.votes.get(r.title_key), tr = vote ? TIERS[vote.tier - 1] : null, f = vote && feelingOf((vote.feelings || [])[0]);
       const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
       const long = (r.body || '').length > 320;
-      const poster = it.poster ? `<img src="${esc(it.poster)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : `<div class="flex h-full w-full items-center justify-center p-1 text-center text-[10px] text-white/35">${esc(r.title_name)}</div>`;
+      const poster = it.poster ? `<img src="${esc(ps(it.poster))}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : `<div class="flex h-full w-full items-center justify-center p-1 text-center text-[10px] text-white/35">${esc(r.title_name)}</div>`;
       return `<article class="flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
           <button type="button" onclick="openDetails('${esc(it.id)}')" class="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-[#14141A] ring-1 ring-white/10 focus:outline-none" aria-label="Open ${esc(r.title_name)}">${poster}</button>
           <div class="min-w-0 flex-1">
@@ -5932,7 +5959,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     function tonightRender(mode) {
       let el = document.getElementById('tonightSheet');
       if (!el) { el = document.createElement('div'); el.id = 'tonightSheet'; document.body.appendChild(el); }
-      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 backdrop-blur-md sm:items-center sm:p-5';
+      el.className = 'rs-overlay fixed inset-0 z-[70] flex items-end justify-center bg-black/75 sm:items-center sm:p-5';
       el.onclick = e => { if (e.target === el) tonightClose(); };
       const shell = inner => `<div class="rs-card relative max-h-[94vh] w-full max-w-[520px] overflow-y-auto overflow-x-hidden rounded-t-[28px] bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10 sm:rounded-[28px] sm:p-7" role="dialog" aria-modal="true" aria-label="Pick one for tonight">
           <button type="button" onclick="tonightClose()" aria-label="Close" class="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>${inner}</div>`;
@@ -5950,7 +5977,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       el.innerHTML = shell(`
           <div class="text-xs uppercase tracking-[0.14em] text-white/40">Tonight's pick</div>
           <div class="mt-4 flex gap-5">
-            <div class="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/10">${it.poster ? `<img src="${esc(it.poster)}" alt="" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : ''}</div>
+            <div class="h-[168px] w-[112px] shrink-0 overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/10">${it.poster ? `<img src="${esc(ps(it.poster))}" alt="" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : ''}</div>
             <div class="min-w-0 flex-1 pr-6">
               <h2 class="break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2>
               <div class="mt-1 text-sm text-white/50">${esc(it.year || '')}${rtHtml(it, '', ' · ')}${it.type ? ' · ' + esc(it.type) : ''}</div>
@@ -6162,26 +6189,41 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (stEl) stEl.innerHTML = `<span><b>${s.watchedCount}</b> Watched</span><span><b>${s.wantCount}</b> Want to watch</span>`;
     }
     // --- CONTROLLER NAVIGATION ---
+    // Leaving the plain home page keeps its finished DOM for a few minutes; coming back puts it straight back (no rebuild, no image re-decode)
+    const HOME = { node: null, t: 0, key: '', pool: null, reuse: false };
+    function homeCacheable() { return !window.homeRow && selectedTopCategory === 'all' && selectedTopVibe === 'all' && !selectedTopLanguage && !activeMood && !aiVibeQuery && !(aiMoods && aiMoods.length) && !aiMaxRuntime; }
+    function homeKey() { return [selectedCountry, FEAT.day, FEAT.state, mediaDatabase.length].join('|'); }
     function switchTab(tab) {
       if (tab !== activeTab) Track.event('view', {}, tab);
+      if (activeTab === 'discover' && tab !== 'discover' && homeCacheable() && FEAT.state !== 'loading') {
+        const v = document.getElementById('mainViewport');
+        if (v && v.firstElementChild && v.querySelector('#heroCarousel')) { HOME.node = v.firstElementChild; HOME.t = Date.now(); HOME.key = homeKey(); HOME.pool = HERO.pool.slice(); }
+      }
+      HOME.reuse = (tab === 'discover' && tab !== activeTab);
       activeTab = tab;
       refreshViews();
     }
 
     function refreshViews() {
       const hs = document.getElementById('headerSearchBtn'); if (hs) hs.style.visibility = activeTab === 'explore' ? 'hidden' : '';
-      let content = '';
-      if (activeTab === 'discover') content = renderDiscover();
-      else if (activeTab === 'explore') content = renderExplore();
-      else if (activeTab === 'community') content = renderCommunity();
-      else if (activeTab === 'watchlist') content = renderWatchlist();
-      else if (activeTab === 'profile') content = renderProfile();
-
       const viewport = document.getElementById('mainViewport');
       viewport.classList.toggle('max-w-[2400px]', activeTab === 'discover'); viewport.classList.toggle('max-w-[1440px]', activeTab !== 'discover');
-      viewport.innerHTML = content;
-      // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
-      viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
+      const reuse = activeTab === 'discover' && HOME.reuse && HOME.node && Date.now() - HOME.t < 5 * 60 * 1000 && HOME.key === homeKey() && homeCacheable();
+      HOME.reuse = false;
+      if (reuse) {
+        viewport.replaceChildren(HOME.node);
+        const pool = HOME.pool; setTimeout(() => heroMount(pool), 0);
+      } else {
+        let content = '';
+        if (activeTab === 'discover') content = renderDiscover();
+        else if (activeTab === 'explore') content = renderExplore();
+        else if (activeTab === 'community') content = renderCommunity();
+        else if (activeTab === 'watchlist') content = renderWatchlist();
+        else if (activeTab === 'profile') content = renderProfile();
+        viewport.innerHTML = content;
+        // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
+        viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
+      }
       updateSidebarUserCard();
       syncTopNav();
 
