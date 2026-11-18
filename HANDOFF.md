@@ -148,3 +148,7 @@ Open / next, in the order we discussed:
 - Daily Challenge waits for the catalogue (dcReady) so every player draws the same films; pool thresholds lowered (hw 2500 votes, ind 150); round key now wv_daily_round_v4.
 - Ratings of extras with few votes are weighted toward the average (100 votes at 6.3). Regional languages (Telugu, Kannada, Marathi, Punjabi) are thin because TMDB has few rated films.
 
+
+## v75 - Daily Challenge phone layout
+- Phone: compact header, picture + all four options (2x2) visible together, one answer card with identical height before/after answering (clock row becomes the Next button), correct answer bright green (bg-green-500), no smooth scroll between questions (soft .22s fade via .dc-in), story clue capped at ~250 chars (dcPlot), picture height min(229px,31svh), stats box full width on phones.
+

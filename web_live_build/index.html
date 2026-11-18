@@ -75,6 +75,8 @@
       0%, 100% { height: 4px; }
       50% { height: 16px; }
     }
+    @keyframes dcIn { from { opacity: 0; } to { opacity: 1; } }
+    .dc-in { animation: dcIn .22s ease-out both; }
     .eq-bar-1 { animation: equalizer 0.8s ease-in-out infinite; }
     .eq-bar-2 { animation: equalizer 0.6s ease-in-out infinite 0.2s; }
     .eq-bar-3 { animation: equalizer 0.9s ease-in-out infinite 0.4s; }
@@ -4152,6 +4154,12 @@ function posterCard(item, opts) {
     }
     function dcStats() { const s = dcLS('wv_daily_stats_v4', null) || { played: 0, streak: 0, best: 0, bestBy: { easy: 0, medium: 0, hard: 0 }, rounds: 0, lastPlay: '', recent: [] }; s.recent = s.recent || []; s.bestBy = s.bestBy || { easy: 0, medium: 0, hard: 0 }; return s; }
     function dcStreakNow() { const s = dcStats(), d = featDay(); return (s.lastPlay === d || s.lastPlay === dcYesterday(d)) ? s.streak : 0; }
+    // the story clue, shortened at a sentence or word boundary so it always fits the picture box on a phone
+    function dcPlot(m) {
+      const t = dcMask(m.synopsis, m.title); if (t.length <= 250) return t;
+      const cut = t.slice(0, 250), dot = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+      return dot > 120 ? cut.slice(0, dot + 1) : cut.replace(/\s+\S*$/, '') + '…';
+    }
     function dcMask(text, title) {
       let out = String(text);
       String(title).split(/[\s:,\-–—]+/).filter(w => w.length >= 3).forEach(w => { out = out.replace(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), '▇▇▇'); });
@@ -4267,11 +4275,11 @@ function posterCard(item, opts) {
       if (s.finished || !r || !r.done) return;
       if (s.cur + 1 >= s.specs.length) { s.finished = true; dcFinish(s); dcSaveState(s); dcSubmit(s); Track.event('daily_done', { n: dcNumber(), l: s.level, s: s.score, w: dcSolved(s) }); }
       else { s.cur++; s.rounds[s.cur] = { guesses: [], done: false, won: false, pts: 0 }; dcSaveState(s); }
-      if (typeof activeTab !== 'undefined' && activeTab === 'daily') { refreshViews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      if (typeof activeTab !== 'undefined' && activeTab === 'daily') { DC.enter = true; refreshViews(); if (window.scrollY > 120) window.scrollTo(0, 0); }   // a soft fade, never a long scroll
     }
     // the questions are drawn from the full catalogue, so every player must have it loaded before a round is built
     const dcReady = () => CAT.state === 'done' || CAT.state === 'failed';
-    function dcChoose(level) { clearTimeout(DC.auto); DC.level = level; DC.boardLevel = level; if (dcReady()) dcState(level); refreshViews(); window.scrollTo({ top: 0 }); }
+    function dcChoose(level) { clearTimeout(DC.auto); DC.level = level; DC.boardLevel = level; DC.enter = true; if (dcReady()) dcState(level); refreshViews(); window.scrollTo(0, 0); }
     function dcLevels() { clearTimeout(DC.auto); DC.level = null; refreshViews(); window.scrollTo({ top: 0 }); }
 
     // ---- leaderboard: one board per level
@@ -4331,7 +4339,7 @@ function posterCard(item, opts) {
     }
     function dcStatsBox(level) {
       const st = dcStats();
-      return `<div class="flex items-center gap-5 rounded-2xl bg-white/[0.04] px-5 py-3 ring-1 ring-white/[0.07]"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Day streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${level ? st.bestBy[level] || 0 : st.rounds}</div><div class="text-[11px] text-white/45">${level ? 'Best ' + DC_LEVEL[level].label : 'Rounds finished'}</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${st.played}</div><div class="text-[11px] text-white/45">Days played</div></div></div>`;
+      return `<div class="flex w-full items-center justify-around gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.07] sm:w-auto sm:justify-start sm:gap-5 sm:px-5"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Day streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${level ? st.bestBy[level] || 0 : st.rounds}</div><div class="text-[11px] text-white/45">${level ? 'Best ' + DC_LEVEL[level].label : 'Rounds finished'}</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${st.played}</div><div class="text-[11px] text-white/45">Days played</div></div></div>`;
     }
     function dcRecentBox() {
       const st = dcStats(), mx = Math.max(60, ...st.recent.map(r => r.score));
@@ -4349,7 +4357,7 @@ function posterCard(item, opts) {
     function renderDailyLanding() {
       const cards = DC_LEVELS.map(l => {
         const c = DC_LEVEL[l], st = dcLevelStatus(l);
-        return `<div class="flex flex-col rounded-2xl bg-white/[0.04] p-6 ring-1 ring-white/10 transition hover:bg-white/[0.06]">
+        return `<div class="flex flex-col rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10 transition hover:bg-white/[0.06] sm:p-6">
           <span class="self-start rounded-full px-3 py-1 text-xs font-semibold ring-1 ${c.cls}">${c.label}</span>
           <div class="mt-4 font-display text-2xl text-white">${c.label} round</div>
           <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">${c.desc}</p>
@@ -4358,13 +4366,13 @@ function posterCard(item, opts) {
         </div>`;
       }).join('');
       return `
-        <div class="mx-auto max-w-5xl space-y-8">
+        <div class="mx-auto -mt-2 max-w-5xl space-y-5 sm:mt-0 sm:space-y-8">
           <div class="flex flex-wrap items-end justify-between gap-4">
             <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 max-w-xl text-sm text-white/50">Choose your level. Each level has its own 20 questions every day, Hollywood and Indian cinema mixed. Play one or all three. New questions in <span id="dcCountdown" class="tabular-nums text-white/80">--:--:--</span>.</p></div>
             ${dcStatsBox(null)}
           </div>
-          <div class="grid gap-5 md:grid-cols-3">${cards}</div>
-          <div class="grid gap-6 md:grid-cols-2">${dcBoardSection()}${dcRecentBox()}</div>
+          <div class="grid gap-4 sm:gap-5 md:grid-cols-3">${cards}</div>
+          <div class="grid gap-5 sm:gap-6 md:grid-cols-2">${dcBoardSection()}${dcRecentBox()}</div>
         </div>`;
     }
     const DC_STEP_BACK = '<button type="button" onclick="dcLevels()" class="mb-1 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>All levels</button>';
@@ -4399,44 +4407,53 @@ function posterCard(item, opts) {
       const castBig = (m.cast || []).slice(0, cfg.castN === 2 ? 2 + Math.min(wrong, 1) : 3);
       let visual = '';
       if (kind === 'cast' && !done) visual = `<div class="relative flex min-h-[230px] flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-500/15 to-blue-500/10 px-5 pb-5 pt-14 text-center sm:absolute sm:inset-0 sm:gap-3 sm:p-6"><div class="text-xs uppercase tracking-[0.2em] text-white/50">Starring</div>${castBig.map(a => `<div class="font-display text-xl leading-tight text-white sm:text-4xl">${esc(a)}</div>`).join('')}</div>${wrong > 0 ? img + '<div class="absolute inset-0 bg-black/55"></div><div class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">' + castBig.map(a => `<div class="font-display text-xl text-white sm:text-3xl">${esc(a)}</div>`).join('') + '</div>' : ''}`;
-      else if (kind === 'plot' && !done) visual = `<div class="relative flex min-h-[230px] flex-col justify-center gap-3 bg-gradient-to-br from-purple-500/15 to-blue-500/10 px-5 pb-5 pt-14 sm:absolute sm:inset-0 sm:p-10"><div class="text-xs uppercase tracking-[0.2em] text-white/50">The story</div><p class="text-[15px] leading-relaxed text-white sm:text-2xl">${esc(dcMask(m.synopsis, m.title))}</p></div>${wrong > 0 ? img + '<div class="absolute inset-0 bg-black/60"></div><div class="absolute inset-0 flex items-center p-6 sm:p-10"><p class="text-base leading-relaxed text-white sm:text-xl">' + esc(dcMask(m.synopsis, m.title)) + '</p></div>' : ''}`;
+      else if (kind === 'plot' && !done) visual = `<div class="relative flex min-h-[230px] flex-col justify-center gap-3 bg-gradient-to-br from-purple-500/15 to-blue-500/10 px-5 pb-5 pt-14 sm:absolute sm:inset-0 sm:p-10"><div class="text-xs uppercase tracking-[0.2em] text-white/50">The story</div><p class="text-[14px] leading-snug text-white sm:text-2xl sm:leading-relaxed">${esc(dcPlot(m))}</p></div>${wrong > 0 ? img + '<div class="absolute inset-0 bg-black/60"></div><div class="absolute inset-0 flex items-center p-6 sm:p-10"><p class="text-base leading-relaxed text-white sm:text-xl">' + esc(dcPlot(m)) + '</p></div>' : ''}`;
       else if (!filmGuess && !done) visual = `<div class="relative flex min-h-[200px] flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-500/15 to-blue-500/10 px-5 pb-5 pt-14 text-center sm:absolute sm:inset-0 sm:gap-4 sm:p-6"><div class="hidden text-xs uppercase tracking-[0.2em] text-white/50 sm:block">${esc(DC_KIND[kind])}</div><div class="max-w-2xl text-xl leading-snug text-white sm:text-3xl">${q.prompt}</div><div class="text-xs text-white/40">${q.tries > 1 ? q.tries + ' tries' : 'One try'}</div></div>`;
       else visual = img;
       const overlay = done ? `<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div><div class="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4 sm:p-6"><img src="${esc(ps(m.poster))}" alt="" class="hidden h-28 w-[76px] rounded-lg object-cover ring-1 ring-white/20 sm:block"><div class="min-w-0"><div class="text-xs uppercase tracking-[0.16em] ${r.won ? 'text-emerald-300' : 'text-rose-300'}">${r.won ? 'Correct · +' + r.pts : (r.timedOut ? 'Time is up' : 'Not this time')}${r.won && (r.speed || r.combo) ? ` <span class="text-white/55 normal-case tracking-normal">(${r.base}${r.speed ? ' + ' + r.speed + ' speed' : ''}${r.combo ? ' + ' + r.combo + ' streak' : ''})</span>` : ''}</div><div class="font-display text-xl leading-tight text-white sm:text-4xl">${esc(m.title)}</div><div class="text-xs text-white/70 sm:text-sm">${esc(m.year)}${rtHtml(m, '', ' · ')}${!filmGuess ? ' · answer: ' + esc(dcCorrect(q)) : ''}</div></div></div>` : '';
-      const picture = `<div class="relative w-full overflow-hidden ${(filmGuess && kind !== 'cast' && kind !== 'plot') || done ? 'aspect-[16/9]' : 'sm:aspect-[16/9]'} rounded-2xl bg-[#14141A] ring-1 ring-white/10">${visual}<span class="absolute left-3 top-3 z-10 flex gap-2"><span class="rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15">${esc(group)}</span><span class="rounded-full px-3 py-1 text-xs font-medium ring-1 ${cfg.cls}">${cfg.label}</span></span>${overlay}</div>`;
+      const picture = `<div class="relative w-full overflow-hidden ${filmGuess && kind !== 'cast' && kind !== 'plot' ? 'h-[min(229px,31svh)] sm:h-auto sm:aspect-[16/9]' : 'h-[min(229px,31svh)] sm:h-auto sm:aspect-[16/9]'} rounded-2xl bg-[#14141A] ring-1 ring-white/10">${visual}<span class="absolute left-3 top-3 z-10 flex gap-2"><span class="rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15">${esc(group)}</span><span class="rounded-full px-3 py-1 text-xs font-medium ring-1 ${cfg.cls}">${cfg.label}</span></span>${overlay}</div>`;
       const dots = Array.from({ length: q.tries }, (_, i) => { const g = r.guesses[i]; return `<span class="h-2.5 w-2.5 rounded-full ${g ? (g.ok ? 'bg-emerald-400' : 'bg-rose-400') : 'bg-white/15'}"></span>`; }).join('');
       const tried = new Set(r.guesses.map(g => dcNorm(g.t)));
       const options = q.options.map(o => {
         const out = tried.has(dcNorm(o.label)), showCorrect = done && o.correct;
-        return `<button type="button" ${out || done ? 'disabled' : ''} onclick="dcPick(${esc(JSON.stringify(o.label))})" class="flex min-h-[64px] items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition ${showCorrect ? 'bg-emerald-500/15 text-white ring-1 ring-emerald-400/40' : out ? 'cursor-not-allowed bg-rose-500/10 text-white/35 ring-1 ring-rose-400/20 line-through' : done ? 'bg-white/[0.03] text-white/40 ring-1 ring-white/[0.06]' : 'bg-white/[0.05] text-white ring-1 ring-white/10 hover:bg-white/[0.1] active:scale-[.98]'}"><span class="min-w-0"><span class="block text-[15px] font-medium leading-snug">${esc(o.label)}</span><span class="block text-xs text-white/40">${esc(o.sub || (done && o.year ? o.year : ''))}</span></span>${showCorrect ? '<i class="fa-solid fa-check text-emerald-300"></i>' : out ? '<i class="fa-solid fa-xmark text-rose-300"></i>' : done ? '' : '<i class="fa-solid fa-chevron-right text-xs text-white/30"></i>'}</button>`;
+        const cls = showCorrect ? 'bg-green-500 text-black ring-2 ring-green-300 shadow-[0_0_22px_rgba(74,222,128,.55)]' : out ? 'cursor-not-allowed bg-rose-500/15 text-white/40 ring-1 ring-rose-400/25 line-through' : done ? 'bg-white/[0.03] text-white/35 ring-1 ring-white/[0.06]' : 'bg-white/[0.06] text-white ring-1 ring-white/10 active:scale-[.98] sm:hover:bg-white/[0.1]';
+        return `<button type="button" ${out || done ? 'disabled' : ''} onclick="dcPick(${esc(JSON.stringify(o.label))})" class="flex min-h-[58px] items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition-colors duration-200 sm:min-h-[64px] sm:rounded-2xl sm:px-4 sm:py-3 ${cls}"><span class="min-w-0"><span class="block text-[13.5px] font-semibold leading-tight sm:text-[15px] sm:font-medium">${esc(o.label)}</span><span class="block text-[11px] sm:text-xs ${showCorrect ? 'text-black/70' : 'text-white/40'}">${esc(o.sub || (done && o.year ? o.year : ''))}</span></span>${showCorrect ? '<i class="fa-solid fa-check shrink-0 text-black"></i>' : out ? '<i class="fa-solid fa-xmark shrink-0 text-rose-300"></i>' : done ? '' : '<i class="fa-solid fa-chevron-right hidden text-xs text-white/30 sm:inline"></i>'}</button>`;
       }).join('');
       const last = s.cur + 1 >= s.specs.length, comboNow = s.combo || 0;
       const heading = kind === 'cast' ? 'Which film stars these actors?' : kind === 'plot' ? 'Which film is this story from?' : filmGuess ? 'Which film is it?' : DC_KIND[kind];
-      const play = done ? `
-        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-          <div class="text-sm text-white/60">Score <span class="font-medium text-white">${s.score}</span>${comboNow >= 3 ? ` · <span class="text-amber-300">🔥 streak of ${comboNow}</span>` : ''}</div>
-          <button type="button" onclick="dcNext()" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${last ? 'See my result' : 'Next question'} <i class="fa-solid fa-arrow-right ml-1.5 text-xs"></i></button>
-        </div>
-        <div class="grid gap-2.5 sm:grid-cols-2">${options}</div>` : `
-        <div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
-          <div class="mb-3 flex items-center justify-between gap-3"><div class="text-sm font-medium text-white/80">${esc(heading)}</div><div class="flex items-center gap-3"><span class="text-xs text-white/45">${q.tries > 1 ? 'Try ' + (r.guesses.length + 1) + ' of ' + q.tries : 'One try'}</span><span class="flex gap-1.5">${dots}</span></div></div>
-          <div class="mb-3 flex items-center gap-3"><div class="h-2 flex-1 overflow-hidden rounded-full bg-white/10"><div id="dcTimerBar" class="h-full w-full rounded-full bg-emerald-400"></div></div><span id="dcTimerText" class="w-8 text-right text-sm tabular-nums text-white/70">${Math.ceil(dcLimit(spec, s) / 1000)}s</span></div>
-          <div class="grid gap-2.5 sm:grid-cols-2">${options}</div>
-          <div class="mt-3 text-xs text-white/35">Answer fast for bonus points. ${comboNow >= 2 ? `You are on a streak of ${comboNow}.` : 'Three right answers in a row start a streak bonus.'}</div>
+      // one card for both states: before the answer it shows the clock, after it shows the result and "Next". Same height, so nothing jumps.
+      const detail = r.won && (r.speed || r.combo) ? `<span class="ml-1 text-xs font-normal text-white/50">(${r.base}${r.speed ? ' + ' + r.speed + ' speed' : ''}${r.combo ? ' + ' + r.combo + ' streak' : ''})</span>` : '';
+      const topRow = done
+        ? `<span class="min-w-0 truncate font-semibold ${r.won ? 'text-green-400' : 'text-rose-300'}">${r.won ? 'Correct! +' + r.pts : (r.timedOut ? 'Time is up' : 'Not this time')}${detail}</span><span class="shrink-0 text-xs text-white/55">Score <span class="font-semibold text-white">${s.score}</span>${comboNow >= 3 ? ' · 🔥' + comboNow : ''}</span>`
+        : `<span class="min-w-0 truncate font-medium text-white/80">${esc(heading)}</span><span class="flex shrink-0 items-center gap-2"><span class="hidden text-xs text-white/45 sm:inline">${q.tries > 1 ? 'Try ' + (r.guesses.length + 1) + ' of ' + q.tries : 'One try'}</span><span class="flex gap-1.5">${dots}</span></span>`;
+      const midRow = done
+        ? `<button type="button" onclick="dcNext()" class="h-10 w-full rounded-full bg-white text-sm font-semibold text-black transition active:scale-[.98] sm:hover:bg-white/90">${last ? 'See my result' : 'Next question'} <i class="fa-solid fa-arrow-right ml-1.5 text-xs"></i></button>`
+        : `<div class="h-2 flex-1 overflow-hidden rounded-full bg-white/10"><div id="dcTimerBar" class="h-full w-full rounded-full bg-emerald-400"></div></div><span id="dcTimerText" class="w-8 text-right text-sm tabular-nums text-white/70">${Math.ceil(dcLimit(spec, s) / 1000)}s</span>`;
+      const play = `
+        <div class="rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-5">
+          <div class="flex h-6 items-center justify-between gap-3 text-sm">${topRow}</div>
+          <div class="my-2 flex h-10 items-center gap-3 sm:my-3">${midRow}</div>
+          <div class="grid grid-cols-2 gap-2 sm:gap-2.5">${options}</div>
+          <div class="mt-3 hidden text-xs text-white/35 sm:block">${done ? '' : 'Answer fast for bonus points. ' + (comboNow >= 2 ? `You are on a streak of ${comboNow}.` : 'Three right answers in a row start a streak bonus.')}</div>
         </div>`;
       const pct = Math.round(s.cur / DC_ROUND * 100);
+      const enter = DC.enter; DC.enter = false;
       return `
-        <div class="mx-auto max-w-5xl space-y-6">
-          <div class="flex flex-wrap items-end justify-between gap-4">
-            <div>${DC_STEP_BACK}<div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()} · ${cfg.label}</div><h1 class="hidden font-display text-3xl font-medium text-white sm:block lg:text-4xl">Guess the film</h1></div>
-            <div class="hidden sm:block">${dcStatsBox(s.level)}</div>
+        <div class="mx-auto -mt-3 max-w-5xl space-y-3 sm:mt-0 sm:space-y-6">
+          <div class="hidden flex-wrap items-end justify-between gap-4 sm:flex">
+            <div>${DC_STEP_BACK}<div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()} · ${cfg.label}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1></div>
+            ${dcStatsBox(s.level)}
           </div>
-          <div class="rounded-2xl bg-white/[0.03] px-5 py-3 ring-1 ring-white/[0.06]">
+          <div class="sm:hidden">
+            <div class="flex items-center justify-between gap-3 text-sm"><button type="button" onclick="dcLevels()" class="shrink-0 text-white/60"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>Levels</button><span class="min-w-0 truncate font-medium text-white">${cfg.label} · Question ${s.cur + 1}/${DC_ROUND}</span><span class="shrink-0 text-white/60">Score <span class="font-semibold text-white">${s.score}</span></span></div>
+            <div class="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-purple-400 to-blue-400" style="width:${pct}%"></div></div>
+          </div>
+          <div class="hidden rounded-2xl bg-white/[0.03] px-5 py-3 ring-1 ring-white/[0.06] sm:block">
             <div class="flex items-center justify-between text-sm"><span class="font-medium text-white">Question ${s.cur + 1} of ${DC_ROUND} <span class="ml-2 text-white/45">${esc(DC_KIND[kind])}</span></span><span class="text-white/55">Score <span class="font-medium text-white">${s.score}</span></span></div>
             <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div class="h-full rounded-full bg-gradient-to-r from-purple-400 to-blue-400 transition-all" style="width:${pct}%"></div></div>
           </div>
-          <div class="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-            <div class="min-w-0 space-y-4">${picture}${play}</div>
+          <div class="grid gap-4 sm:gap-6 lg:grid-cols-[1.35fr_1fr]">
+            <div class="min-w-0 space-y-3 sm:space-y-4 ${enter ? 'dc-in' : ''}">${picture}${play}</div>
             <div class="min-w-0 space-y-3">${filmGuess ? clues : `<div class="rounded-2xl bg-white/[0.04] px-4 py-3 text-sm text-white/60 ring-1 ring-white/[0.07]">${esc(DC_KIND[kind])}: ${q.tries > 1 ? q.tries + ' tries' : 'one try'}, so think before you tap. There are no clues for this kind of question.</div>`}</div>
           </div>
           <div class="grid gap-6 md:grid-cols-2">${dcBoardSection()}${dcRecentBox()}</div>
