@@ -220,3 +220,11 @@ Open / next, in the order we discussed:
 - Open: the verdict clear animation is instant (no green-to-normal fade); the user may want a fade.
 - Open: tester and reviewer reports were not run for v83/v84 changes.
 - Not verified live: clearing a verdict (signed-in user), real phones, multi-player game rooms.
+
+## v85 (deployed live 2026-11-20, 7f27f63): header and admin logo match the sign-in wordmark
+- index.html header wordmark now uses the sign-in wordmark: WATCH + orange VIBE (#D6502F), Anton, 15px (was 19-22px). theme.css?v=5 drops the old header wordmark override (24px, orange bar). admin.html logo is the same 15px Anton WATCH + orange VIBE (was purple VIBE, 20px).
+- tailwind.css rebuilt (the unused old header sizes dropped). sw.js CACHE_NAME v85 (precache theme.css?v=5). games.js?v=4, CAT.v=2, DB_VERSION=v9_alt_titles unchanged (those files did not change).
+- Deployed after the user said "ship". Syntax checks passed (both inline scripts, sw.js, games.js, hover-card.js). Sweep problems [] at 375/768/1440, local and live; no sideways scroll. Live header wordmark computed 15px Anton, VIBE rgb(214,80,47), identical to the sign-in wordmark; live admin logo the same. Live sw cache is v85 only (v84 removed). Detail page, a Daily Challenge question and a game room (create, leave) checked live.
+- Small difference: admin.html does not load theme.css, so WATCH there is pure white (#FFFFFF) instead of paper white (#FAFAF7).
+- Seen during the live check (not from v85): leaving a game room returned to the Daily Challenge view and the next question started its timer without a tap.
+- Push: see the commit after this entry (GitHub push was returning 403).
