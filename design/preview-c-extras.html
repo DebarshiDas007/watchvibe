@@ -1,26 +1,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@400;500;600&family=Archivo+Narrow:wght@500;600&family=Space+Grotesk:wght@500;600&family=Playfair+Display:wght@500;600&family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
-<style id="pv-pop">
-/* hover pop-out on every poster card */
+<style id="pv-pop-style">
 .row-scroll { padding-top: 14px !important; margin-top: -14px !important; padding-left: 8px !important; padding-right: 8px !important; margin-left: -8px !important; }
-button.group > div[class*="aspect-[2/3]"] {
-  transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, filter .3s ease !important;
-  will-change: transform;
-}
-button.group:hover > div[class*="aspect-[2/3]"], button.group:focus-visible > div[class*="aspect-[2/3]"] {
-  transform: translateY(-8px) scale(1.07) !important;
-  box-shadow: 0 22px 40px rgba(0,0,0,.65), 0 0 0 1px rgba(250,250,247,.28) !important;
-  filter: brightness(1.06) saturate(1.06);
-  position: relative; z-index: 6;
-}
-/* the title under the poster follows with a small slide */
-button.group > div:last-child > div:first-child { transition: transform .25s ease, color .2s ease, letter-spacing .25s ease; transform-origin: left center; }
-button.group:hover > div:last-child > div:first-child { transform: translate(2px, 4px); color: #FFFFFF !important; }
-@media (prefers-reduced-motion: reduce) {
-  button.group > div[class*="aspect-[2/3]"], button.group > div:last-child > div:first-child { transition: none !important; }
-  button.group:hover > div[class*="aspect-[2/3]"] { transform: none !important; }
-}
-/* font under the posters: set by the picker (default = current Inter) */
-button.group > div:last-child > div:first-child { font-family: var(--pv-title-font, Inter, system-ui, sans-serif) !important; font-weight: var(--pv-title-weight, 500) !important; text-transform: var(--pv-title-case, none) !important; letter-spacing: var(--pv-title-track, 0) !important; font-size: var(--pv-title-size, 14px) !important; line-height: 1.2 !important; }
+
+/* poster names: whiter and a little bigger */
+button.group > div:last-child > div:first-child { font-family: var(--pv-title-font, 'Barlow Condensed', sans-serif) !important; font-weight: var(--pv-title-weight, 700) !important; text-transform: var(--pv-title-case, none) !important; letter-spacing: var(--pv-title-track, .01em) !important; font-size: var(--pv-title-size, 19px) !important; line-height: 1.18 !important; color: #FFFFFF !important; }
+
+/* the popup (Netflix-style) */
+#pv-pop { position: fixed; z-index: 9998; display: none; background: #181818; border-radius: 6px; overflow: hidden; box-shadow: 0 20px 56px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.08); transform-origin: center; }
+#pv-pop.on { display: block; animation: pvpop .3s cubic-bezier(.34,1.3,.64,1) both; }
+@keyframes pvpop { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
+#pv-pop .pv-media { position: relative; aspect-ratio: 16 / 9; background: #0c0c0c; cursor: pointer; }
+#pv-pop .pv-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#pv-pop .pv-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, #181818 0%, rgba(24,24,24,0) 55%); }
+#pv-pop .pv-name { position: absolute; left: 14px; bottom: 10px; right: 54px; z-index: 2; font: 700 24px/1.05 'Barlow Condensed', sans-serif; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+#pv-pop .pv-vol { position: absolute; right: 12px; bottom: 12px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.55); background: rgba(0,0,0,.4); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+#pv-pop .pv-body { padding: 12px 16px 16px; }
+#pv-pop .pv-actions { display: flex; align-items: center; gap: 8px; }
+#pv-pop .pv-actions .sp { flex: 1; }
+#pv-pop .pv-b { width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(42,42,42,.6); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: border-color .15s, background .15s, transform .15s; padding: 0; }
+#pv-pop .pv-b:hover { border-color: #fff; background: rgba(70,70,70,.8); }
+#pv-pop .pv-b:active { transform: scale(.94); }
+#pv-pop .pv-b.play { background: #fff; border-color: #fff; color: #000; }
+#pv-pop .pv-b.play:hover { background: #e6e6e6; }
+#pv-pop .pv-b.on { border-color: #D6502F; color: #D6502F; }
+#pv-pop .pv-meta { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 500 14px Inter, sans-serif; color: #BDBDB6; }
+#pv-pop .pv-meta .cert { border: 1px solid rgba(255,255,255,.4); padding: 0 6px; font-size: 12px; color: #fff; }
+#pv-pop .pv-meta .star { color: #fff; }
+#pv-pop .pv-tags { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 600 14px Inter, sans-serif; color: #fff; }
+#pv-pop .pv-tags i { width: 4px; height: 4px; border-radius: 50%; background: #777; display: inline-block; }
+@media (hover: none) { #pv-pop { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { #pv-pop.on { animation: none; } }
+
+/* font picker */
 #pv-fonts { position: fixed; right: 12px; bottom: 76px; z-index: 9999; background: #141414; border: 1px solid #2E2E2E; border-radius: 6px; padding: 8px; width: 188px; font: 500 11px Inter, sans-serif; color: #BDBDB6; }
 #pv-fonts b { display: block; margin: 0 0 6px 2px; color: #FAFAF7; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 10px; }
 #pv-fonts button { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 7px 9px; border-radius: 3px; background: transparent; color: #FAFAF7; border: 1px solid transparent; cursor: pointer; font-size: 14px; }
@@ -29,27 +40,81 @@ button.group > div:last-child > div:first-child { font-family: var(--pv-title-fo
 </style>
 <script>
 (function () {
+  /* ---- font picker ---- */
   var F = [
-    ['Inter (current)',      'Inter, system-ui, sans-serif',                 500, 'none',      '0',     '14px'],
-    ['Barlow Cond. Bold (my pick)', "'Barlow Condensed', sans-serif",       700, 'none',      '.01em', '17px'],
-    ['Barlow Cond. UPPERCASE', "'Barlow Condensed', sans-serif",            600, 'uppercase', '.03em', '16px'],
-    ['Oswald',               "Oswald, sans-serif",                           500, 'uppercase', '.02em', '15px'],
-    ['Bebas Neue',           "'Bebas Neue', sans-serif",                     400, 'uppercase', '.04em', '18px'],
-    ['Archivo Narrow',       "'Archivo Narrow', sans-serif",                 600, 'none',      '0',     '15px'],
-    ['Space Grotesk',        "'Space Grotesk', sans-serif",                  600, 'none',      '-.01em','14px'],
-    ['Playfair Display',     "'Playfair Display', Georgia, serif",           600, 'none',      '0',     '15px']
+    ['Barlow Cond. Bold (my pick)', "'Barlow Condensed', sans-serif", 700, 'none', '.01em', '19px'],
+    ['Barlow Cond. UPPERCASE', "'Barlow Condensed', sans-serif", 600, 'uppercase', '.03em', '18px'],
+    ['Oswald', "Oswald, sans-serif", 500, 'uppercase', '.02em', '16px'],
+    ['Archivo Narrow', "'Archivo Narrow', sans-serif", 600, 'none', '0', '17px'],
+    ['Space Grotesk', "'Space Grotesk', sans-serif", 600, 'none', '-.01em', '16px'],
+    ['Inter (old)', 'Inter, system-ui, sans-serif', 500, 'none', '0', '14px']
   ];
-  function apply(i) {
+  function applyFont(i) {
     var f = F[i], r = document.documentElement.style;
     r.setProperty('--pv-title-font', f[1]); r.setProperty('--pv-title-weight', f[2]); r.setProperty('--pv-title-case', f[3]); r.setProperty('--pv-title-track', f[4]); r.setProperty('--pv-title-size', f[5]);
     document.querySelectorAll('#pv-fonts button').forEach(function (b, k) { b.setAttribute('aria-pressed', String(k === i)); });
   }
-  function build() {
+  function buildPicker() {
     if (document.getElementById('pv-fonts')) return;
     var d = document.createElement('div'); d.id = 'pv-fonts'; d.innerHTML = '<b>Font under posters</b>';
-    F.forEach(function (f, i) { var b = document.createElement('button'); b.type = 'button'; b.textContent = f[0]; b.style.fontFamily = f[1]; b.style.textTransform = f[3]; b.onclick = function () { apply(i); }; d.appendChild(b); });
-    document.body.appendChild(d); apply(1);
+    F.forEach(function (f, i) { var b = document.createElement('button'); b.type = 'button'; b.textContent = f[0]; b.style.fontFamily = f[1]; b.style.textTransform = f[3]; b.onclick = function () { applyFont(i); }; d.appendChild(b); });
+    document.body.appendChild(d); applyFont(0);
   }
-  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+
+  /* ---- Netflix-style popup ---- */
+  var pop, cur = null, showT = 0, hideT = 0;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function itemOf(btn) { var m = /openDetails\('([^']+)'\)/.exec(btn.getAttribute('onclick') || ''); return m ? (typeof mediaDatabase !== 'undefined' ? mediaDatabase : []).find(function (x) { return x.id === m[1]; }) : null; }
+  function inList(id) { try { return (userWatchlistIds || []).indexOf(id) >= 0; } catch (e) { return false; } }
+  function fill(it) {
+    var tags = (it.genres || []).filter(function (g) { return !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g); }).slice(0, 2);
+    try { var v = VIBES[it.dominantVibe]; if (v) tags.push(v.label); } catch (e) {}
+    var cert = ''; try { cert = typeof certFor === 'function' ? certFor(EXTRAS.cache.get(extrasKeyOf(it)), selectedCountry) : ''; if (cert && typeof cert === 'object') cert = cert.label || cert.text || cert.cert || ''; } catch (e) { cert = ''; }
+    var kind = it.type === 'Series' ? 'Series' : it.type === 'Stand-Up' ? 'Stand-up' : 'Film';
+    pop.innerHTML =
+      '<div class="pv-media" data-a="open"><img alt="" src="' + esc(it.backdrop || it.poster) + '"><div class="pv-name">' + esc(it.title) + '</div><div class="pv-vol"><i class="fa-solid fa-volume-xmark"></i></div></div>' +
+      '<div class="pv-body"><div class="pv-actions">' +
+      '<button class="pv-b play" data-a="open" aria-label="Play and open details"><i class="fa-solid fa-play" style="margin-left:2px"></i></button>' +
+      '<button class="pv-b' + (inList(it.id) ? ' on' : '') + '" data-a="list" aria-label="Add to watchlist"><i class="fa-solid ' + (inList(it.id) ? 'fa-check' : 'fa-plus') + '"></i></button>' +
+      '<button class="pv-b" data-a="like" aria-label="Like"><i class="fa-regular fa-thumbs-up"></i></button><span class="sp"></span>' +
+      '<button class="pv-b" data-a="open" aria-label="More info"><i class="fa-solid fa-chevron-down"></i></button></div>' +
+      '<div class="pv-meta"><span>' + kind + '</span>' + (cert ? '<span class="cert">' + esc(cert) + '</span>' : '') + (it.duration ? '<span>' + esc(it.duration) + '</span>' : '') + (it.rating ? '<span class="star">&#9733; ' + esc(it.rating) + '</span>' : '') + '</div>' +
+      '<div class="pv-tags">' + tags.map(esc).join('<i></i>') + '</div></div>';
+    pop.dataset.id = it.id;
+  }
+  function place(card) {
+    var r = card.getBoundingClientRect(), w = Math.max(300, Math.min(360, r.width * 1.6));
+    pop.style.width = w + 'px';
+    var h = pop.offsetHeight, left = r.left + r.width / 2 - w / 2, top = r.top + r.height / 2 - h / 2;
+    left = Math.max(10, Math.min(innerWidth - w - 10, left)); top = Math.max(72, Math.min(innerHeight - h - 10, top));
+    pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  }
+  function show(card) {
+    var it = itemOf(card); if (!it) return;
+    cur = card; fill(it); pop.classList.remove('on'); pop.style.display = 'block'; pop.style.visibility = 'hidden';
+    place(card); pop.style.visibility = ''; void pop.offsetWidth; pop.classList.add('on');
+  }
+  function hide() { clearTimeout(showT); pop.classList.remove('on'); pop.style.display = 'none'; cur = null; }
+  function buildPopup() {
+    if (document.getElementById('pv-pop') || !matchMedia('(hover: hover)').matches) return;
+    pop = document.createElement('div'); pop.id = 'pv-pop'; document.body.appendChild(pop);
+    document.addEventListener('mouseover', function (e) {
+      var card = e.target.closest && e.target.closest('button.group'), inPop = e.target.closest && e.target.closest('#pv-pop');
+      if (inPop) { clearTimeout(hideT); return; }
+      if (card && card.querySelector('div[class*="aspect-[2/3]"]')) {
+        clearTimeout(hideT);
+        if (card !== cur) { clearTimeout(showT); showT = setTimeout(function () { show(card); }, 320); }
+      } else { clearTimeout(showT); clearTimeout(hideT); hideT = setTimeout(hide, 140); }
+    }, true);
+    window.addEventListener('scroll', function () { if (cur) hide(); }, { passive: true, capture: true });
+    pop.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-a]'); if (!b) return; var id = pop.dataset.id, a = b.dataset.a;
+      if (a === 'open') { hide(); openDetails(id); }
+      else if (a === 'list') { toggleWatchlist(id); var on = inList(id); b.classList.toggle('on', on); b.innerHTML = '<i class="fa-solid ' + (on ? 'fa-check' : 'fa-plus') + '"></i>'; }
+      else if (a === 'like') { b.classList.toggle('on'); b.querySelector('i').className = b.classList.contains('on') ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up'; }
+    });
+  }
+  function init() { buildPicker(); buildPopup(); }
+  if (document.body) init(); else document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
