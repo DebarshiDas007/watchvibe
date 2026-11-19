@@ -1,0 +1,76 @@
+/* WatchVibe "Marquee" theme (direction C): near-black, paper white, one brick-orange accent, heavy condensed headings.
+   Loaded after tailwind.css so it re-colours the utility classes the app already uses (same specificity, later wins, so hover:/focus:
+   variants keep working: no !important on colours, and selectors match whole class names, never "hover:" variants).
+   bg #090909 | surface #141414 | elevated #1E1E1E | line #2E2E2E | text #FAFAF7 (19.0:1) | text-2 #BDBDB6 (10.5:1) | muted #93938C (6.4:1) | accent #D6502F (4.8:1) with black text */
+html:root {
+  --bg: #090909; --surface: #141414; --elev: #1E1E1E; --line: #2E2E2E; --line-strong: #66665F;
+  --text: #FAFAF7; --text-2: #BDBDB6; --muted: #93938C; --accent: #D6502F; --accent-hover: #E5623F; --ink: #000000;
+}
+html, body { background: var(--bg) !important; color: var(--text); }
+header.sticky { background: rgba(9,9,9,.94) !important; border-color: var(--line) !important; }
+
+/* ---- surfaces and lines ---- */
+[class*="bg-[#0B0B0F"], [class*="bg-[#0F0F14"], [class*="bg-[#0E0E12"] { background-color: var(--bg); }
+[class*="bg-[#14141A"], [class*="bg-[#1A1A20"], [class*="bg-[#15151B"] { background-color: var(--surface); }
+[class^="bg-white/["], [class*=" bg-white/["] { background-color: rgba(250,250,247,.05); }
+[class^="ring-white/"], [class*=" ring-white/"] { --tw-ring-color: rgba(250,250,247,.12); }
+[class^="border-white/"], [class*=" border-white/"] { border-color: var(--line); }
+[class*="from-[#0B0B0F"] { --tw-gradient-from: #090909 var(--tw-gradient-from-position); }
+[class*="via-[#0B0B0F"] { --tw-gradient-via-color: #090909; }
+
+/* ---- text: every grey passes 4.5:1 (hover colours still work) ---- */
+[class~="text-white/95"], [class~="text-white/90"], [class~="text-white/85"], [class~="text-white/80"], [class~="text-white/75"], [class~="text-white/70"], [class~="text-white/65"], [class~="text-white/60"], [class~="text-white/55"], [class~="text-white/50"] { color: var(--text-2); }
+[class~="text-white/45"], [class~="text-white/40"], [class~="text-white/35"], [class~="text-white/30"], [class~="text-white/25"], [class~="text-white/20"] { color: var(--muted); }
+.text-white { color: var(--text); }
+.text-\[10px\], .text-\[11px\] { font-size: 12px; }   /* nothing smaller than 12 px */
+
+/* ---- one accent colour: orange replaces purple and pink ---- */
+[class^="text-purple"], [class*=" text-purple"], [class^="text-pink"], [class*=" text-pink"] { color: var(--accent); }
+[class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: rgba(214,80,47,.14); }
+[class~="bg-purple-400"], [class~="bg-purple-500"], [class~="bg-purple-600"] { background-color: var(--accent); color: var(--ink); }
+[class^="ring-purple"], [class*=" ring-purple"] { --tw-ring-color: rgba(214,80,47,.55); }
+[class^="border-purple"], [class*=" border-purple"] { border-color: rgba(214,80,47,.55); }
+.accent-purple-400 { accent-color: var(--accent); }
+::selection { background: var(--accent); color: var(--ink); }
+
+/* gradients: solid orange for fills (progress bar, round swipe button); the soft tinted washes on cards become flat surfaces,
+   and washes laid over a picture disappear */
+[class*="from-purple-4"][class*="to-blue-4"], [class*="from-purple-5"][class*="to-blue-5"] { background-image: none; background-color: var(--accent); }
+[class*="from-purple-500/"][class], [class*="from-purple-400/"][class], [class*="from-pink-500/"][class], [class*="via-blue-500/"][class], [class*="to-blue-500/"][class], [class*="to-blue-400/"][class] { background-image: none; background-color: var(--surface); }
+.absolute.inset-0[class*="from-purple-500/"], .absolute.inset-0[class*="from-pink-500/"] { background-color: transparent; }
+
+/* ---- buttons: flat orange with black text, square, uppercase ---- */
+.bg-white.text-black, button.bg-white { background-color: var(--accent); color: var(--ink); box-shadow: none; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.bg-white.text-black:hover, button.bg-white:hover, .hover\:bg-white\/90:hover { background-color: var(--accent-hover); }
+.rounded-2xl, .rounded-xl, .rounded-lg, .rounded-3xl { border-radius: 2px; }
+button.rounded-full, a.rounded-full, select.rounded-full, input.rounded-full { border-radius: 2px; }
+
+/* ---- type: heavy condensed headings, Inter for reading ---- */
+.font-display { font-weight: 400; text-transform: uppercase; letter-spacing: .02em; }
+.top-nav-pill { text-transform: uppercase; letter-spacing: .06em; }
+
+/* ---- wordmark ---- */
+header button[aria-label="WatchVibe home"] { font-family: 'Anton', Impact, sans-serif !important; font-size: 24px !important; text-transform: uppercase !important; letter-spacing: .04em !important; color: var(--text) !important; }
+header button[aria-label="WatchVibe home"] span { color: var(--text) !important; }
+header button[aria-label="WatchVibe home"]::before { content: ""; display: inline-block; width: 6px; height: 20px; background: var(--accent); margin-right: 8px; vertical-align: -2px; }
+
+/* ---- top navigation: orange underline marks the current page ---- */
+.top-nav-pill[aria-current="page"] { background: transparent !important; color: var(--text) !important; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0 !important; }
+
+/* ---- poster names: white, bold condensed, two lines at most ---- */
+button.group > div:last-child > div:first-child { font-family: 'Barlow Condensed', 'Inter', sans-serif; font-weight: 700; letter-spacing: .01em; font-size: 19px; line-height: 1.18; color: #FFFFFF; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row-scroll { padding-top: 14px !important; margin-top: -14px !important; padding-left: 8px !important; padding-right: 8px !important; margin-left: -8px !important; }
+button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: 0 0 0 2px var(--accent); }
+button.group:hover > div[class*="aspect-[2/3]"] { transform: none; }   /* the hover card (hover-card.js) replaces the small lift */
+
+/* tablet: uppercase tracking makes the top menu wider, so tighten it there */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .top-nav-pill { letter-spacing: .02em; padding-left: 8px; padding-right: 8px; }
+  header button[aria-label="WatchVibe home"] { font-size: 20px !important; }
+}
+
+/* ---- touch targets: at least 44 px on phones ---- */
+@media (max-width: 767px) {
+  button.rounded-full, a.rounded-full, select { min-height: 44px; }
+  button.h-9.w-9, button.h-8.w-8, button.h-10.w-10 { min-width: 44px; min-height: 44px; }
+}

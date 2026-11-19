@@ -45,7 +45,8 @@ window.runProductSweep = async () => {
   if (hw < 3000) problems.push(`only ${hw} Hollywood films (want 3000+)`); else passed.push(`${hw} Hollywood films`);
   if (ind < 2000) problems.push(`only ${ind} Indian films (want 2000+)`); else passed.push(`${ind} Indian films`);
   const bad = { noPoster: 0, noSynopsis: 0, noCast: 0, placeholder: 0 };
-  db.forEach(m => { if (!m.poster) bad.noPoster++; if (!m.synopsis) bad.noSynopsis++; if (!m.cast || !m.cast.length) bad.noCast++; if (/TMDB Featured|Creator \/ Showrunner|^Director$|^Showrunner$|Live daily trending/.test((m.director || '') + (m.synopsis || ''))) bad.placeholder++; });
+  const live = m => /^tmdb-(m|tv)-/.test(String(m.id));   // titles added by the daily trending sync: details are loaded when opened
+  db.forEach(m => { if (!m.poster) bad.noPoster++; if (!m.synopsis) bad.noSynopsis++; if ((!m.cast || !m.cast.length) && !live(m)) bad.noCast++; if (/TMDB Featured|Creator \/ Showrunner|^Director$|^Showrunner$|Live daily trending/.test((m.director || '') + (m.synopsis || ''))) bad.placeholder++; });
   Object.entries(bad).forEach(([k, v]) => { if (v) problems.push(`${v} titles with ${k}`); }); if (!Object.values(bad).some(Boolean)) passed.push('every title has poster, story, cast and no placeholders');
   // vibe filters must not match everything
   for (const v of ['mind_blown', 'fun_time', 'emotional_damage', 'hidden_gem']) { const n = db.filter(m => m.dominantVibe === v).length; if (n === 0 || n > db.length * 0.7) problems.push(`vibe ${v} matches ${n} of ${db.length}`); }
