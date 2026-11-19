@@ -689,6 +689,7 @@
       <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watchlist" aria-label="Watchlist"><i class="fa-solid fa-bookmark text-[13px]"></i><span class="hidden min-[1500px]:inline">Watchlist</span></button>
       <button type="button" onclick="switchTab('profile')" id="desk-tab-profile" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Profile" aria-label="Profile"><i class="fa-solid fa-user text-[13px]"></i><span class="hidden min-[1500px]:inline">Profile</span></button>
       <button type="button" onclick="switchTab('daily')" id="top-daily" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white lg:inline-flex lg:px-3" title="Daily Challenge" aria-label="Daily Challenge"><i class="fa-solid fa-bolt text-[13px]"></i><span class="hidden min-[1500px]:inline">Daily</span></button>
+      <button type="button" onclick="openGames()" id="top-games" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white lg:inline-flex lg:px-3" title="Game night" aria-label="Game night"><i class="fa-solid fa-gamepad text-[13px]"></i><span class="hidden min-[1500px]:inline">Games</span></button>
       <button type="button" onclick="toggleNavMore(event)" id="navMore" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white md:inline-flex lg:hidden" title="More" aria-label="More" aria-haspopup="menu"><i class="fa-solid fa-ellipsis"></i></button>
     </nav>
 
@@ -1461,7 +1462,8 @@
       }
       try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+          realtime: { params: { eventsPerSecond: 20 } }
         });
         window.supabaseClient = supabaseClient;
 
@@ -4035,6 +4037,7 @@ function posterCard(item, opts) {
         <div class="space-y-14">
           <div class="space-y-5">${mobileTabs}<div class="flex justify-end">${toolbar}</div>${heroHtml}</div>
           ${dailyCardHtml()}
+          ${gamesCardHtml()}
           ${moodHtml}
           <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
           ${watchRowHtml()}
@@ -4527,6 +4530,15 @@ function posterCard(item, opts) {
     })();
     function dcProgressKey() { return DC_LEVELS.map(l => { const s = dcStateOf(l); return s ? (s.finished ? 'f' + s.score : s.cur + ':' + s.score) : '-'; }).join(','); }
 
+    // the Game night card on the home page
+    function gamesCardHtml() {
+      return `
+        <section class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-transparent p-4 ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5">
+          <div class="flex items-center gap-4"><span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white sm:flex"><i class="fa-solid fa-gamepad"></i></span>
+            <div class="min-w-0"><div class="font-display text-[17px] leading-snug text-white lg:text-xl"><i class="fa-solid fa-gamepad mr-1.5 text-[15px] text-pink-300 sm:hidden"></i>Game night with friends</div><div class="mt-1 text-sm text-white/55">Draw the Movie, Movie Fibber and Who's the Impostor? Start a room and send the link.</div></div></div>
+          <button type="button" onclick="openGames()" class="w-full shrink-0 rounded-full bg-white py-2.5 text-sm font-semibold text-black transition active:scale-[.98] sm:w-auto sm:px-6 sm:hover:bg-white/90">Start a room</button>
+        </section>`;
+    }
     // the home-page card
     function dailyCardHtml() {
       const streak = dcStreakNow();
@@ -4737,7 +4749,7 @@ function posterCard(item, opts) {
       m.className = 'fixed z-[55] w-56 overflow-hidden rounded-2xl bg-[#14141A] p-1.5 shadow-2xl ring-1 ring-white/10';
       m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(innerWidth - 232, r.left)) + 'px';
       const item = (icon, label, fn) => `<button type="button" role="menuitem" onclick="closeNavMore(); ${fn}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"><i class="fa-solid ${icon} w-4 text-center text-[13px] text-white/50"></i>${label}</button>`;
-      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
+      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-gamepad', 'Game night', 'openGames()') + item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
       document.body.appendChild(m);
       setTimeout(() => document.addEventListener('click', closeNavMore, { once: true }), 0);
     }
@@ -6836,5 +6848,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     refreshViews();
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
+  <script src="games.js?v=1" defer></script>
 </body>
 </html>

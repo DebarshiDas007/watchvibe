@@ -158,3 +158,10 @@ Open / next, in the order we discussed:
 - Phone home: compact Daily card, shorter mood placeholder.
 - Could not test real video playback in the hidden browser pane; logic tested with simulated player messages.
 
+
+## v78 - Game night (multiplayer)
+- web_live_build/games.js (loaded deferred; Tailwind scans it): rooms over Supabase Realtime channel 'gn:CODE' (broadcast event 'g' + presence), join by ?game=CODE link or code, guests with a name, up to 10 players. Host = earliest present player; host runs the state machine and broadcasts full state (gnUpdate/gnPack, time left sent as a duration); next player takes over if the host leaves.
+- Games: Draw the Movie (skribbl-style: drawer picks 1 of 3 films, 60-120 s, strokes sent every 80 ms, host checks guesses, private 'very close' hint, letter hints at 50%/75%, faster = more points, drawer +60 per guesser), Movie Fibber (write fake plot, vote real one: +200 for real, +100 per player fooled), Who's the Impostor? (one player gets a similar film via dcSimilar, clue laps, vote, caught impostor guesses the film for +150, escaped impostor +300).
+- Entry: top-bar Games button (lg), More menu, home card 'Game night with friends'. Realtime eventsPerSecond raised to 20.
+- Limits: game state (incl. secret words) is broadcast to all clients, so a technical player could peek in dev tools; no voice; scores not saved.
+
