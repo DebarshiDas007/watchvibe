@@ -30,3 +30,9 @@ WatchVibe is a movie and series discovery web app (installable PWA). Live: https
 
 ## Definition of done for any change
 syntax check passes, `npm run build:css`, `await runProductSweep()` shows `problems: []` at 375/768/1440, `sw.js` cache version bumped, deployed, checked live, HANDOFF.md entry, committed and pushed.
+
+## Team roles (.claude/agents)
+- lead: the only one who edits index.html and games.js.
+- tester, reviewer: read-only reports.
+- designer: writes only inside design/ (mockups, critiques, build specs).
+- data-owner: scripts/ and the film data files only.
