@@ -228,3 +228,11 @@ Open / next, in the order we discussed:
 - Small difference: admin.html does not load theme.css, so WATCH there is pure white (#FFFFFF) instead of paper white (#FAFAF7).
 - Seen during the live check (not from v85): leaving a game room returned to the Daily Challenge view and the next question started its timer without a tap.
 - Push: see the commit after this entry (GitHub push was returning 403).
+
+## Resume notes (saved after v85)
+- Live site is v85 (already deployed earlier today): verdict fix (v84), sign-in-style logo in header and admin (v85).
+- BLOCKED: `git push origin main` returns 403. Local-only commits: 12aaabd, c62fe82, e5e1b53, 7f27f63, 9493732 and this note. Fix the GitHub login, then push.
+- Next: apply supabase/admin_analytics_event_types.sql to live Supabase (lbtuikgpgcgrizijfiyl) once the user says yes.
+- Open: Daily Challenge timer starts after leaving a game room without a tap.
+- Open: verdict clear is instant (no fade).
+- Not verified live: clearing a verdict (signed-in user), real phones, multi-player rooms.
