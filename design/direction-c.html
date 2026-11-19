@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WatchVibe direction C: Marquee</title>
+<!-- PREVIEW ONLY. In the app: Inter is already self-hosted; Anton (OFL, one weight) would be added to web_live_build/vendor/fonts as one latin-subset woff2 and Fraunces removed. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Direction C: Marquee. Tokens ===== */
+:root{
+  --bg:#090909; --surface:#141414; --elev:#1E1E1E;
+  --line:#2E2E2E;          /* rules and hairlines */
+  --line-strong:#66665F;   /* control outlines, 3.2:1 on surface */
+  --text:#FAFAF7;          /* paper white, 19.0:1 */
+  --text-2:#BDBDB6;        /* 10.5:1 */
+  --muted:#93938C;         /* 6.4:1 on bg, 5.4:1 on elevated */
+  --accent:#FF5A36;        /* vermilion: primary button, index numbers, active tab. 6.4:1 on bg */
+  --accent-hover:#FF7352; --accent-press:#E84A28;
+  --on-accent:#0A0A0A;     /* 6.4:1 on vermilion (white on it is only 3.0:1, so never white text) */
+  --v-must:#B9F26E; --v-mind:#BBA9FF; --v-fun:#72E4F2; --v-emo:#FF93A6; --v-gem:#FFCB52; --v-pass:#BDBDB6;
+  --font-ui:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --font-display:"Anton","Impact","Arial Narrow",sans-serif;
+  --r-poster:2px; --r-card:4px; --r-btn:4px; --r-chip:4px; --r-input:4px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+  --ease:cubic-bezier(.3,0,0,1); --d1:100ms; --d2:180ms; --d3:280ms;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#000;color:var(--text);font:400 15px/22px var(--font-ui);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+a{color:inherit;text-decoration:none}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter}
+:focus-visible{outline:2px solid var(--text);outline-offset:2px;box-shadow:0 0 0 5px var(--accent)}
+.display{font-family:var(--font-display);font-weight:400;text-transform:uppercase;letter-spacing:.005em}
+
+/* ===== Document chrome ===== */
+.doc{max-width:1280px;margin:0 auto;padding:40px 24px 8px}
+.doc h1{font:400 64px/60px var(--font-display);text-transform:uppercase;margin:0}
+.doc h1 span{color:var(--accent)}
+.doc .mood{color:var(--text-2);margin:10px 0 20px;max-width:760px}
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0;border-top:1px solid var(--line)}
+.panel{background:transparent;border-bottom:1px solid var(--line);padding:20px 20px 20px 0}
+.doc-grid .panel+.panel{padding-left:20px;border-left:1px solid var(--line)}
+.panel h3{margin:0 0 12px;font:700 12px/16px var(--font-ui);color:var(--accent);text-transform:uppercase;letter-spacing:.14em}
+.sw{display:flex;align-items:center;gap:10px;font-size:13px;line-height:18px;margin:6px 0}
+.sw i{width:28px;height:28px;border:1px solid var(--line);flex:none}
+.sw b{font-weight:600;min-width:84px}
+.sw span{color:var(--muted)}
+.stage{max-width:1280px;margin:0 auto;padding:24px}
+.stage-label{font:700 12px/16px var(--font-ui);color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin:0 0 12px}
+.frame{border:1px solid var(--line);overflow:hidden;background:var(--bg)}
+.two{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start}
+.two>*{min-width:0}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}.doc-grid .panel+.panel{padding-left:0;border-left:0}}
+
+/* ===== App ===== */
+.app{background:var(--bg);color:var(--text)}
+.wrap{padding:0 var(--s6)}
+.wordmark{display:inline-flex;align-items:center;gap:10px;font:400 28px/1 var(--font-display);letter-spacing:.02em;text-transform:uppercase;color:var(--text);min-height:44px}
+.wordmark .bar{width:10px;height:26px;background:var(--accent)}
+.topbar{height:64px;display:flex;align-items:center;gap:var(--s5);border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:5}
+.tabs{display:flex;gap:2px;flex:1;min-width:0;align-self:stretch}
+.tab{min-width:44px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;font:700 12.5px/16px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);position:relative;transition:color var(--d2) var(--ease);min-height:44px}
+.tab:hover{color:var(--text)}
+.tab.is-active{color:var(--text)}
+.tab.is-active::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:var(--accent)}
+.search{display:flex;align-items:center;gap:10px;height:44px;width:220px;flex:none;white-space:nowrap;overflow:hidden;padding:0 14px;border-radius:var(--r-input);border:1px solid var(--line-strong);color:var(--muted);font-size:14px}
+.avatar{width:44px;height:44px;display:grid;place-items:center;background:var(--text);color:var(--bg);font:400 20px/1 var(--font-display)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:48px;padding:0 22px;border-radius:var(--r-btn);font:700 13.5px/16px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;transition:background-color var(--d2) var(--ease),transform var(--d1) var(--ease),color var(--d2) var(--ease),border-color var(--d2) var(--ease);white-space:nowrap}
+.btn svg.i{width:16px;height:16px}
+.btn-primary{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover,.btn-primary.is-hover{background:var(--accent-hover)}
+.btn-primary:active,.btn-primary.is-pressed{transform:translateY(1px);background:var(--accent-press)}
+.btn-secondary{color:var(--text);box-shadow:inset 0 0 0 1.5px var(--text)}
+.btn-secondary:hover,.btn-secondary.is-hover{background:var(--text);color:var(--bg)}
+.btn-secondary:active,.btn-secondary.is-pressed{transform:translateY(1px)}
+.btn-ghost{color:var(--text);padding:0 4px;text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1.5px}
+.btn-ghost:hover,.btn-ghost.is-hover{color:var(--accent)}
+.btn.is-focus{outline:2px solid var(--text);outline-offset:2px;box-shadow:0 0 0 5px var(--accent)}
+.btn:disabled,.btn.is-disabled{background:var(--elev);color:var(--muted);box-shadow:none;cursor:not-allowed;transform:none}
+.btn.is-loading{color:transparent;position:relative;pointer-events:none}
+.btn.is-loading::after{content:"";position:absolute;left:22px;right:22px;top:50%;height:2px;background:linear-gradient(90deg,var(--on-accent) 0 30%,transparent 30%);background-size:200% 100%;animation:bar 1s linear infinite}
+@keyframes bar{from{background-position:100% 0}to{background-position:-100% 0}}
+.btn-sm{height:44px;padding:0 16px}
+.icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;border:1.5px solid var(--text);color:var(--text);background:var(--bg)}
+
+/* Chips */
+.chips{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:none;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{height:40px;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:var(--r-chip);border:1px solid var(--line-strong);color:var(--text);font:600 14px/20px var(--font-ui);white-space:nowrap;flex:none;transition:all var(--d2) var(--ease)}
+.chip:hover{border-color:var(--text)}
+.chip .dot{width:8px;height:8px;background:var(--c,var(--text-2))}
+.chip.is-on{background:var(--c,var(--text));border-color:var(--c,var(--text));color:#0A0A0A}
+.chip.is-on .dot{background:#0A0A0A}
+
+/* Hero: editorial split */
+.hero{display:grid;grid-template-columns:5fr 7fr;min-height:520px;border-bottom:1px solid var(--line)}
+.hero-text{display:flex;flex-direction:column;justify-content:flex-end;padding:var(--s6) var(--s6) var(--s6)}
+.hero-pic{position:relative;overflow:hidden;background:var(--surface)}
+.hero-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:60% 20%}
+.hero-pic .cap{position:absolute;left:16px;bottom:14px;font:700 12px/16px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;background:var(--bg);padding:6px 10px}
+.kicker{font:700 12px/16px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
+.kicker b{color:var(--accent);font-weight:700}
+.hero-title{font:400 132px/.9 var(--font-display);text-transform:uppercase;letter-spacing:-.005em;margin:16px 0 18px}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;color:var(--text-2);font-size:14px;line-height:20px}
+.cert{border:1.5px solid var(--text);padding:0 6px;font:700 12px/18px var(--font-ui);color:var(--text)}
+.rating{color:var(--text);font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.rating svg{width:14px;height:14px;fill:var(--text);stroke:none}
+.actions{display:flex;gap:var(--s3);margin-top:var(--s5);flex-wrap:wrap}
+.pager{display:flex;gap:2px;margin-top:var(--s6)}
+.pager button{min-width:44px;height:44px;font:700 12px/16px var(--font-ui);letter-spacing:.08em;color:var(--muted);border-top:2px solid var(--line);text-align:left;padding:8px 0 0}
+.pager button.on{color:var(--text);border-top-color:var(--accent)}
+
+/* Sections */
+.content{display:flex;flex-direction:column;gap:var(--s7);padding-top:var(--s5);padding-bottom:var(--s8)}
+.sec-head{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:var(--s4);border-top:1px solid var(--line);padding-top:var(--s4);margin-bottom:var(--s4)}
+.sec-head .no{font:700 12px/16px var(--font-ui);letter-spacing:.14em;color:var(--accent);align-self:start;padding-top:6px}
+.sec-head h2{font:400 40px/40px var(--font-display);text-transform:uppercase;margin:0}
+.sec-head p{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:20px}
+.link{display:inline-flex;align-items:center;gap:6px;height:44px;font:700 12.5px/16px var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
+.link:hover{color:var(--accent)}
+.track{display:flex;gap:var(--s4);overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.track::-webkit-scrollbar{display:none}
+.poster{flex:none;width:180px}
+.poster .img{aspect-ratio:2/3;border-radius:var(--r-poster);overflow:hidden;background:var(--surface);position:relative;outline:1px solid transparent;outline-offset:3px;transition:outline-color var(--d2) var(--ease)}
+.poster .img img{width:100%;height:100%;object-fit:cover}
+.poster:hover .img{outline-color:var(--text)}
+.poster .t{margin-top:10px;font:600 14px/20px var(--font-ui);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.poster .m{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--muted);margin-top:2px}
+.poster .m .dot{width:6px;height:6px;background:var(--c)}
+.poster .m .r{margin-left:auto;color:var(--text);font-weight:700}
+
+/* Cards */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+.card{background:var(--surface);border-radius:var(--r-card);overflow:hidden}
+.dc{border-top:4px solid var(--accent);padding:var(--s5);display:grid;grid-template-columns:auto 1fr;gap:var(--s5);align-items:start}
+.dc .big{font:400 112px/.85 var(--font-display);color:var(--accent)}
+.dc h3,.film h3{font:400 40px/40px var(--font-display);text-transform:uppercase;margin:8px 0 6px}
+.dc .sub{color:var(--muted);font-size:14px;line-height:20px}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin:var(--s4) 0}
+.lvl{padding:10px 0 0}
+.lvl+.lvl{border-left:1px solid var(--line);padding-left:12px}
+.lvl small{display:block;font:700 12px/16px var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2)}
+.lvl b{font:400 30px/34px var(--font-display);color:var(--text)}
+.lvl b span{color:var(--muted);font-size:18px}
+.film{display:grid;grid-template-columns:150px 1fr;gap:var(--s5);padding:var(--s5);border-top:4px solid var(--text)}
+.film .p{border-radius:var(--r-poster);overflow:hidden;aspect-ratio:2/3;background:var(--elev)}
+.film .p img{width:100%;height:100%;object-fit:cover}
+.vtag{display:inline-flex;align-items:center;height:24px;padding:0 8px;font:700 12px/16px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;background:var(--c);color:#0A0A0A}
+.spec{display:grid;grid-template-columns:repeat(4,auto);justify-content:start;gap:4px 24px;margin-top:12px}
+.spec small{display:block;font:700 11.5px/14px var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.spec span{font-weight:600;font-size:14px;line-height:20px}
+.film .cast{color:var(--text-2);font-size:14px;line-height:20px;margin-top:12px}
+.film .cast b{color:var(--text);font-weight:600}
+.film .actions{margin-top:var(--s4)}
+.gn{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);padding:var(--s4) var(--s5);border-left:4px solid var(--accent)}
+.gn b{display:block;font:400 26px/30px var(--font-display);text-transform:uppercase}
+.gn span{color:var(--muted);font-size:14px;line-height:20px}
+
+/* ===== Phone ===== */
+.phone{width:377px;height:814px;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none}
+.phone::-webkit-scrollbar{display:none}
+.phone .wrap{padding:0 var(--s4)}
+.phone .topbar{height:56px;gap:var(--s2);justify-content:space-between}
+.phone .wordmark{font-size:24px}
+.phone .wordmark .bar{height:22px;width:8px}
+.phone .top-actions{display:flex;gap:6px}
+.phone .top-actions .icon-plain{width:44px;height:44px;display:grid;place-items:center}
+.phone .seg{display:flex;gap:2px;padding:0 var(--s2);border-bottom:1px solid var(--line)}
+.phone .seg .tab{height:48px}
+.phone .seg .tab.is-active::after{bottom:-1px}
+.phone .hero{grid-template-columns:1fr;min-height:0}
+.phone .hero-pic{aspect-ratio:16/11;order:-1}
+.phone .hero-text{padding:var(--s4) var(--s4) var(--s5)}
+.phone .hero-title{font-size:72px;margin:10px 0 12px}
+.phone .actions .btn{flex:1}
+.phone .pager{margin-top:var(--s4)}
+.phone .pager button{flex:1}
+.phone .chips{padding:2px var(--s4)}
+.phone .chip{height:44px}
+.phone .content{gap:40px;padding-bottom:96px}
+.phone .poster{width:132px}
+.phone .sec-head{gap:var(--s3)}
+.phone .sec-head h2{font-size:30px;line-height:30px}
+.phone .dc{grid-template-columns:1fr;gap:0;padding:var(--s4)}
+.phone .dc .big{font-size:80px;margin-bottom:10px}
+.phone .dc h3,.phone .film h3{font-size:32px;line-height:32px}
+.phone .dc .actions .btn{flex:1}
+.phone .film{grid-template-columns:100px 1fr;gap:var(--s4);padding:var(--s4)}
+.phone .spec{grid-template-columns:repeat(2,auto)}
+.phone .film .actions{grid-column:1/-1;margin-top:0}
+.phone .film .actions .btn{flex:1}
+.bottomnav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);height:64px;background:var(--bg);border-top:1px solid var(--line)}
+.bottomnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:700 11px/14px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);min-height:44px;position:relative}
+.bottomnav a.is-active{color:var(--text)}
+.bottomnav a.is-active::before{content:"";position:absolute;top:-1px;left:30%;right:30%;height:3px;background:var(--accent)}
+
+/* ===== States ===== */
+.states{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.states .panel{padding:20px 0}
+.row-states{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center}
+.state-label{font:700 12px/16px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.skel{width:132px}
+.skel .img,.skel .l1,.skel .l2{background:var(--elev);position:relative;overflow:hidden}
+.skel .img::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--accent);transform-origin:left;animation:load 1.2s var(--ease) infinite}
+@keyframes load{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.skel .img{aspect-ratio:2/3}
+.skel .l1{height:12px;margin-top:12px;width:80%}
+.skel .l2{height:10px;margin-top:8px;width:50%}
+.empty{padding:var(--s5) 0}
+.empty .huge{font:400 96px/.85 var(--font-display);color:var(--elev);-webkit-text-stroke:1.5px var(--line-strong);text-transform:uppercase}
+.empty h4{margin:12px 0 4px;font:400 30px/32px var(--font-display);text-transform:uppercase}
+.empty p{margin:0 0 var(--s4);color:var(--muted);font-size:14px;line-height:20px;max-width:320px}
+.error{display:flex;gap:var(--s3);align-items:center;justify-content:space-between;padding:12px 12px 12px 16px;border-left:4px solid var(--accent);background:var(--surface);font-size:14px;line-height:20px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0s!important;animation-iteration-count:1!important;transition-duration:0s!important}
+}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr}.search{width:44px;padding:0 12px;color:transparent}.desktop .hero-title{font-size:96px}}
+@media (max-width:820px){.desktop .tabs{display:none}.desktop .hero{grid-template-columns:1fr}.desktop .hero-pic{aspect-ratio:16/9;order:-1}.desktop .hero-title{font-size:72px}.desktop .dc{grid-template-columns:1fr}}
+/* the desktop preview keeps its desktop layout on small screens and scrolls inside its own frame; the page itself never scrolls sideways */
+.frame.desktop{overflow-x:auto}.frame.desktop>.app{min-width:1100px}
+@media (max-width:440px){.states .panel{grid-template-columns:1fr!important}.stage{padding:16px 0}.stage-label{padding:0 16px}.phone{width:100%;border-left:0;border-right:0;border-radius:0}.doc{padding:24px 16px 8px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/></symbol>
+</svg>
+
+<header class="doc">
+  <h1>C. Marquee<span>.</span></h1>
+  <p class="mood">A film-festival programme in your pocket: black, paper white and one vermilion. Condensed headlines, rules instead of boxes, square corners. Loud on purpose, so the restraint has to be in everything else.</p>
+  <div class="doc-grid">
+    <div class="panel">
+      <h3>Colour tokens (contrast on bg)</h3>
+      <div class="sw"><i style="background:#090909"></i><b>bg</b><span>#090909</span></div>
+      <div class="sw"><i style="background:#141414"></i><b>surface</b><span>#141414</span></div>
+      <div class="sw"><i style="background:#1E1E1E"></i><b>elevated</b><span>#1E1E1E</span></div>
+      <div class="sw"><i style="background:#2E2E2E"></i><b>rule</b><span>#2E2E2E · strong #66665F (3.2:1)</span></div>
+      <div class="sw"><i style="background:#FAFAF7"></i><b>text</b><span>#FAFAF7 · 19.0:1</span></div>
+      <div class="sw"><i style="background:#BDBDB6"></i><b>text-2</b><span>#BDBDB6 · 10.5:1</span></div>
+      <div class="sw"><i style="background:#93938C"></i><b>muted</b><span>#93938C · 6.4:1 (5.4 on elevated)</span></div>
+      <div class="sw"><i style="background:#FF5A36"></i><b>vermilion</b><span>#FF5A36 · 6.4:1 · black text on it 6.4:1</span></div>
+    </div>
+    <div class="panel">
+      <h3>Vibes as solid labels</h3>
+      <div class="sw"><i style="background:#B9F26E"></i><b>Must watch</b><span>black text on it 15.1:1</span></div>
+      <div class="sw"><i style="background:#BBA9FF"></i><b>Mind blown</b><span>9.7:1</span></div>
+      <div class="sw"><i style="background:#72E4F2"></i><b>Fun time</b><span>13.3:1</span></div>
+      <div class="sw"><i style="background:#FF93A6"></i><b>Emotional</b><span>9.4:1</span></div>
+      <div class="sw"><i style="background:#FFCB52"></i><b>Hidden gem</b><span>13.1:1</span></div>
+      <p style="color:var(--muted);font-size:13px;line-height:18px;margin:10px 0 0">Flat, square, black type: like coloured section tabs in a printed programme. Only one per card.</p>
+    </div>
+    <div class="panel">
+      <h3>Type: Anton + Inter</h3>
+      <div style="font:400 56px/52px var(--font-display);text-transform:uppercase">Display 132/72</div>
+      <div style="font:400 34px/36px var(--font-display);text-transform:uppercase">Section 40 / 30</div>
+      <div style="font:700 13.5px/18px var(--font-ui);letter-spacing:.08em;text-transform:uppercase">Label 13.5 bold caps</div>
+      <div style="font:400 15px/22px var(--font-ui);color:var(--text-2)">Body 15/22 Inter</div>
+      <div style="font:400 13px/18px var(--font-ui);color:var(--muted)">Meta 13/18 · caption 12/16 (minimum)</div>
+      <p style="color:var(--muted);font-size:13px;line-height:18px;margin:10px 0 0">Anton only at 24 px and above, always uppercase. One file, one weight.</p>
+    </div>
+  </div>
+</header>
+
+<section class="stage">
+  <h2 class="stage-label">Desktop · 1280 px</h2>
+  <div class="frame desktop">
+    <div class="app">
+      <div class="topbar wrap">
+        <a href="#" class="wordmark" aria-label="WatchVibe home"><span class="bar" aria-hidden="true"></span>Watchvibe</a>
+        <nav class="tabs" aria-label="Primary">
+          <a href="#" class="tab is-active" aria-current="page">Home</a><a href="#" class="tab">Movies</a><a href="#" class="tab">Series</a><a href="#" class="tab">Stand-up</a><a href="#" class="tab">Daily</a><a href="#" class="tab">Game night</a><a href="#" class="tab">Watchlist</a>
+        </nav>
+        <div class="search"><svg class="i"><use href="#i-search"/></svg>Search titles, actors, moods</div>
+        <button class="avatar" aria-label="Profile">D</button>
+      </div>
+
+      <section class="hero" aria-label="Featured">
+        <div class="hero-text">
+          <div class="kicker"><b>01 / 05</b> · Trending now</div>
+          <h1 class="hero-title">Madden</h1>
+          <div class="meta"><span class="cert">R</span><span>2026</span><span>Drama · History · Comedy</span><span class="rating"><svg><use href="#i-star"/></svg>8.1</span></div>
+          <div class="actions">
+            <button class="btn btn-primary">View details</button>
+            <button class="btn btn-secondary"><svg class="i"><use href="#i-plus"/></svg>Watchlist</button>
+          </div>
+          <div class="pager" aria-label="Featured titles"><button class="on" aria-current="true">01</button><button>02</button><button>03</button><button>04</button><button>05</button></div>
+        </div>
+        <div class="hero-pic"><img src="https://image.tmdb.org/t/p/w1280/lRsapglJZIyMfGl8oQyNASlZqDC.jpg" alt=""><span class="cap">Trailer · sound off</span></div>
+      </section>
+
+      <div class="content wrap">
+        <div class="chips" role="group" aria-label="Filter by vibe">
+          <button class="chip is-on" aria-pressed="true">All vibes</button>
+          <button class="chip" style="--c:var(--v-must)"><span class="dot"></span>Must watch</button>
+          <button class="chip" style="--c:var(--v-mind)"><span class="dot"></span>Mind blown</button>
+          <button class="chip" style="--c:var(--v-fun)"><span class="dot"></span>Fun time</button>
+          <button class="chip" style="--c:var(--v-emo)"><span class="dot"></span>Emotional damage</button>
+          <button class="chip" style="--c:var(--v-gem)"><span class="dot"></span>Hidden gem</button>
+          <button class="chip">All languages</button>
+        </div>
+
+        <section>
+          <div class="sec-head"><span class="no">02</span><div><h2>Streaming now</h2><p>New titles you can watch in India</p></div><a href="#" class="link">See all<svg class="i"><use href="#i-right"/></svg></a></div>
+          <div class="track">
+            <a href="#" class="poster" style="--c:var(--v-must)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/kdz0fHndmpFKb0iwJvauyPHRAh7.jpg" alt=""></div><div class="t">Last meal</div><div class="m"><span class="dot"></span>2026 · Prime Video</div></a>
+            <a href="#" class="poster" style="--c:var(--v-fun)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/fMECSPrTmRClSViMsXFYmiYIcWP.jpg" alt=""></div><div class="t">Teach You a Lesson</div><div class="m"><span class="dot"></span>2026 · Netflix<span class="r">★ 8.4</span></div></a>
+            <a href="#" class="poster" style="--c:var(--v-mind)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/iOb2fjXLbpJgyQXe46n1WtGCnaa.jpg" alt=""></div><div class="t">Project Hail Mary</div><div class="m"><span class="dot"></span>2026 · Prime Video<span class="r">★ 8.2</span></div></a>
+            <a href="#" class="poster" style="--c:var(--v-fun)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/eJGWx219ZcEMVQJhAgMiqo8tYY.jpg" alt=""></div><div class="t">The Super Mario Galaxy Movie</div><div class="m"><span class="dot"></span>2026 · JioHotstar</div></a>
+            <a href="#" class="poster" style="--c:var(--v-mind)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/enz3WLx5QU1FUyhXZld04QWIc6N.jpg" alt=""></div><div class="t">Colony</div><div class="m"><span class="dot"></span>2026 · Prime Video +1</div></a>
+            <a href="#" class="poster" style="--c:var(--v-fun)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/uaSZiH6yoGaVJcqzKtrfSkqDuHX.jpg" alt=""></div><div class="t">Bethlehem Kudumba Unit</div><div class="m"><span class="dot"></span>2026 · JioHotstar</div></a>
+            <a href="#" class="poster" style="--c:var(--v-must)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/bRa83oPFFPqaAF3wrpVWPqqfFel.jpg" alt=""></div><div class="t">Madden</div><div class="m"><span class="dot"></span>2026 · Prime Video</div></a>
+          </div>
+        </section>
+
+        <div class="grid2">
+          <article class="card dc">
+            <div class="big" aria-hidden="true">#20</div>
+            <div>
+              <div class="kicker"><b>Daily Challenge</b> · New in 23:06:39</div>
+              <h3>Guess the film</h3>
+              <div class="sub">3 levels, 20 questions each. Hollywood and Indian cinema.</div>
+              <div class="levels">
+                <div class="lvl"><small>Easy</small><b>1<span>/20</span></b></div>
+                <div class="lvl"><small>Medium</small><b>0<span>/20</span></b></div>
+                <div class="lvl"><small>Hard</small><b>0<span>/20</span></b></div>
+              </div>
+              <div class="actions" style="margin-top:0"><button class="btn btn-primary">Continue Easy</button><button class="btn btn-ghost">Leaderboard</button></div>
+            </div>
+          </article>
+
+          <article class="card film">
+            <div class="p"><img src="https://image.tmdb.org/t/p/w342/iOb2fjXLbpJgyQXe46n1WtGCnaa.jpg" alt="Project Hail Mary poster"></div>
+            <div>
+              <span class="vtag" style="--c:var(--v-mind)">Mind blown</span>
+              <h3>Project Hail Mary</h3>
+              <div class="spec"><div><small>Year</small><span>2026</span></div><div><small>Runtime</small><span>2h 37m</span></div><div><small>Rating</small><span>★ 8.2</span></div><div><small>Cert</small><span>U/A 13+</span></div></div>
+              <div class="cast"><b>Starring</b> Ryan Gosling, Sandra Hüller</div>
+              <div class="cast"><b>Stream</b> Prime Video, subscription</div>
+              <div class="actions"><button class="btn btn-primary btn-sm"><svg class="i"><use href="#i-play"/></svg>Watch now</button><button class="btn btn-secondary btn-sm"><svg class="i"><use href="#i-bookmark"/></svg>Save</button></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="card gn">
+          <div><b>Game night</b><span>Draw the Movie, Movie Fibber and Who's the Impostor? Start a room and send the link.</span></div>
+          <button class="btn btn-secondary btn-sm">Start a room</button>
+        </article>
+
+        <section>
+          <div class="sec-head"><span class="no">03</span><div><h2>Indian &amp; regional cinema</h2><p>Hindi, Tamil, Telugu, Malayalam and Kannada</p></div><a href="#" class="link">See all<svg class="i"><use href="#i-right"/></svg></a></div>
+          <div class="track">
+            <a href="#" class="poster" style="--c:var(--v-gem)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/8FwgAZTVVtqMbW4y2dBuoJjdNXt.jpg" alt=""></div><div class="t">Katyar Kaljat Ghusali</div><div class="m"><span class="dot"></span>2015 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-fun)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/3KJ8UiNloo0Un2osnQOuyXfqNO2.jpg" alt=""></div><div class="t">Carry On Jatta</div><div class="m"><span class="dot"></span>2012 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-emo)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/78YoIO3gzkZPC1jotfDmolNDmgT.jpg" alt=""></div><div class="t">Pariyerum Perumal</div><div class="m"><span class="dot"></span>2018 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-emo)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/ngDEH7YqVaMCAD4LpNxRl6ScJnw.jpg" alt=""></div><div class="t">Meiyazhagan</div><div class="m"><span class="dot"></span>2024 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-emo)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/x4KvM8NBi8m44aqwEMgsJPzA5Ne.jpg" alt=""></div><div class="t">Natsamrat</div><div class="m"><span class="dot"></span>2016 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-emo)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/yJcg6qaDFok73SC353u4oEYpkvF.jpg" alt=""></div><div class="t">Punjab 1984</div><div class="m"><span class="dot"></span>2014 · Movie</div></a>
+            <a href="#" class="poster" style="--c:var(--v-emo)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/4dImTMse7PPFGHPG6GQuwDng9fB.jpg" alt=""></div><div class="t">Godhi Banna Sadharana Mykattu</div><div class="m"><span class="dot"></span>2016 · Movie</div></a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stage two">
+  <div>
+    <h2 class="stage-label">Phone · 375 px (scrolls inside the frame)</h2>
+    <div class="frame phone">
+      <div class="app">
+        <div class="topbar wrap">
+          <a href="#" class="wordmark" aria-label="WatchVibe home"><span class="bar" aria-hidden="true"></span>Watchvibe</a>
+          <div class="top-actions"><button class="icon-plain" aria-label="Search"><svg class="i"><use href="#i-search"/></svg></button><button class="avatar" aria-label="Profile">D</button></div>
+        </div>
+        <nav class="seg" aria-label="Category"><a href="#" class="tab is-active">All</a><a href="#" class="tab">Movies</a><a href="#" class="tab">Series</a><a href="#" class="tab">Stand-up</a></nav>
+        <section class="hero" aria-label="Featured">
+          <div class="hero-pic"><img src="https://image.tmdb.org/t/p/w780/lRsapglJZIyMfGl8oQyNASlZqDC.jpg" alt=""></div>
+          <div class="hero-text">
+            <div class="kicker"><b>01 / 05</b> · Trending now</div>
+            <h1 class="hero-title">Madden</h1>
+            <div class="meta"><span class="cert">R</span><span>2026 · Drama · History</span><span class="rating"><svg><use href="#i-star"/></svg>8.1</span></div>
+            <div class="actions"><button class="btn btn-primary">Details</button><button class="btn btn-secondary"><svg class="i"><use href="#i-plus"/></svg>Watchlist</button></div>
+          </div>
+        </section>
+        <div class="content">
+          <div class="chips" role="group" aria-label="Filter by vibe">
+            <button class="chip is-on">All vibes</button>
+            <button class="chip" style="--c:var(--v-must)"><span class="dot"></span>Must watch</button>
+            <button class="chip" style="--c:var(--v-mind)"><span class="dot"></span>Mind blown</button>
+            <button class="chip" style="--c:var(--v-fun)"><span class="dot"></span>Fun time</button>
+            <button class="chip" style="--c:var(--v-emo)"><span class="dot"></span>Emotional</button>
+            <button class="chip" style="--c:var(--v-gem)"><span class="dot"></span>Hidden gem</button>
+          </div>
+          <section class="wrap">
+            <div class="sec-head"><span class="no">02</span><div><h2>Streaming now</h2><p>New in India</p></div><a href="#" class="link">See all</a></div>
+            <div class="track">
+              <a href="#" class="poster" style="--c:var(--v-must)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/kdz0fHndmpFKb0iwJvauyPHRAh7.jpg" alt=""></div><div class="t">Last meal</div><div class="m"><span class="dot"></span>2026 · Prime</div></a>
+              <a href="#" class="poster" style="--c:var(--v-fun)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/fMECSPrTmRClSViMsXFYmiYIcWP.jpg" alt=""></div><div class="t">Teach You a Lesson</div><div class="m"><span class="dot"></span>2026<span class="r">★ 8.4</span></div></a>
+              <a href="#" class="poster" style="--c:var(--v-mind)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/iOb2fjXLbpJgyQXe46n1WtGCnaa.jpg" alt=""></div><div class="t">Project Hail Mary</div><div class="m"><span class="dot"></span>2026<span class="r">★ 8.2</span></div></a>
+              <a href="#" class="poster" style="--c:var(--v-mind)"><div class="img"><img src="https://image.tmdb.org/t/p/w342/enz3WLx5QU1FUyhXZld04QWIc6N.jpg" alt=""></div><div class="t">Colony</div><div class="m"><span class="dot"></span>2026</div></a>
+            </div>
+          </section>
+          <section class="wrap">
+            <article class="card dc">
+              <div class="big" aria-hidden="true">#20</div>
+              <div>
+                <div class="kicker"><b>Daily Challenge</b> · 23:06:39</div>
+                <h3>Guess the film</h3>
+                <div class="levels">
+                  <div class="lvl"><small>Easy</small><b>1<span>/20</span></b></div>
+                  <div class="lvl"><small>Medium</small><b>0<span>/20</span></b></div>
+                  <div class="lvl"><small>Hard</small><b>0<span>/20</span></b></div>
+                </div>
+                <div class="actions" style="margin-top:0"><button class="btn btn-primary">Continue Easy</button></div>
+              </div>
+            </article>
+          </section>
+          <section class="wrap">
+            <article class="card film">
+              <div class="p"><img src="https://image.tmdb.org/t/p/w342/iOb2fjXLbpJgyQXe46n1WtGCnaa.jpg" alt="Project Hail Mary poster"></div>
+              <div>
+                <span class="vtag" style="--c:var(--v-mind)">Mind blown</span>
+                <h3>Project Hail Mary</h3>
+                <div class="spec"><div><small>Year</small><span>2026</span></div><div><small>Runtime</small><span>2h 37m</span></div><div><small>Rating</small><span>★ 8.2</span></div><div><small>Stream</small><span>Prime</span></div></div>
+              </div>
+              <div class="actions"><button class="btn btn-primary"><svg class="i"><use href="#i-play"/></svg>Watch</button><button class="btn btn-secondary"><svg class="i"><use href="#i-bookmark"/></svg>Save</button></div>
+            </article>
+          </section>
+          <section class="wrap">
+            <article class="card gn" style="padding:16px">
+              <div><b>Game night</b><span>Movie games with friends</span></div>
+              <button class="icon-btn" aria-label="Start a room"><svg class="i"><use href="#i-right"/></svg></button>
+            </article>
+          </section>
+        </div>
+        <nav class="bottomnav" aria-label="Main">
+          <a href="#" class="is-active" aria-current="page"><svg class="i"><use href="#i-home"/></svg>Home</a>
+          <a href="#"><svg class="i"><use href="#i-search"/></svg>Search</a>
+          <a href="#"><svg class="i"><use href="#i-layers"/></svg>Swipe</a>
+          <a href="#"><svg class="i"><use href="#i-bookmark"/></svg>List</a>
+          <a href="#"><svg class="i"><use href="#i-user"/></svg>Profile</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="states">
+    <h2 class="stage-label" style="margin-top:12px">Components and states</h2>
+    <div class="panel">
+      <div class="state-label">Primary: default · hover · pressed · focus · disabled · loading</div>
+      <div class="row-states">
+        <button class="btn btn-primary">Play now</button>
+        <button class="btn btn-primary is-hover">Play now</button>
+        <button class="btn btn-primary is-pressed">Play now</button>
+        <button class="btn btn-primary is-focus">Play now</button>
+        <button class="btn btn-primary is-disabled" disabled>Play now</button>
+        <button class="btn btn-primary is-loading">Play now</button>
+      </div>
+      <div class="state-label" style="margin-top:16px">Secondary and text link</div>
+      <div class="row-states">
+        <button class="btn btn-secondary"><svg class="i"><use href="#i-plus"/></svg>Watchlist</button>
+        <button class="btn btn-secondary is-hover"><svg class="i"><use href="#i-check"/></svg>Saved</button>
+        <button class="btn btn-secondary is-focus">Focus</button>
+        <button class="btn btn-secondary is-disabled" disabled>Disabled</button>
+        <button class="btn btn-ghost">Leaderboard</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="state-label">Vibe chips: default · selected · focus</div>
+      <div class="row-states">
+        <button class="chip" style="--c:var(--v-gem)"><span class="dot"></span>Hidden gem</button>
+        <button class="chip is-on" style="--c:var(--v-gem)"><span class="dot"></span>Hidden gem</button>
+        <button class="chip" style="--c:var(--v-gem);outline:2px solid var(--text);outline-offset:2px;box-shadow:0 0 0 5px var(--accent)"><span class="dot"></span>Hidden gem</button>
+      </div>
+    </div>
+    <div class="panel" style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start">
+      <div><div class="state-label">Loading poster</div><div class="skel"><div class="img"></div><div class="l1"></div><div class="l2"></div></div></div>
+      <div class="empty"><div class="huge" aria-hidden="true">Empty</div><h4>Nothing saved yet</h4><p>Save films from any poster and we will tell you where they stream.</p><button class="btn btn-primary btn-sm">Find something</button></div>
+    </div>
+    <div class="panel">
+      <div class="state-label">Error (inline, recoverable)</div>
+      <div class="error"><span>Could not load where to watch.</span><button class="btn btn-secondary btn-sm">Try again</button></div>
+    </div>
+    <div class="panel">
+      <div class="state-label">Scale, radius, elevation, motion</div>
+      <p style="margin:0;color:var(--text-2);font-size:14px;line-height:21px">Spacing 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64. Radius 2 on posters, 4 on everything else. No shadows at all: hierarchy comes from rules (1 px #2E2E2E), 4 px coloured top borders and type size. Motion is quick and mechanical: 100 ms press (1 px drop, no scale), 180 ms colour, 280 ms sheets, cubic-bezier(.3,0,0,1). Loading uses a thin vermilion line, not shimmer. Reduced motion: line stays still.</p>
+    </div>
+  </div>
+</section>
+</body>
+</html>
