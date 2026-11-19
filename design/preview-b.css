@@ -1,0 +1,52 @@
+/* Direction B "Projector" applied over the real app, for a clickable preview only (not shipped).
+   Colour tokens from design/critique.md: bg #110D0B, surface #1A1512, elevated #241D19, text #F5EEE6, brass #E2B35E. */
+:root { --pv-bg:#110D0B; --pv-surface:#1A1512; --pv-elev:#241D19; --pv-line:#382C25; --pv-text:#F5EEE6; --pv-text2:#CDBFB2; --pv-muted:#A08F81; --pv-brass:#E2B35E; --pv-ink:#1A1208; }
+html, body { background: var(--pv-bg) !important; color: var(--pv-text); }
+header, header.sticky { background: rgba(17,13,11,.92) !important; border-color: var(--pv-line) !important; }
+
+/* surfaces */
+[class*="bg-[#0B0B0F"], [class*="bg-[#0F0F14"], [class*="bg-[#0E0E12"] { background-color: var(--pv-bg) !important; }
+[class*="bg-[#14141A"], [class*="bg-[#1A1A20"], [class*="bg-[#15151B"] { background-color: var(--pv-surface) !important; }
+[class*="bg-white/["] { background-color: rgba(245,238,230,.05) !important; }
+[class*="ring-white/"], [class*="border-white/"] { --tw-ring-color: rgba(245,238,230,.12) !important; border-color: var(--pv-line) !important; }
+[class*="text-white/"] { color: var(--pv-text2) !important; }
+[class*="text-white/3"], [class*="text-white/4"] { color: var(--pv-muted) !important; }
+.text-white { color: var(--pv-text) !important; }
+
+/* one accent: brass replaces purple, pink and the blue washes */
+[class*="text-purple"], [class*="text-pink"], .text-purple-400 { color: var(--pv-brass) !important; }
+[class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: rgba(226,179,94,.14) !important; }
+[class~="bg-purple-400"], [class~="bg-purple-500"], [class~="bg-purple-600"] { background-color: var(--pv-brass) !important; color: var(--pv-ink) !important; }
+[class*="ring-purple"], [class*="border-purple"] { --tw-ring-color: rgba(226,179,94,.5) !important; border-color: rgba(226,179,94,.5) !important; }
+[class*="from-purple"], [class*="from-pink"], [class*="via-blue"], [class*="to-blue"], [class*="via-purple"] { background-image: none !important; background-color: var(--pv-surface) !important; }
+[class*="from-purple"][class*="to-transparent"], [class*="from-pink"][class*="to-transparent"] { background-color: var(--pv-surface) !important; }
+.accent-purple-400 { accent-color: var(--pv-brass); }
+[class*="from-[#0B0B0F"] { --tw-gradient-from: #110D0B var(--tw-gradient-from-position) !important; }
+[class*="via-[#0B0B0F"] { --tw-gradient-via-color: #110D0B !important; }
+
+/* buttons: brass, dark text, flat */
+.bg-white.text-black, button.bg-white { background-color: var(--pv-brass) !important; color: var(--pv-ink) !important; box-shadow: none !important; }
+.bg-white.text-black:hover, button.bg-white:hover { background-color: #EBC074 !important; }
+.hover\:bg-white\/90:hover { background-color: #EBC074 !important; }
+
+/* type: serif for display headings, Inter for everything else */
+.font-display { font-family: 'Instrument Serif', Georgia, serif !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+h1.font-display, h2.font-display { letter-spacing: -.005em !important; }
+
+/* wordmark: Watchvibe. in one colour, serif */
+header button[aria-label="WatchVibe home"] { font-family: 'Instrument Serif', Georgia, serif !important; font-weight: 400 !important; letter-spacing: 0 !important; text-transform: lowercase; font-size: 28px !important; color: var(--pv-text) !important; }
+header button[aria-label="WatchVibe home"]::first-letter { text-transform: uppercase; }
+header button[aria-label="WatchVibe home"] span { color: var(--pv-text) !important; }
+header button[aria-label="WatchVibe home"]::after { content: "."; color: var(--pv-brass); }
+
+/* nav active state: brass underline instead of a grey pill */
+.top-nav-pill[aria-current="page"] { background: transparent !important; color: var(--pv-text) !important; box-shadow: inset 0 -2px 0 var(--pv-brass); border-radius: 0 !important; }
+
+/* bigger tap targets on phones */
+@media (max-width: 640px) {
+  button.rounded-full { min-height: 44px; }
+  select { min-height: 44px; }
+}
+
+/* a small tag so it is obvious this is the preview */
+body::after { content: "Preview: direction B Projector"; position: fixed; left: 12px; bottom: 76px; z-index: 9999; font: 500 11px Inter, sans-serif; color: var(--pv-ink); background: var(--pv-brass); padding: 4px 9px; border-radius: 99px; pointer-events: none; }
