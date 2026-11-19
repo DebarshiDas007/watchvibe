@@ -1,4 +1,4 @@
-# WatchVibe project notes (read this first)
+﻿# WatchVibe project notes (read this first)
 
 WatchVibe is a movie and series discovery web app (installable PWA). Live: https://watchvibe-b92.pages.dev/
 
@@ -33,6 +33,6 @@ syntax check passes, `npm run build:css`, `await runProductSweep()` shows `probl
 
 ## Team roles (.claude/agents)
 - lead: the only one who edits index.html and games.js.
-- tester, reviewer: read-only reports.
+- tester, reviewer: read-only reports (tester Sonnet, reviewer Sonnet; use Opus for the reviewer on security changes).
 - designer: writes only inside design/ (mockups, critiques, build specs).
-- data-owner: scripts/ and the film data files only.
+- data-owner: scripts/ and the film data files only (Haiku; Sonnet when changing script logic).`n- deployer (Opus, high effort): runs the checklist, deploys only on the lead saying "ship", verifies live, writes the HANDOFF entry. May edit only sw.js, version numbers and HANDOFF.md.`n- designer (Opus, high effort).
