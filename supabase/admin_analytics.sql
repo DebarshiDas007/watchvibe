@@ -24,7 +24,7 @@ create table if not exists public.events (
   id      bigint generated always as identity primary key,
   ts      timestamptz not null default now(),
   sid     text not null check (char_length(sid) between 8 and 64),
-  type    text not null check (type in ('visit','view','title_open','search','ott_click','trailer_play','trailer_fail','poster_fail','avail_none','watchlist_add','vibe_vote','mood','actor_open','signup','login','js_error','region_change')),
+  type    text not null check (type in ('visit','view','title_open','search','ott_click','trailer_play','trailer_fail','poster_fail','avail_none','watchlist_add','vibe_vote','mood','actor_open','signup','login','js_error','region_change','game_room','game_start','game_conn','daily_done')),
   props   jsonb not null default '{}'::jsonb check (octet_length(props::text) <= 1500),
   country text check (country is null or char_length(country) = 2),
   device  text check (device is null or device in ('mobile','tablet','desktop')),
