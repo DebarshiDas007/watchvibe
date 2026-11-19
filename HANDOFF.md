@@ -198,10 +198,10 @@ Open / next, in the order we discussed:
 - tests/product-sweep.js: paste/load in the site and run  await runProductSweep()  at 375/768/1440 widths (needs the file served from the site because the CSP blocks eval). Returns {problems:[],passed:[...]}. DB_VERSION=v9_alt_titles.
 
 
-## v83 (built, NOT deployed): direction C "Marquee" redesign
+## v83 (deployed live 2026-11-20, c73f246): direction C "Marquee" redesign
 - New look: black/paper-white, brick orange #D6502F, Anton headings + wordmark, Barlow Condensed 700 poster names (19px, white), no outline on posters. Implemented as an override layer: `theme.css?v=3` after tailwind.css (tablet nav tightened so the top menu fits at 768).
 - Netflix-style hover card (desktop mouse only): `hover-card.js?v=2` + `hover-card.css?v=1`, fixed 340x326, Play / add to watchlist / more info, meta line and 3 tags.
 - Phone: 44px tap targets, 12px minimum text, first poster row on the first screen (Streaming now moved under the banner).
 - Fonts self-hosted: anton, barlow-condensed-600/700 (fraunces removed). New icons/favicon, manifest and theme colour #090909.
 - sw.js CACHE_NAME v83, precache updated. Product sweep: problems [] at 375, 768 and 1440.
-- Not deployed: waiting for the user to say "ship".
+- Deployed after the user said "ship". Sweep problems [] at 375/768/1440, local and live.
