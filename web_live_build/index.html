@@ -5355,7 +5355,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       }
       if (failed) showToast('Could not save your verdict. Try again.');
     }
-    function vsSetTier(n) { const m = VS.summary && VS.summary.mine; if (m && m.tier === n) return; VS.pop = 'tier:' + n; vsSaveVote(n, m ? (m.feelings || []) : []); }
+    function vsSetTier(n) {
+      const m = VS.summary && VS.summary.mine;
+      if (m && m.tier === n) { vsRemoveVote(); return; }   // tapping the chosen verdict again clears it
+      VS.pop = 'tier:' + n; vsSaveVote(n, m ? (m.feelings || []) : []);
+    }
     function vsToggleFeeling(id) {
       const m = VS.summary && VS.summary.mine;
       if (!m) { if (vsAuth('Sign in to share your verdict.')) showToast('Choose your verdict first, then add a feeling.'); return; }
