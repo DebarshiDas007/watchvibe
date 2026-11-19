@@ -205,3 +205,10 @@ Open / next, in the order we discussed:
 - Fonts self-hosted: anton, barlow-condensed-600/700 (fraunces removed). New icons/favicon, manifest and theme colour #090909.
 - sw.js CACHE_NAME v83, precache updated. Product sweep: problems [] at 375, 768 and 1440.
 - Deployed after the user said "ship". Sweep problems [] at 375/768/1440, local and live.
+
+## v84 (deployed live 2026-11-20): tapping the chosen verdict again clears it; deployed
+- index.html: vsSetTier calls vsRemoveVote when the already-chosen verdict is tapped again (eeca140).
+- sw.js CACHE_NAME v84. games.js?v=4, CAT.v=2, DB_VERSION=v9_alt_titles unchanged (those files did not change).
+- Deployed after the user said "ship". Sweep problems [] at 375/768/1440, local and live; live sw cache is v84 only (v83 removed).
+- Not tested live: clearing a verdict (needs a signed-in user).
+- Open (pre-existing, not from v84): analytics types game_room/game_start/game_conn/daily_done are not in the events.type check in supabase/admin_analytics.sql, so those inserts return 400 and the batch they are in is lost.
