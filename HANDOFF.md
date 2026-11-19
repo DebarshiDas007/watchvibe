@@ -181,3 +181,12 @@ Open / next, in the order we discussed:
 - Smooth quadratic strokes (new 'e' stroke-end op), brush preview cursor, custom colour picker + size slider (2-40) and S/M/L presets (hidden on phones); colour/size can change mid-stroke (the line continues in the new style); last tool remembered (gn_tool). Shortcuts: Ctrl+Z, B, E, [ ].
 - Fix: a host whose page reloads (and asks for the game) is treated as lost; the next player takes over and sends it back.
 
+
+## v81 - Full product sweep fixes
+- Watch together: everything from other devices is validated (wtSafeItem/wtSafeState/wtSafeColor); film ids could previously inject code via onclick.
+- Vibe filter used 'has any votes' (matched every title); now the main vibe decides (+ rating >= 8 for Must watch). Vibes with no titles (Skip it, Time pass) hidden from the menu and from Browse by vibe.
+- Search chips now open the matching list (they typed 'Robert Downey', 'Movie', 'mind blown' into search).
+- syncTopNav kept overwriting responsive classes: Daily showed on tablets and pushed More off the bar; divider hidden below lg.
+- Data: scripts/fix_runtimes.mjs replaced 1,724 made-up '2h 10m' runtimes and 35 placeholder directors in the built-in catalogue; DB_VERSION bumped to flush saved copies.
+- Daily trending sync no longer replaces complete catalogue entries with thin ones, and new trending titles get real genres and no fake runtime/director.
+
