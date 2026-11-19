@@ -212,3 +212,11 @@ Open / next, in the order we discussed:
 - Deployed after the user said "ship". Sweep problems [] at 375/768/1440, local and live; live sw cache is v84 only (v83 removed).
 - Not tested live: clearing a verdict (needs a signed-in user).
 - Open (pre-existing, not from v84): analytics types game_room/game_start/game_conn/daily_done are not in the events.type check in supabase/admin_analytics.sql, so those inserts return 400 and the batch they are in is lost.
+
+## Resume notes (saved 2026-11-20, end of day)
+- Live site: v84 (verdict fix) deployed. Live = origin/main at eeca140 plus the deploy; the release commit 12aaabd and the analytics commit c62fe82 are local only.
+- BLOCKED: `git push origin main` returns 403 (Permission denied to DebarshiDas007). Fix the GitHub login (Windows Credential Manager), then push 12aaabd and c62fe82.
+- Next: apply supabase/admin_analytics_event_types.sql to the live Supabase project (lbtuikgpgcgrizijfiyl) after the user says yes. Then confirm game_room / daily_done events are accepted (no 400).
+- Open: the verdict clear animation is instant (no green-to-normal fade); the user may want a fade.
+- Open: tester and reviewer reports were not run for v83/v84 changes.
+- Not verified live: clearing a verdict (signed-in user), real phones, multi-player game rooms.
