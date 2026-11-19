@@ -1,0 +1,54 @@
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@400;500;600&family=Archivo+Narrow:wght@500;600&family=Space+Grotesk:wght@500;600&family=Playfair+Display:wght@500;600&family=Bebas+Neue&family=Anton&display=swap" rel="stylesheet">
+<style id="pv-pop">
+/* hover pop-out on every poster card */
+.row-scroll { padding-top: 14px !important; margin-top: -14px !important; padding-left: 8px !important; padding-right: 8px !important; margin-left: -8px !important; }
+button.group > div[class*="aspect-[2/3]"] {
+  transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, filter .3s ease !important;
+  will-change: transform;
+}
+button.group:hover > div[class*="aspect-[2/3]"], button.group:focus-visible > div[class*="aspect-[2/3]"] {
+  transform: translateY(-8px) scale(1.07) !important;
+  box-shadow: 0 22px 40px rgba(0,0,0,.65), 0 0 0 1px rgba(250,250,247,.28) !important;
+  filter: brightness(1.06) saturate(1.06);
+  position: relative; z-index: 6;
+}
+/* the title under the poster follows with a small slide */
+button.group > div:last-child > div:first-child { transition: transform .25s ease, color .2s ease, letter-spacing .25s ease; transform-origin: left center; }
+button.group:hover > div:last-child > div:first-child { transform: translate(2px, 4px); color: #FFFFFF !important; }
+@media (prefers-reduced-motion: reduce) {
+  button.group > div[class*="aspect-[2/3]"], button.group > div:last-child > div:first-child { transition: none !important; }
+  button.group:hover > div[class*="aspect-[2/3]"] { transform: none !important; }
+}
+/* font under the posters: set by the picker (default = current Inter) */
+button.group > div:last-child > div:first-child { font-family: var(--pv-title-font, Inter, system-ui, sans-serif) !important; font-weight: var(--pv-title-weight, 500) !important; text-transform: var(--pv-title-case, none) !important; letter-spacing: var(--pv-title-track, 0) !important; font-size: var(--pv-title-size, 14px) !important; line-height: 1.2 !important; }
+#pv-fonts { position: fixed; right: 12px; bottom: 76px; z-index: 9999; background: #141414; border: 1px solid #2E2E2E; border-radius: 6px; padding: 8px; width: 188px; font: 500 11px Inter, sans-serif; color: #BDBDB6; }
+#pv-fonts b { display: block; margin: 0 0 6px 2px; color: #FAFAF7; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 10px; }
+#pv-fonts button { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 7px 9px; border-radius: 3px; background: transparent; color: #FAFAF7; border: 1px solid transparent; cursor: pointer; font-size: 14px; }
+#pv-fonts button:hover { background: #1E1E1E; }
+#pv-fonts button[aria-pressed="true"] { border-color: #D6502F; background: #1E1E1E; }
+</style>
+<script>
+(function () {
+  var F = [
+    ['Inter (current)',      'Inter, system-ui, sans-serif',                 500, 'none',      '0',     '14px'],
+    ['Barlow Condensed',     "'Barlow Condensed', sans-serif",               600, 'uppercase', '.03em', '16px'],
+    ['Oswald',               "Oswald, sans-serif",                           500, 'uppercase', '.02em', '15px'],
+    ['Bebas Neue',           "'Bebas Neue', sans-serif",                     400, 'uppercase', '.04em', '18px'],
+    ['Archivo Narrow',       "'Archivo Narrow', sans-serif",                 600, 'none',      '0',     '15px'],
+    ['Space Grotesk',        "'Space Grotesk', sans-serif",                  600, 'none',      '-.01em','14px'],
+    ['Playfair Display',     "'Playfair Display', Georgia, serif",           600, 'none',      '0',     '15px']
+  ];
+  function apply(i) {
+    var f = F[i], r = document.documentElement.style;
+    r.setProperty('--pv-title-font', f[1]); r.setProperty('--pv-title-weight', f[2]); r.setProperty('--pv-title-case', f[3]); r.setProperty('--pv-title-track', f[4]); r.setProperty('--pv-title-size', f[5]);
+    document.querySelectorAll('#pv-fonts button').forEach(function (b, k) { b.setAttribute('aria-pressed', String(k === i)); });
+  }
+  function build() {
+    if (document.getElementById('pv-fonts')) return;
+    var d = document.createElement('div'); d.id = 'pv-fonts'; d.innerHTML = '<b>Font under posters</b>';
+    F.forEach(function (f, i) { var b = document.createElement('button'); b.type = 'button'; b.textContent = f[0]; b.style.fontFamily = f[1]; b.style.textTransform = f[3]; b.onclick = function () { apply(i); }; d.appendChild(b); });
+    document.body.appendChild(d); apply(1);
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+})();
+</script>
