@@ -50,9 +50,6 @@ button.rounded-full, a.rounded-full, select.rounded-full, input.rounded-full { b
 .top-nav-pill { text-transform: uppercase; letter-spacing: .06em; }
 
 /* ---- wordmark ---- */
-header button[aria-label="WatchVibe home"] { font-family: 'Anton', Impact, sans-serif !important; font-size: 24px !important; text-transform: uppercase !important; letter-spacing: .04em !important; color: var(--text) !important; }
-header button[aria-label="WatchVibe home"] span { color: var(--text) !important; }
-header button[aria-label="WatchVibe home"]::before { content: ""; display: inline-block; width: 6px; height: 20px; background: var(--accent); margin-right: 8px; vertical-align: -2px; }
 
 /* ---- top navigation: orange underline marks the current page ---- */
 .top-nav-pill[aria-current="page"] { background: transparent !important; color: var(--text) !important; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0 !important; }
@@ -66,7 +63,6 @@ button.group:hover > div[class*="aspect-[2/3]"] { transform: none; }   /* the ho
 /* tablet: uppercase tracking makes the top menu wider, so tighten it there */
 @media (min-width: 768px) and (max-width: 1099px) {
   .top-nav-pill { letter-spacing: .02em; padding-left: 8px; padding-right: 8px; }
-  header button[aria-label="WatchVibe home"] { font-size: 20px !important; }
 }
 
 /* ---- touch targets: at least 44 px on phones ---- */
