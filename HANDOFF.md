@@ -174,3 +174,10 @@ Open / next, in the order we discussed:
 - Drawing: flush every 150 ms, min point distance 0.005, channel self:false. Presence updates debounced (Supabase closes a connection on 'Client presence rate limit exceeded'). Auto-reconnect on CLOSED/ERROR.
 - Also: impostor leaving ends the round, fewer than the minimum players ends the game, 5 s grace for drop-outs, Fibber decoy plots (min 4 options), alternative titles + number/roman/'the' matching for guesses, no title words in impostor clues, tie message + 50 pts for spotting the impostor, duplicate names numbered, impostor film from popular pool.
 - Known limit: a cheater can still send a fake state to someone who joins after them (before the real host answers).
+
+## v80 - Drawing board upgrade (games.js?v=3)
+- Board sizes itself to the space (gnFitBoard: word + clock + tools always visible); chat sits beside the stage from md up, and shrinks to 18vh for the drawer on phones.
+- Big round clock (gnClockHtml) with red last 10 s and ticks; WebAudio tones for tick/correct/turn/end with a mute button (localStorage gn_mute).
+- Smooth quadratic strokes (new 'e' stroke-end op), brush preview cursor, custom colour picker + size slider (2-40) and S/M/L presets (hidden on phones); colour/size can change mid-stroke (the line continues in the new style); last tool remembered (gn_tool). Shortcuts: Ctrl+Z, B, E, [ ].
+- Fix: a host whose page reloads (and asks for the game) is treated as lost; the next player takes over and sends it back.
+

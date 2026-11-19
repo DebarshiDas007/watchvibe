@@ -15,7 +15,7 @@ const GN = {
   code: null, ch: null, me: null, keys: null, st: null, sec: null, mine: {}, members: [], feed: [], strokes: [], strokesKey: '', out: [],
   tick: 0, flushT: 0, beatT: 0, tool: { c: '#111111', w: 7, erase: false }, cur: null, rcur: null, canvas: null, ctx: null, wrap: null,
   joinCode: '', pub: {}, aes: {}, valid: {}, vq: {}, lastN: {}, seq: 0, goneSince: {}, awaySince: {}, syncTok: 0, sendQ: Promise.resolve(),
-  myFib: null, lastChat: 0, askT: [], stageKey: ''
+  myFib: null, lastChat: 0, askT: [], stageKey: '', lost: {}
 };
 const GN_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const GN_COLORS = ['#111111', '#ffffff', '#9ca3af', '#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899', '#92400e'];
@@ -62,7 +62,7 @@ function gnCompact(m) { return { id: m.id, title: m.title, year: m.year, poster:
 // ---------- presence: who is here, who can host
 function gnHere(u) { if (gnMember(u)) return true; const g = GN.goneSince[u]; return !!(g && Date.now() - g < GN_GRACE_GONE); }
 function gnHereIds() { const ids = new Set(GN.members.map(m => m.id)); Object.keys(GN.goneSince).forEach(u => { if (gnHere(u)) ids.add(u); }); return [...ids].filter(u => !GN.st || !GN.st.joined || GN.st.joined.includes(u)); }
-function gnCanHost(u) { if (!gnHere(u)) return false; const a = GN.awaySince[u]; return !(a && Date.now() - a > GN_GRACE_AWAY); }
+function gnCanHost(u) { if (!gnHere(u)) return false; if (GN.lost[u] && Date.now() - GN.lost[u] < 30000 && !(u === gnMeId() && GN.st)) return false; const a = GN.awaySince[u]; return !(a && Date.now() - a > GN_GRACE_AWAY); }
 function gnHostId() {
   const st = GN.st; if (!st) return null;
   if (st.host && gnCanHost(st.host)) return st.host;
@@ -177,7 +177,12 @@ function gnHandle(p, from) {
   if (!p || typeof p.t !== 'string') return;
   const me = gnMeId(), host = gnHostId(), fromHost = from === host;
   switch (p.t) {
-    case 'req': if (gnIsHost() && from !== me) gnWelcome(from); break;
+    case 'req':
+      if (from === me) break;
+      // the host itself asking for the game means its page reloaded and lost it: the next player takes over and sends it back
+      if (GN.st && from === host) { GN.lost[from] = Date.now(); if (gnIsHost()) gnTakeOver(); }
+      if (gnIsHost()) gnWelcome(from);
+      break;
     case 'st': {
       if (from === me || !p.st || typeof p.st !== 'object') break;
       if (p.to && p.to !== me) break;
@@ -294,7 +299,7 @@ async function gnJoin(code, create) {
   try { await gnInitKeys(); } catch (e) { showToast("This browser can't join game rooms. Try an up-to-date Chrome or Safari."); return; }
   if (GN.ch) gnLeave(true);
   const me = GN.me; me.name = gnSavedName(); me.ts = 0;
-  Object.assign(GN, { code, members: [], feed: [], strokes: [], strokesKey: '', out: [], sec: null, mine: {}, myFib: null, lastN: {}, vq: {}, goneSince: {}, awaySince: {}, stageKey: '' });
+  Object.assign(GN, { code, members: [], feed: [], strokes: [], strokesKey: '', out: [], sec: null, mine: {}, myFib: null, lastN: {}, vq: {}, goneSince: {}, awaySince: {}, lost: {}, stageKey: '' });
   GN.st = create ? gnLobbyState() : null;
   history.replaceState(null, '', '?game=' + code);
   gnConnect(code, create);
@@ -309,6 +314,7 @@ function gnConnect(code, create) {
   const ch = sb.channel('gn:' + code, { config: { broadcast: { self: false }, presence: { key: me.id } } });
   GN.ch = ch;
   ch.on('broadcast', { event: 'g' }, gnRecv)
+    .on('system', {}, p => { if (p && p.status === 'error') { GN.lastErr = String(p.message || '').slice(0, 120); try { Track.event('game_conn', { m: GN.lastErr }); } catch (e) {} } })
     .on('presence', { event: 'sync' }, () => { if (GN.ch === ch) gnSyncMembers(); })
     .subscribe(async status => {
       if (GN.ch !== ch) return;
@@ -321,6 +327,7 @@ function gnConnect(code, create) {
         else gnSys('Reconnected.');
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         if (GN.code !== code) return;
+        GN.closes = (GN.closes || []).concat([status + (GN.lastErr ? ': ' + GN.lastErr : '')]).slice(-5);
         GN.ch = null;
         try { sb.removeChannel(ch); } catch (e) {}
         gnSys('Connection lost. Reconnecting…');
@@ -386,6 +393,9 @@ document.addEventListener('visibilitychange', gnTrackSoon);
 
 function gnAfterState() {
   const st = GN.st; if (!st) return;
+  const mark = st.phase + ':' + st.game + ':' + (st.d ? gdKey(st) + st.d.phase : '') + (st.f ? st.f.round + st.f.phase : '') + (st.i ? st.i.round + st.i.phase : '');
+  if (GN.lastMark && mark !== GN.lastMark) { if (st.phase === 'end') gnSound('end'); else if (st.phase === 'play' && ((st.d && st.d.phase === 'choose') || (st.f && st.f.phase === 'write') || (st.i && st.i.phase === 'clue' && !st.i.clues.length))) gnSound('turn'); }
+  GN.lastMark = mark;
   const key = st.phase === 'play' && st.game === 'draw' && st.d ? gdKey(st) : '';
   if (key !== GN.strokesKey) { GN.strokes = []; GN.rcur = null; GN.cur = null; GN.strokesKey = key; gnRedraw(); }
   gnRenderPlayers(); gnRenderTop(); gnRenderStage(); gnRenderChatInput();
@@ -444,7 +454,7 @@ function gnTakeOver() {
     if (st.game === 'fib' && st.f && st.f.phase !== 'reveal') gfNew(st);
     if (st.game === 'imp' && st.i && st.i.phase !== 'reveal') giNew(st);
   });
-  gnBroadcastSys(`${gnName(prev)} stepped away, so ${gnName(gnMeId())} is running the game now.`);
+  gnBroadcastSys(`${gnName(gnMeId())} is hosting the game now.`);
 }
 
 // ---------- the clock (only the host moves the game on)
@@ -453,6 +463,14 @@ function gnTick() {
   if (t) { const l = st && st.deadline ? gnLeft(st) : null; t.textContent = l == null ? '' : l + 's'; t.classList.toggle('text-rose-300', l != null && l <= 10); }
   const bar = document.getElementById('gnTimeBar');
   if (bar && st && st.deadline && st.dur) bar.style.width = Math.max(0, Math.min(100, (st.deadline - Date.now()) / st.dur * 100)) + '%';
+  const ring = document.getElementById('gnClockRing'), ct = document.getElementById('gnClockText');
+  if (ring && st && st.deadline && st.dur) {
+    const f = Math.max(0, Math.min(1, (st.deadline - Date.now()) / st.dur)), l = gnLeft(st);
+    ring.setAttribute('stroke-dashoffset', String(97.4 * (1 - f))); ring.setAttribute('stroke', l <= 10 ? '#f87171' : '#a78bfa');
+    if (ct) { ct.textContent = l; ct.classList.toggle('text-rose-300', l <= 10); }
+    const drawing = st.phase === 'play' && st.game === 'draw' && st.d && st.d.phase === 'draw';
+    if (drawing && l <= 10 && l > 0 && l !== GN.lastTick) { GN.lastTick = l; gnSound('tick'); }
+  }
   if (!st || !gnIsHost()) return;
   if (st.host !== gnMeId()) { gnTakeOver(); return; }
   if (st.phase !== 'play') return;
@@ -582,15 +600,18 @@ function gdMaskHtml(st) {
 }
 
 // ---- the canvas
+const GN_MIN_W = 2, GN_MAX_W = 40;
 function gnCanvasWrap() {
   if (GN.wrap) return GN.wrap;
   const w = document.createElement('div');
   w.id = 'gnCanvasWrap'; w.className = 'relative w-full select-none overflow-hidden rounded-xl bg-white'; w.style.aspectRatio = '4 / 3'; w.style.touchAction = 'none';
   const c = document.createElement('canvas'); c.className = 'absolute inset-0 h-full w-full'; c.style.touchAction = 'none';
-  w.appendChild(c); GN.wrap = w; GN.canvas = c; GN.ctx = c.getContext('2d');
+  const cur = document.createElement('div'); cur.className = 'pointer-events-none absolute left-0 top-0 hidden rounded-full'; cur.style.transform = 'translate(-50%,-50%)';
+  w.appendChild(c); w.appendChild(cur); GN.wrap = w; GN.canvas = c; GN.ctx = c.getContext('2d'); GN.brushEl = cur;
   if ('ResizeObserver' in window) new ResizeObserver(gnResize).observe(w);
   c.addEventListener('pointerdown', gnPDown); c.addEventListener('pointermove', gnPMove);
   c.addEventListener('pointerup', gnPUp); c.addEventListener('pointercancel', gnPUp); c.addEventListener('lostpointercapture', gnPUp);
+  c.addEventListener('pointerleave', () => { if (!GN.cur) cur.classList.add('hidden'); });
   return w;
 }
 function gnResize() {
@@ -598,58 +619,155 @@ function gnResize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1), W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
   if (c.width !== W || c.height !== H) { c.width = W; c.height = H; gnRedraw(); }
 }
+// the board takes the space it has: as wide as possible while the word, the clock and the tools stay on screen
+function gnFitBoard() {
+  const stage = document.getElementById('gnStage'), wrap = GN.wrap, box = document.getElementById('gnDrawBox'), holder = document.getElementById('gnBoardBox');
+  if (!stage || !wrap || !box || !holder || !box.contains(wrap)) return;
+  const cs = getComputedStyle(stage);
+  const availW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const others = box.getBoundingClientRect().height - holder.getBoundingClientRect().height;
+  const availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - others - 2;
+  const w = Math.floor(Math.max(220, Math.min(availW, 880, availH * 4 / 3)));
+  if (Math.abs((parseFloat(holder.style.width) || 0) - w) > 1) { holder.style.width = w + 'px'; }
+}
 function gnRedraw() { const ctx = GN.ctx, c = GN.canvas; if (!ctx) return; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); GN.strokes.forEach(s => gnStrokeDraw(s, 0)); }
-const gnSafeColor = c => /^#[0-9a-f]{6}$/i.test(String(c)) ? c : '#111111';
-function gnStrokeDraw(s, from) {
+const gnSafeColor = c => /^#[0-9a-f]{6}$/i.test(String(c)) ? String(c).toLowerCase() : '#111111';
+const gnMid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+// smooth lines: each piece is a curve through the midpoints, so the drawing looks hand-made instead of jagged
+function gnStrokeDraw(s, from, tailOnly) {
   const c = GN.canvas, ctx = GN.ctx; if (!ctx || !s || !Array.isArray(s.p) || !s.p.length) return;
   const W = c.width, H = c.height, p = s.p;
-  ctx.strokeStyle = gnSafeColor(s.c); ctx.fillStyle = gnSafeColor(s.c); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(1, Math.min(0.05, Number(s.w) || 0.008) * W);
+  ctx.strokeStyle = gnSafeColor(s.c); ctx.fillStyle = gnSafeColor(s.c); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1, Math.min(GN_MAX_W / 800, Number(s.w) || 0.008) * W);
   if (p.length === 1) { ctx.beginPath(); ctx.arc(p[0][0] * W, p[0][1] * H, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill(); return; }
-  const st = Math.max(0, from - 1);
-  ctx.beginPath(); ctx.moveTo(p[st][0] * W, p[st][1] * H);
-  for (let i = st + 1; i < p.length; i++) ctx.lineTo(p[i][0] * W, p[i][1] * H);
+  ctx.beginPath();
+  if (!tailOnly) for (let i = Math.max(1, from); i < p.length; i++) {
+    const a = i === 1 ? p[0] : gnMid(p[i - 2], p[i - 1]), q = p[i - 1], e = gnMid(p[i - 1], p[i]);
+    ctx.moveTo(a[0] * W, a[1] * H); ctx.quadraticCurveTo(q[0] * W, q[1] * H, e[0] * W, e[1] * H);
+  }
+  if (s.done || tailOnly) { const a = gnMid(p[p.length - 2], p[p.length - 1]), e = p[p.length - 1]; ctx.moveTo(a[0] * W, a[1] * H); ctx.lineTo(e[0] * W, e[1] * H); }
   ctx.stroke();
 }
+function gnEndStroke(s) { if (s && !s.done) { s.done = true; if (s.p.length > 1) gnStrokeDraw(s, 0, true); } }
 function gnCanDraw() { const st = GN.st, d = st && st.d; return !!(st && st.phase === 'play' && st.game === 'draw' && d && d.phase === 'draw' && d.drawer === gnMeId()); }
 function gnPt(e) { const r = GN.canvas.getBoundingClientRect(); const f = v => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000; return [f((e.clientX - r.left) / r.width), f((e.clientY - r.top) / r.height)]; }
+function gnStartStroke(pt) {
+  const s = { c: GN.tool.erase ? '#ffffff' : GN.tool.c, w: GN.tool.w / 800, p: [pt] };
+  GN.strokes.push(s); GN.cur = s; gnStrokeDraw(s, 0); GN.out.push({ k: 'b', c: s.c, w: s.w, p: pt });
+}
 function gnPDown(e) {
   if (!gnCanDraw()) return; e.preventDefault();
   try { GN.canvas.setPointerCapture(e.pointerId); } catch (x) {}
-  const s = { c: GN.tool.erase ? '#ffffff' : GN.tool.c, w: GN.tool.w / 800, p: [gnPt(e)] };
-  GN.strokes.push(s); GN.cur = s; gnStrokeDraw(s, 0); GN.out.push({ k: 'b', c: s.c, w: s.w, p: s.p[0] });
+  gnStartStroke(gnPt(e)); gnBrushAt(e);
 }
 function gnPMove(e) {
+  gnBrushAt(e);
   if (!GN.cur) return; e.preventDefault();
   const pt = gnPt(e), l = GN.cur.p[GN.cur.p.length - 1]; if (Math.abs(pt[0] - l[0]) + Math.abs(pt[1] - l[1]) < 0.005) return;   // skip tiny moves: fewer points, same look
   GN.cur.p.push(pt); gnStrokeDraw(GN.cur, GN.cur.p.length - 1);
   const last = GN.out[GN.out.length - 1]; if (last && last.k === 'm') last.p.push(pt); else GN.out.push({ k: 'm', p: [pt] });
 }
-function gnPUp() { GN.cur = null; }
+function gnPUp() { if (GN.cur) { gnEndStroke(GN.cur); GN.out.push({ k: 'e' }); } GN.cur = null; }
+// a circle under the pointer shows the brush: its size and colour, or an outline for the eraser
+function gnBrushAt(e) {
+  const el = GN.brushEl; if (!el) return;
+  if (!gnCanDraw() || e.pointerType === 'touch') { el.classList.add('hidden'); return; }
+  const r = GN.wrap.getBoundingClientRect(), d = Math.max(4, GN.tool.w / 800 * r.width);
+  el.style.width = el.style.height = d + 'px'; el.style.left = (e.clientX - r.left) + 'px'; el.style.top = (e.clientY - r.top) + 'px';
+  el.style.background = GN.tool.erase ? 'transparent' : GN.tool.c; el.style.boxShadow = GN.tool.erase ? '0 0 0 1.5px #111' : '0 0 0 1.5px rgba(0,0,0,.35)';
+  el.classList.remove('hidden');
+}
 function gnFlush() { if (!GN.out.length || !GN.ch) return; const ops = GN.out; GN.out = []; gnSend({ t: 'draw', ops }); }
 function gnApplyOps(ops) {
   ops.slice(0, 400).forEach(o => {
     if (!o) return;
     const okPt = p => Array.isArray(p) && p.length === 2 && p.every(v => typeof v === 'number' && v >= 0 && v <= 1);
-    if (o.k === 'b' && okPt(o.p)) { const s = { c: gnSafeColor(o.c), w: Number(o.w) || 0.008, p: [o.p] }; GN.strokes.push(s); GN.rcur = s; gnStrokeDraw(s, 0); }
+    if (o.k === 'b' && okPt(o.p)) { gnEndStroke(GN.rcur); const s = { c: gnSafeColor(o.c), w: Math.min(GN_MAX_W / 800, Number(o.w) || 0.008), p: [o.p] }; GN.strokes.push(s); GN.rcur = s; gnStrokeDraw(s, 0); }
     else if (o.k === 'm' && GN.rcur && Array.isArray(o.p)) { const pts = o.p.filter(okPt); const n = GN.rcur.p.length; GN.rcur.p.push(...pts); gnStrokeDraw(GN.rcur, n); }
+    else if (o.k === 'e') { gnEndStroke(GN.rcur); GN.rcur = null; }
     else if (o.k === 'u') { GN.strokes.pop(); GN.rcur = null; gnRedraw(); }
     else if (o.k === 'x') { GN.strokes = []; GN.rcur = null; gnRedraw(); }
   });
 }
+// colour and size can change at any moment, even in the middle of a line: the line simply carries on in the new style
 function gnTool(k, v) {
+  const before = { c: GN.tool.c, w: GN.tool.w, erase: GN.tool.erase };
   if (k === 'c') { GN.tool.c = gnSafeColor(v); GN.tool.erase = false; }
-  if (k === 'w') GN.tool.w = GN_SIZES.includes(v) ? v : 7;
+  if (k === 'w') GN.tool.w = Math.max(GN_MIN_W, Math.min(GN_MAX_W, Math.round(Number(v) || 7)));
   if (k === 'erase') GN.tool.erase = !GN.tool.erase;
-  if (k === 'undo' && gnCanDraw() && GN.strokes.length) { GN.strokes.pop(); gnRedraw(); GN.out.push({ k: 'u' }); }
-  if (k === 'clear' && gnCanDraw()) { GN.strokes = []; gnRedraw(); GN.out.push({ k: 'x' }); }
-  const tb = document.getElementById('gnTools'); if (tb) tb.outerHTML = gdToolsHtml();
+  if (k === 'brush') GN.tool.erase = false;
+  if (k === 'undo' && gnCanDraw() && GN.strokes.length) { if (GN.cur) gnPUp(); GN.strokes.pop(); gnRedraw(); GN.out.push({ k: 'u' }); }
+  if (k === 'clear' && gnCanDraw()) { GN.cur = null; GN.strokes = []; gnRedraw(); GN.out.push({ k: 'x' }); }
+  const changed = before.c !== GN.tool.c || before.w !== GN.tool.w || before.erase !== GN.tool.erase;
+  if (changed && GN.cur && gnCanDraw()) { const last = GN.cur.p[GN.cur.p.length - 1]; gnPUp(); gnStartStroke(last); }
+  try { localStorage.setItem('gn_tool', JSON.stringify({ c: GN.tool.c, w: GN.tool.w })); } catch (e) {}
+  gnToolsSync();
+}
+// update the toolbar in place (re-building it would interrupt a slider or colour picker that is being dragged)
+function gnToolsSync() {
+  const tb = document.getElementById('gnTools'); if (!tb) return;
+  const t = GN.tool, inPalette = GN_COLORS.includes(t.c);
+  tb.querySelectorAll('[data-color]').forEach(b => { const on = !t.erase && b.dataset.color === t.c; b.classList.toggle('ring-white', on); b.classList.toggle('scale-110', on); b.classList.toggle('ring-white/15', !on); });
+  const cust = document.getElementById('gnCustom'); if (cust) { const on = !t.erase && !inPalette; cust.classList.toggle('ring-white', on); cust.classList.toggle('scale-110', on); cust.classList.toggle('ring-white/15', !on); const inp = cust.querySelector('input'); if (inp && document.activeElement !== inp) inp.value = t.c; }
+  const dot = document.getElementById('gnBrushDot'); if (dot) { const d = Math.max(3, Math.min(28, t.w)); dot.style.width = dot.style.height = d + 'px'; dot.style.background = t.erase ? 'transparent' : t.c; dot.style.boxShadow = t.erase ? 'inset 0 0 0 1.5px #111' : (t.c === '#ffffff' ? 'inset 0 0 0 1px #9ca3af' : 'none'); }
+  const val = document.getElementById('gnSizeVal'); if (val) val.textContent = t.w;
+  const sl = document.getElementById('gnSize'); if (sl && document.activeElement !== sl) sl.value = t.w;
+  tb.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('bg-white/20', Number(b.dataset.size) === t.w));
+  const er = document.getElementById('gnEraser'); if (er) { er.classList.toggle('bg-white', t.erase); er.classList.toggle('text-black', t.erase); er.classList.toggle('bg-white/[0.06]', !t.erase); }
 }
 function gdToolsHtml() {
   const t = GN.tool;
-  const colors = GN_COLORS.map(c => `<button type="button" onclick="gnTool('c','${c}')" aria-label="Colour ${c}" class="h-6 w-6 shrink-0 rounded-full ring-2 sm:h-7 sm:w-7 ${!t.erase && t.c === c ? 'ring-white scale-110' : 'ring-white/15'} transition" style="background:${c}"></button>`).join('');
-  const sizes = GN_SIZES.map(w => `<button type="button" onclick="gnTool('w',${w})" aria-label="Brush size ${w}" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.w === w ? 'bg-white/20' : 'bg-white/[0.06]'}"><span class="rounded-full bg-white" style="width:${Math.min(22, w)}px;height:${Math.min(22, w)}px"></span></button>`).join('');
-  const btn = (k, icon, label, on) => `<button type="button" onclick="gnTool('${k}')" aria-label="${label}" title="${label}" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-white text-black' : 'bg-white/[0.06] text-white'}"><i class="fa-solid ${icon} text-sm"></i></button>`;
-  return `<div id="gnTools" class="flex flex-col items-center gap-2 py-1 lg:flex-row lg:justify-center"><div class="flex flex-wrap justify-center gap-1 sm:gap-1.5">${colors}</div><span class="hidden h-6 w-px shrink-0 bg-white/15 lg:block"></span><div class="flex items-center gap-1.5">${sizes}<span class="mx-1 h-6 w-px shrink-0 bg-white/15"></span>${btn('erase', 'fa-eraser', 'Eraser', t.erase)}${btn('undo', 'fa-rotate-left', 'Undo')}${btn('clear', 'fa-trash', 'Clear the drawing')}</div></div>`;
+  const colors = GN_COLORS.map(c => `<button type="button" data-color="${c}" onclick="gnTool('c','${c}')" aria-label="Colour ${c}" class="h-[22px] w-[22px] shrink-0 rounded-full ring-2 ring-white/15 transition sm:h-7 sm:w-7" style="background:${c}"></button>`).join('');
+  const custom = `<label id="gnCustom" title="Pick any colour" class="relative h-[22px] w-[22px] shrink-0 cursor-pointer overflow-hidden rounded-full ring-2 ring-white/15 transition sm:h-7 sm:w-7" style="background:conic-gradient(#ef4444,#facc15,#22c55e,#06b6d4,#3b82f6,#a855f7,#ec4899,#ef4444)"><input type="color" value="${gnSafeColor(t.c)}" oninput="gnTool('c', this.value)" aria-label="Pick any colour" class="absolute inset-0 h-full w-full cursor-pointer opacity-0"></label>`;
+  const presets = [[4, 'S'], [10, 'M'], [22, 'L']].map(([w, l]) => `<button type="button" data-size="${w}" onclick="gnTool('w',${w})" aria-label="Brush size ${l}" class="hidden h-8 w-8 shrink-0 rounded-lg bg-white/[0.06] text-xs font-semibold text-white/80 sm:block">${l}</button>`).join('');
+  const btn = (k, icon, label, id) => `<button type="button" ${id ? `id="${id}"` : ''} onclick="gnTool('${k}')" aria-label="${label}" title="${label}" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-white"><i class="fa-solid ${icon} text-sm"></i></button>`;
+  return `<div id="gnTools" class="flex flex-col items-center gap-2 py-0.5">
+    <div class="flex flex-wrap items-center justify-center gap-[5px] sm:gap-1.5">${colors}${custom}</div>
+    <div class="flex items-center justify-center gap-1.5">
+      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white" title="Current brush"><span id="gnBrushDot" class="rounded-full"></span></span>
+      <input id="gnSize" type="range" min="${GN_MIN_W}" max="${GN_MAX_W}" step="1" value="${t.w}" oninput="gnTool('w', this.value)" aria-label="Brush size" class="h-8 w-[88px] accent-purple-400 sm:w-32">
+      <span id="gnSizeVal" class="w-5 text-xs tabular-nums text-white/55">${t.w}</span>
+      ${presets}
+      <span class="mx-1 h-6 w-px shrink-0 bg-white/15"></span>
+      ${btn('erase', 'fa-eraser', 'Eraser (E)', 'gnEraser')}${btn('undo', 'fa-rotate-left', 'Undo (Ctrl+Z)')}${btn('clear', 'fa-trash', 'Clear the drawing')}
+    </div>
+  </div>`;
+}
+// keyboard: Ctrl+Z undo, B brush, E eraser, [ and ] brush size
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('gnRoot') || !gnCanDraw()) return;
+  const tag = (e.target && e.target.tagName) || ''; if (tag === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'color' || tag === 'TEXTAREA') return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); gnTool('undo'); }
+  else if (e.key === 'e' || e.key === 'E') gnTool('erase');
+  else if (e.key === 'b' || e.key === 'B') gnTool('brush');
+  else if (e.key === '[') gnTool('w', GN.tool.w - 2);
+  else if (e.key === ']') gnTool('w', GN.tool.w + 2);
+});
+(function () { try { const s = JSON.parse(localStorage.getItem('gn_tool') || 'null'); if (s) { GN.tool.c = gnSafeColor(s.c); GN.tool.w = Math.max(GN_MIN_W, Math.min(GN_MAX_W, Number(s.w) || 7)); } } catch (e) {} })();
+
+// ---- sounds (short tones made on the device; nothing is downloaded). A button in the top bar mutes them.
+const GNS = { ctx: null };
+function gnMuted() { try { return localStorage.getItem('gn_mute') === '1'; } catch (e) { return false; } }
+function gnToggleMute() { try { localStorage.setItem('gn_mute', gnMuted() ? '0' : '1'); } catch (e) {} const b = document.getElementById('gnMuteBtn'); if (b) b.innerHTML = `<i class="fa-solid ${gnMuted() ? 'fa-volume-xmark' : 'fa-volume-high'} text-[12px]"></i>`; if (!gnMuted()) gnSound('turn'); }
+function gnBeep(freq, dur, type, vol, when) {
+  if (gnMuted()) return;
+  try {
+    if (!GNS.ctx) GNS.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const a = GNS.ctx; if (a.state === 'suspended') a.resume();
+    const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + (when || 0);
+    o.type = type || 'sine'; o.frequency.value = freq; g.gain.setValueAtTime(vol || 0.06, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) {}
+}
+function gnSound(k) {
+  if (k === 'tick') gnBeep(1000, 0.05, 'square', 0.025);
+  else if (k === 'correct') { gnBeep(660, 0.12, 'sine', 0.08); gnBeep(990, 0.2, 'sine', 0.08, 0.1); }
+  else if (k === 'turn') gnBeep(520, 0.16, 'triangle', 0.06);
+  else if (k === 'end') [523, 659, 784, 1046].forEach((f, i) => gnBeep(f, 0.22, 'triangle', 0.07, i * 0.12));
+}
+// the big round clock next to the word
+function gnClockHtml() {
+  return `<div class="relative h-12 w-12 shrink-0" aria-label="Time left"><svg viewBox="0 0 36 36" class="h-12 w-12 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="3"></circle><circle id="gnClockRing" cx="18" cy="18" r="15.5" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="0" style="transition:stroke-dashoffset .25s linear, stroke .3s"></circle></svg><span id="gnClockText" class="absolute inset-0 flex items-center justify-center text-[15px] font-bold tabular-nums"></span></div>`;
 }
 
 // ================= MOVIE FIBBER =================
@@ -793,7 +911,10 @@ function giTick(st) {
 function gnRender(full) {
   const r = document.getElementById('gnRoot'); if (!r) return;
   if (!GN.code) { r.innerHTML = gnLandingHtml(); return; }
-  if (full || !document.getElementById('gnStage')) { r.innerHTML = gnShellHtml(); gnFeedRender(); GN.stageKey = ''; }
+  if (full || !document.getElementById('gnStage')) {
+    r.innerHTML = gnShellHtml(); gnFeedRender(); GN.stageKey = '';
+    if ('ResizeObserver' in window) new ResizeObserver(() => gnFitBoard()).observe(document.getElementById('gnStage'));
+  }
   gnRenderTop(); gnRenderPlayers(); gnRenderStage(); gnRenderChatInput();
 }
 function gnLandingHtml() {
@@ -823,18 +944,21 @@ function gnShellHtml() {
       <button type="button" onclick="gnCopy()" class="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-white/10" aria-label="Copy invite link"><i class="fa-solid fa-link text-[11px]"></i><span class="hidden sm:inline">Copy link</span></button>
       <button type="button" onclick="gnWhatsApp()" class="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-white/10" aria-label="Invite on WhatsApp"><i class="fa-brands fa-whatsapp text-[13px]"></i><span class="hidden sm:inline">Invite</span></button>
       <div id="gnTop" class="ml-auto flex min-w-0 items-center gap-2 whitespace-nowrap text-sm"></div>
+      <button type="button" id="gnMuteBtn" onclick="gnToggleMute()" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 hover:bg-white/10" aria-label="Sound on or off"><i class="fa-solid ${gnMuted() ? 'fa-volume-xmark' : 'fa-volume-high'} text-[12px]"></i></button>
       <button type="button" onclick="closeGames()" class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-rose-500/20" aria-label="Leave the room"><i class="fa-solid fa-right-from-bracket text-[11px]"></i><span class="hidden sm:inline">Leave</span></button>
     </div>
     <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
       <aside id="gnPlayers" class="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 px-3 py-2 lg:w-60 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:p-3"></aside>
-      <main id="gnStage" class="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5"></main>
-      <section class="flex h-[30vh] shrink-0 flex-col border-t border-white/10 lg:h-auto lg:w-80 lg:border-l lg:border-t-0">
+      <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+      <main id="gnStage" class="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4"></main>
+      <section id="gnChatBox" class="flex h-[30vh] shrink-0 flex-col border-t border-white/10 md:h-auto md:w-72 md:border-l md:border-t-0 lg:w-80">
         <div id="gnFeed" class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm"></div>
         <form onsubmit="gnSubmitChat(event)" class="flex gap-2 border-t border-white/10 p-2">
           <input id="gnChatInput" maxlength="80" autocomplete="off" enterkeyhint="send" class="min-w-0 flex-1 rounded-full bg-white/[0.06] px-4 py-2.5 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
           <button type="submit" class="rounded-full bg-white px-4 text-sm font-semibold text-black" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
         </form>
       </section>
+      </div>
     </div>`;
 }
 function gnRenderTop() {
@@ -901,7 +1025,8 @@ function gnRenderStage(force) {
   el.innerHTML = html;
   Object.entries(keep).forEach(([id, k]) => { const x = document.getElementById(id); if (x) { x.value = k.v; if (k.f) { x.focus(); try { x.setSelectionRange(k.s, k.s); } catch (e) {} } } });
   const slot = document.getElementById('gnCanvasSlot');
-  if (slot) { slot.appendChild(gnCanvasWrap()); requestAnimationFrame(gnResize); }
+  if (slot) { slot.appendChild(gnCanvasWrap()); requestAnimationFrame(() => { gnFitBoard(); gnResize(); }); }
+  gnToolsSync();
   gnTick();
 }
 function gnLobbyHtml(st) {
@@ -951,11 +1076,10 @@ function gdStageHtml(st) {
     top = gdTopHtml(st);
     const n = Object.keys(d.guessed).length;
     const reveal = d.phase === 'reveal' ? `<div class="absolute inset-0 z-10 flex items-center justify-center bg-black/75 p-4"><div class="flex items-center gap-4 text-left">${gnPoster(d.word, 'h-32 w-[86px] sm:h-40 sm:w-[106px]')}<div><div class="text-xs uppercase tracking-[0.16em] text-white/55">The film was</div><div class="font-display text-2xl sm:text-3xl">${esc(d.word ? d.word.title : '')}</div><div class="text-sm text-white/60">${esc(d.word ? d.word.year : '')}</div><div class="mt-2 text-sm ${n ? 'text-green-400' : 'text-rose-300'}">${n ? n + ' guessed it' : 'Nobody guessed it'}</div></div></div></div>` : '';
-    body = `<div class="relative">${reveal}<div id="gnCanvasSlot"></div></div>${amDrawer && d.phase === 'draw' ? gdToolsHtml() : ''}`;
+    body = `<div id="gnBoardBox" class="relative mx-auto w-full max-w-full">${reveal}<div id="gnCanvasSlot"></div></div>${amDrawer && d.phase === 'draw' ? gdToolsHtml() : ''}`;
   }
-  return `<div class="mx-auto max-w-[880px] space-y-2.5">
-    <div id="gnWordTop" class="flex min-h-[36px] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">${top}</div>
-    ${gnTimeBar()}
+  return `<div id="gnDrawBox" class="mx-auto flex max-w-[880px] flex-col gap-2">
+    <div class="flex items-center justify-center gap-3"><div id="gnWordTop" class="flex min-h-[40px] min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">${top}</div>${d.phase === 'reveal' ? '' : gnClockHtml()}</div>
     ${body}
     <div id="gnHint" class="text-center text-xs text-white/40 ${!amDrawer && d.phase === 'draw' && d.guessed[me] == null ? '' : 'hidden'}">Type your guess in the chat. Faster guesses score more.</div>
   </div>`;
@@ -1018,6 +1142,7 @@ function gnRenderChatInput() {
   const st = GN.st, d = st && st.phase === 'play' && st.game === 'draw' ? st.d : null, me = gnMeId();
   const drawing = d && d.phase === 'draw' && d.drawer === me;
   el.disabled = !!drawing;
+  const box = document.getElementById('gnChatBox'); if (box) { box.classList.toggle('h-[30vh]', !drawing); box.classList.toggle('h-[18vh]', !!drawing); }
   el.placeholder = drawing ? 'You are drawing: no typing the answer!' : d && d.phase === 'draw' && d.guessed[me] == null ? 'Type your guess here…' : 'Chat with the room';
 }
 function gnSubmitChat(e) {
@@ -1029,7 +1154,7 @@ function gnSubmitChat(e) {
   if (st && st.phase === 'play' && st.game === 'draw') gnSend({ t: 'guess', text: t });   // the host checks guesses and shows the wrong ones
   else gnSend({ t: 'chat', text: t });
 }
-function gnFeedAdd(m) { GN.feed.push(m); if (GN.feed.length > 150) GN.feed.shift(); const el = document.getElementById('gnFeed'); if (!el) return; el.insertAdjacentHTML('beforeend', gnFeedLine(m)); el.scrollTop = el.scrollHeight; }
+function gnFeedAdd(m) { if (m.k === 'ok') gnSound('correct'); GN.feed.push(m); if (GN.feed.length > 150) GN.feed.shift(); const el = document.getElementById('gnFeed'); if (!el) return; el.insertAdjacentHTML('beforeend', gnFeedLine(m)); el.scrollTop = el.scrollHeight; }
 function gnFeedRender() { const el = document.getElementById('gnFeed'); if (!el) return; el.innerHTML = GN.feed.map(gnFeedLine).join(''); el.scrollTop = el.scrollHeight; }
 function gnFeedLine(m) {
   if (m.k === 'sys') return `<div class="text-[13px] italic text-white/45">${esc(m.text)}</div>`;
