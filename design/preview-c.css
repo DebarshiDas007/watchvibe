@@ -1,6 +1,6 @@
 /* Direction B "Projector" applied over the real app, for a clickable preview only (not shipped).
-   Colour tokens from design/critique.md: bg #090909, surface #141414, elevated #1E1E1E, text #FAFAF7, brass #FF5A36. */
-:root { --pv-bg:#090909; --pv-surface:#141414; --pv-elev:#1E1E1E; --pv-line:#2E2E2E; --pv-text:#FAFAF7; --pv-text2:#BDBDB6; --pv-muted:#93938C; --pv-brass:#FF5A36; --pv-ink:#000000; }
+   Colour tokens from design/critique.md: bg #090909, surface #141414, elevated #1E1E1E, text #FAFAF7, brass #D6502F. */
+:root { --pv-bg:#090909; --pv-surface:#141414; --pv-elev:#1E1E1E; --pv-line:#2E2E2E; --pv-text:#FAFAF7; --pv-text2:#BDBDB6; --pv-muted:#93938C; --pv-brass:#D6502F; --pv-ink:#000000; }
 html, body { background: var(--pv-bg) !important; color: var(--pv-text); }
 header, header.sticky { background: rgba(9,9,9,.92) !important; border-color: var(--pv-line) !important; }
 
@@ -14,10 +14,10 @@ header, header.sticky { background: rgba(9,9,9,.92) !important; border-color: va
 .text-white { color: var(--pv-text) !important; }
 
 /* one accent: brass replaces purple, pink and the blue washes */
-[class*="text-purple"], [class*="text-pink"], .text-purple-400 { color: var(--pv-brass) !important; }
-[class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: rgba(255,90,54,.14) !important; }
+[class^="text-purple"], [class*=" text-purple"], [class^="text-pink"], [class*=" text-pink"] { color: var(--pv-brass) !important; }
+[class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: rgba(214,80,47,.14) !important; }
 [class~="bg-purple-400"], [class~="bg-purple-500"], [class~="bg-purple-600"] { background-color: var(--pv-brass) !important; color: var(--pv-ink) !important; }
-[class*="ring-purple"], [class*="border-purple"] { --tw-ring-color: rgba(255,90,54,.5) !important; border-color: rgba(255,90,54,.5) !important; }
+[class^="ring-purple"], [class*=" ring-purple"], [class^="border-purple"], [class*=" border-purple"] { --tw-ring-color: rgba(214,80,47,.5) !important; border-color: rgba(214,80,47,.5) !important; }
 [class*="from-purple"], [class*="from-pink"], [class*="via-blue"], [class*="to-blue"], [class*="via-purple"] { background-image: none !important; background-color: var(--pv-surface) !important; }
 [class*="from-purple"][class*="to-transparent"], [class*="from-pink"][class*="to-transparent"] { background-color: var(--pv-surface) !important; }
 .accent-purple-400 { accent-color: var(--pv-brass); }
@@ -26,8 +26,8 @@ header, header.sticky { background: rgba(9,9,9,.92) !important; border-color: va
 
 /* buttons: brass, dark text, flat */
 .bg-white.text-black, button.bg-white { background-color: var(--pv-brass) !important; color: var(--pv-ink) !important; box-shadow: none !important; }
-.bg-white.text-black:hover, button.bg-white:hover { background-color: #FF5A36 !important; }
-.hover\:bg-white\/90:hover { background-color: #FF5A36 !important; }
+.bg-white.text-black:hover, button.bg-white:hover { background-color: #D6502F !important; }
+.hover\:bg-white\/90:hover { background-color: #D6502F !important; }
 
 /* type: serif for display headings, Inter for everything else */
 .font-display { font-family: 'Instrument Serif', Georgia, serif !important; font-weight: 400 !important; letter-spacing: 0 !important; }
@@ -54,10 +54,10 @@ body::after { content: "Preview: direction B Projector"; position: fixed; left: 
 .font-display { font-family: Anton, Impact, sans-serif !important; font-weight: 400 !important; text-transform: uppercase; letter-spacing: .02em !important; }
 header button[aria-label="WatchVibe home"] { font-family: Anton, Impact, sans-serif !important; font-size: 24px !important; text-transform: uppercase !important; letter-spacing: .04em !important; }
 header button[aria-label="WatchVibe home"]::first-letter { text-transform: uppercase; }
-header button[aria-label="WatchVibe home"]::before { content: ""; display: inline-block; width: 6px; height: 20px; background: #FF5A36; margin-right: 8px; vertical-align: -2px; }
+header button[aria-label="WatchVibe home"]::before { content: ""; display: inline-block; width: 6px; height: 20px; background: #D6502F; margin-right: 8px; vertical-align: -2px; }
 header button[aria-label="WatchVibe home"]::after { content: ""; }
 .rounded-2xl, .rounded-xl, .rounded-lg, .rounded-3xl { border-radius: 2px !important; }
 button.rounded-full, a.rounded-full, select.rounded-full { border-radius: 2px !important; }
 button.bg-white, .bg-white.text-black { text-transform: uppercase; letter-spacing: .06em; font-weight: 700 !important; }
 .top-nav-pill { text-transform: uppercase; letter-spacing: .06em; }
-body::after { content: "Preview: direction C Marquee"; background:#FF5A36; color:#000; }
+body::after { content: "Preview: direction C Marquee"; background:#D6502F; color:#000; }

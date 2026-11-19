@@ -14,10 +14,10 @@ header, header.sticky { background: rgba(14,15,17,.92) !important; border-color:
 .text-white { color: var(--pv-text) !important; }
 
 /* one accent: brass replaces purple, pink and the blue washes */
-[class*="text-purple"], [class*="text-pink"], .text-purple-400 { color: var(--pv-brass) !important; }
+[class^="text-purple"], [class*=" text-purple"], [class^="text-pink"], [class*=" text-pink"] { color: var(--pv-brass) !important; }
 [class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: rgba(141,182,255,.14) !important; }
 [class~="bg-purple-400"], [class~="bg-purple-500"], [class~="bg-purple-600"] { background-color: var(--pv-brass) !important; color: var(--pv-ink) !important; }
-[class*="ring-purple"], [class*="border-purple"] { --tw-ring-color: rgba(141,182,255,.5) !important; border-color: rgba(141,182,255,.5) !important; }
+[class^="ring-purple"], [class*=" ring-purple"], [class^="border-purple"], [class*=" border-purple"] { --tw-ring-color: rgba(141,182,255,.5) !important; border-color: rgba(141,182,255,.5) !important; }
 [class*="from-purple"], [class*="from-pink"], [class*="via-blue"], [class*="to-blue"], [class*="via-purple"] { background-image: none !important; background-color: var(--pv-surface) !important; }
 [class*="from-purple"][class*="to-transparent"], [class*="from-pink"][class*="to-transparent"] { background-color: var(--pv-surface) !important; }
 .accent-purple-400 { accent-color: var(--pv-brass); }
