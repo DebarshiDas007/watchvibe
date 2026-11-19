@@ -35,4 +35,6 @@ syntax check passes, `npm run build:css`, `await runProductSweep()` shows `probl
 - lead: the only one who edits index.html and games.js.
 - tester, reviewer: read-only reports (tester Sonnet, reviewer Sonnet; use Opus for the reviewer on security changes).
 - designer: writes only inside design/ (mockups, critiques, build specs).
-- data-owner: scripts/ and the film data files only (Haiku; Sonnet when changing script logic).`n- deployer (Opus, high effort): runs the checklist, deploys only on the lead saying "ship", verifies live, writes the HANDOFF entry. May edit only sw.js, version numbers and HANDOFF.md.`n- designer (Opus, high effort).
+- data-owner: scripts/ and the film data files only (Haiku; Sonnet when changing script logic).
+- deployer (Opus, high effort): runs the checklist, deploys only on the lead saying "ship", verifies live, writes the HANDOFF entry. May edit only sw.js, version numbers and HANDOFF.md.
+- designer (Opus, high effort).
