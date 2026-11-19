@@ -516,7 +516,8 @@ function gdPick(u, i) { const st = GN.st, d = st && st.d; if (!d || d.phase !== 
 function gdStartDraw(st, i) {
   const d = st.d, s = GN.sec && GN.sec.draw; if (!s || s.k !== gdKey(st)) { d.turn++; gdBeginTurn(st); return; }
   const w = s.choices[Math.max(0, Math.min(s.choices.length - 1, i | 0))]; if (!w) { d.turn++; gdBeginTurn(st); return; }
-  s.word = w; s.names = [gdGuessNorm(w.title)]; d.used.push(w.id); d.phase = 'draw'; d.reveal = []; d.guessed = {}; d.gain = {};
+  s.word = w; s.names = [gdGuessNorm(w.title)]; d.used.push(w.id);
+  { const full = mediaDatabase.find(x => x.id === w.id); (full && full.alt || []).forEach(t => { const g = gdGuessNorm(t); if (g.length >= 3 && !s.names.includes(g)) s.names.push(g); }); } d.phase = 'draw'; d.reveal = []; d.guessed = {}; d.gain = {};
   gdMask(st); gnDeadline(st, st.settings.drawSec);
   setTimeout(() => gnSendSecret(d.drawer, { k: s.k, word: w }), 0);
   gdAltTitles(s);

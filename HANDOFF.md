@@ -190,3 +190,10 @@ Open / next, in the order we discussed:
 - Data: scripts/fix_runtimes.mjs replaced 1,724 made-up '2h 10m' runtimes and 35 placeholder directors in the built-in catalogue; DB_VERSION bumped to flush saved copies.
 - Daily trending sync no longer replaces complete catalogue entries with thin ones, and new trending titles get real genres and no fake runtime/director.
 
+
+## v82 - Catalogue depth, original titles, saved sweep
+- scripts/add_regional.mjs: +1,034 films in Telugu/Kannada/Marathi/Punjabi/Bengali/Malayalam (vote bar 4) into catalog_extra.json (now 6,088; CAT.v=2). Indian total ~3,534; Telugu 757, Bengali 291, Kannada 145.
+- scripts/add_alt_titles.mjs: 'alt' = other names in Latin letters for 3,084 Indian films (1,825 have some, e.g. Laapataa Ladies, DDLJ). Search matches alt; Draw the Movie accepts alt as a correct guess. Note alt includes some foreign-language translations (harmless).
+- Placeholder directors blanked (32); unknown runtimes/directors are blank, never invented (filmography fallback fixed).
+- tests/product-sweep.js: paste/load in the site and run  await runProductSweep()  at 375/768/1440 widths (needs the file served from the site because the CSP blocks eval). Returns {problems:[],passed:[...]}. DB_VERSION=v9_alt_titles.
+
