@@ -165,3 +165,12 @@ Open / next, in the order we discussed:
 - Entry: top-bar Games button (lg), More menu, home card 'Game night with friends'. Realtime eventsPerSecond raised to 20.
 - Limits: game state (incl. secret words) is broadcast to all clients, so a technical player could peek in dev tools; no voice; scores not saved.
 
+
+## v79 - Game night security and robustness rebuild (games.js?v=2)
+- Each player makes ECDSA (signing) + ECDH (encryption) P-256 keys in sessionStorage ('gn_keys2'); player id = base32(SHA-256(public signing key))[0:10]; presence entries are signed; every broadcast is {f, d, s} signed, with a per-sender increasing n (replays dropped). Unknown/unsigned senders are ignored.
+- Only the host's state is accepted (st.host + st.joined join order; host = first joined player present with screen on; screen off > 6 s or gone > 5 s hands over; returning host does not reclaim). Incoming state is sanitised (gnCleanState). Host heartbeat every 5 s.
+- Secrets stay on the host (GN.sec): draw choices/word, fib authors, impostor + films. Players get theirs AES-GCM encrypted (ECDH). A new host restarts the turn/round in progress.
+- No player-controlled value is placed in onclick: buttons use data-act/data-v with a delegated handler.
+- Drawing: flush every 150 ms, min point distance 0.005, channel self:false. Presence updates debounced (Supabase closes a connection on 'Client presence rate limit exceeded'). Auto-reconnect on CLOSED/ERROR.
+- Also: impostor leaving ends the round, fewer than the minimum players ends the game, 5 s grace for drop-outs, Fibber decoy plots (min 4 options), alternative titles + number/roman/'the' matching for guesses, no title words in impostor clues, tie message + 50 pts for spotting the impostor, duplicate names numbered, impostor film from popular pool.
+- Known limit: a cheater can still send a fake state to someone who joins after them (before the real host answers).
