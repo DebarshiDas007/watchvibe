@@ -4,7 +4,7 @@ const STATIC_ASSETS = [
   './index.html',
   './manifest.json',
   './tailwind.css',
-  './theme.css?v=5',
+  './theme.css?v=6',
   './hover-card.css?v=1',
   './hover-card.js?v=2',
   './vendor/supabase/supabase.js',
