@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=11">
+  <link rel="stylesheet" href="/theme.css?v=12">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -5044,6 +5044,25 @@ function posterCard(item, opts) {
 window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
 window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
+    // the poster the visitor tapped: the title window grows out of that spot
+    document.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('[onclick*="openDetails("]');
+      if (!b) return;
+      const r = b.getBoundingClientRect();
+      window.__dmOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, true);
+    function playDetailsEnter(modal) {
+      const sc = document.getElementById('detailScroll');
+      const o = window.__dmOrigin;
+      if (sc && o) {
+        const r = sc.getBoundingClientRect();
+        sc.style.transformOrigin = `${o.x - r.left}px ${o.y - r.top}px`;
+      }
+      modal.classList.remove('dm-enter');
+      void modal.offsetWidth;   // restart the animation each time the window opens
+      modal.classList.add('dm-enter');
+    }
+
     async function openDetails(mediaId) {
       if (!mediaId) return;
 
@@ -5051,7 +5070,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const contentEl = document.getElementById('modalContent');
       if (!modal || !contentEl) return;
 
+      const wasHidden = modal.classList.contains('hidden');
       modal.classList.remove('hidden');
+      if (wasHidden) playDetailsEnter(modal);
       heroSetPause('modal', true);
       scrollDetailsToTop();
       { const ti = trackTitleInfo(mediaId); Track.event('title_open', ti); }

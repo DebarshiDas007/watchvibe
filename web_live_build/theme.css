@@ -92,6 +92,15 @@ button[data-person] { color: var(--text); text-decoration: none; }
 button[data-person]:hover { color: var(--accent-hover); }
 button[data-person]:focus-visible { color: var(--accent-hover); outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* ---- title window: opens like Netflix's "more info" panel: the backdrop fades in and the window grows out of the poster that was tapped ---- */
+#detailModal.dm-enter { animation: dmBackdrop .28s ease-out both; }
+#detailModal.dm-enter #detailScroll { animation: dmGrow .44s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes dmBackdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dmGrow { from { opacity: 0; transform: translateY(18px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #detailModal.dm-enter, #detailModal.dm-enter #detailScroll { animation: none; }
+}
+
 /* ---- touch targets: at least 44 px on phones ---- */
 @media (max-width: 767px) {
   button.rounded-full, a.rounded-full, select { min-height: 44px; }
