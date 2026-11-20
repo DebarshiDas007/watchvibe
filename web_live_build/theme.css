@@ -282,3 +282,32 @@ button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: none; outl
   h2.font-display { font-size: 28px; }
 }
 @media (max-width: 359px) { .wv-hbtns .wv-btn-p span { font-size: 14px; } }
+
+/* ---- one profile control: the avatar button opens the account menu ---- */
+#cloudAuthBtn { width: 40px; height: 40px; border-radius: 9999px; justify-content: center; gap: 0; padding: 0; overflow: visible; position: relative; box-shadow: 0 0 0 1px #2E2E35; transition: box-shadow .15s; }
+#cloudAuthBtn:hover, #cloudAuthBtn[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--accent); }
+#cloudAuthBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+#cloudAuthBtn #userProfileAvatar { width: 40px; height: 40px; margin: 0; }
+.wv-acct { position: fixed; z-index: 70; width: min(320px, calc(100vw - 24px)); background: #141418; border: 1px solid #26262C; border-radius: 12px; box-shadow: 0 18px 48px rgba(0,0,0,.6); overflow: hidden; animation: wvAcct .16s ease-out both; }
+@keyframes wvAcct { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wv-acct { animation: none; } }
+.wv-acct-head { display: flex; align-items: center; gap: 14px; padding: 18px 18px 14px; }
+.wv-acct-av { width: 48px; height: 48px; border-radius: 9999px; background: #26262C; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text); }
+.wv-acct-name { font: 600 16px/1.2 Inter, sans-serif; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-acct-mail { margin-top: 3px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-acct-persona { margin: 0 18px 12px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9999px; background: rgba(214,80,47,.14); color: #F0A48F; font-size: 12px; font-weight: 600; }
+.wv-acct-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 0 18px 8px; background: #26262C; border: 1px solid #26262C; border-radius: 10px; overflow: hidden; }
+.wv-acct-stats div { background: #1C1C21; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.wv-acct-stats b { font: 700 22px/1 'Barlow Condensed', Inter, sans-serif; color: var(--text); }
+.wv-acct-stats span { font-size: 12px; color: var(--text-2); }
+.wv-acct-list { padding: 6px 8px; border-top: 1px solid #1F1F24; margin-top: 8px; }
+.wv-acct-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #D9D9D3; font: 500 14px/1 Inter, sans-serif; text-align: left; cursor: pointer; transition: background-color .12s; }
+.wv-acct-row i { width: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.wv-acct-row em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--text-2); }
+.wv-acct-row:hover, .wv-acct-row:focus-visible { background: rgba(245,245,242,.07); color: var(--text); outline: none; }
+.wv-acct-foot { display: block; width: calc(100% - 16px); margin: 6px 8px 10px; height: 44px; border: 1px solid #3A3A42; border-radius: 8px; background: transparent; color: var(--text); font: 600 14px/1 Inter, sans-serif; cursor: pointer; }
+.wv-acct-foot:hover { background: rgba(245,245,242,.07); }
+.wv-acct-foot.is-primary { background: var(--accent); border-color: var(--accent); color: #0A0A0B; }
+.wv-acct-foot.is-primary:hover { background: var(--accent-hover); }
+/* phones: the bottom bar already has Profile, so the header carries no second profile icon */
+@media (max-width: 767px) { #cloudAuthBtn { display: none; } }

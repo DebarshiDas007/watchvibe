@@ -366,3 +366,10 @@ Open / next, in the order we discussed:
 - Files: index.html (imdbApply, wvImdbRating, wvImdbEnsure; hover-card.js?v=3), hover-card.js, sw.js CACHE_NAME watchvibe-cache-v101.
 - Checked live: syntax OK; product sweep problems [] at 375, 768 and 1440; hover card and poster ratings matched on every title sampled (the rest were blank on both sides until IMDb loaded).
 - Not done: a poster whose IMDb rating has not loaded yet stays blank until it does, by design.
+
+## v102: one profile control (account menu)
+- Desktop had two profile icons (the "Profile" nav item and the avatar button). The nav item (`#desk-tab-profile`) is removed; the avatar button (`#cloudAuthBtn`) now opens an account menu (`toggleAccountMenu`, `closeAccountMenu`, styles `.wv-acct*` in theme.css).
+- Menu: avatar, name, email (Guest: "Sign in to sync across devices"), vibe persona chip once something is watched, Watchlist and Watched counts, rows for Your profile, Watchlist, Taste Match, Daily Challenge, and Sign out or Sign in or create account. Closes on outside click and Escape; focus moves into the menu.
+- Phones: the header avatar is hidden (the bottom bar already has Profile, which holds the sign-in button), so there is one profile control at every width.
+- theme.css?v=20, sw.js CACHE_NAME watchvibe-cache-v102 (v101 was the hover-card rating fix from another session). Sweep problems [] at 390 and 1440; syntax check passes. Checked live: menu opens, no Profile nav item.
+- Not verified: the menu with a real signed-in account (tested with a stand-in session); the taste-skill design tools were not run, the menu follows the v98 design tokens.
