@@ -258,3 +258,13 @@ Open / next, in the order we discussed:
   - 844x390 landscape: 267 (was 513 in v86, 705 before). Poster row visible.
 - Product sweep (local): problems [] at 320, 375 and 768 (17 passed each).
 - Deployed after the user said "ship".
+
+## v88: credits are links (cast and director open that person's filmography)
+- index.html: `PERSON_SKIP`, `personNorm`, `personNames`, `personLink`, `openPerson(name, role)` and one delegated click handler on `[data-person]` (names go in data attributes via esc(), never in onclick).
+- Title page: Director and Cast names are buttons. Clicking closes the title page and opens the actor modal for that person.
+- Person page: curated ACTORS profile if the name matches; else a dynamic profile `person-<normalised name>` built from the local catalogue (cast or director match) and filled by `enrichActor` (TMDB person search: photo, bio, birth details, up to 40 titles). Empty About and vibe sections are hidden; empty list says "No titles found for this person yet." Placeholder names (Director, Showrunner, "... Starrer") are never links.
+- theme.css?v=11: link style has no underline, text #FAFAF7, orange on hover and focus; 44px tall on phones.
+- tests/product-sweep.js: new check "credits open person pages safely" (links exist, a click opens the person page, a hostile name injects nothing).
+- sw.js CACHE_NAME watchvibe-cache-v88. tailwind.css rebuilt.
+- Not covered: very rare names with no TMDB match show only catalogue films; real-device touch not tested.
+- Deployed after the user said "deploy it".
