@@ -246,3 +246,15 @@ Open / next, in the order we discussed:
 - Still open: 320x640 first row at y=680 (below the fold); filter bar height is the cause.
 - Product sweep: problems [] at 375 and 768 locally (17 passed each).
 - Deployed after the user said "ship".
+
+## v87: first poster row visible on short phones and landscape
+- theme.css?v=9 (index.html and sw.js precache). sw.js CACHE_NAME watchvibe-cache-v87.
+- Short portrait phones (max-height 720px, max-width 639px): hero padding and title art tightened, "Featured" line hidden.
+- Very narrow phones (max-width 359px): language and vibe selects share one row.
+- Landscape phones (max-height 500px): the hero is hidden so the poster rows come first.
+- Measured (first poster top, bottom bar top):
+  - 375x667: 538 (was 554 in the first v86 try, 628 at 812 tall before) vs bar 602. Row heading and ~64px of posters visible.
+  - 320x640: 538 vs bar 575 (v86: 590). Row heading and about 37px of posters visible.
+  - 844x390 landscape: 267 (was 513 in v86, 705 before). Poster row visible.
+- Product sweep (local): problems [] at 320, 375 and 768 (17 passed each).
+- Deployed after the user said "ship".
