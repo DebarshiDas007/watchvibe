@@ -274,3 +274,12 @@ Open / next, in the order we discussed:
 - `events_type_check` on public.events now allows game_room, game_start, game_conn and daily_done (21 types in all).
 - Verified: the constraint definition lists all 21 types; a test insert of the four new types succeeded inside a block that rolled itself back; no test rows were left.
 - Closes the open item: those events were previously rejected with a 400. Events sent from now on are stored.
+
+## v89: watchlist bug fixed (films came back after remove and refresh)
+- Cause: one film could be saved under two ids (catalogue id and TMDB id from search). Removing one card removed only that id, so the other copy stayed in Want to watch and came back on refresh.
+- index.html: `wlKey` (the film, by TMDB id or catalogue tmdbId), `wlHas`, `wlRemoveFilm`, `wlDedupe`. toggleWatchlist, toggleWatched and libMirrorWatched remove every copy; saveWatchlistStore dedupes.
+- Startup: setLoggedOutUser always reloads the guest copy (`loadUserWatchlistStore(hadSession)`), so the saved list is not wiped at page start.
+- sw.js CACHE_NAME watchvibe-cache-v89.
+- Tested locally: duplicate pair merged and removed together; add survives reload; remove survives reload; sweep problems [] at 375, 798 and desktop (18 checks each).
+- Not tested: the signed-in cloud sync path (needs a signed-in user).
+- Deployed after the user said "yes".
