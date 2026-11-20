@@ -344,3 +344,13 @@ Open / next, in the order we discussed:
 - One Games option on phones: the gamepad button in the header (`#headerGamesBtn`). The "Games" chip is removed from the tab row (`mobileTabs`), whose chips are back to px-4 / text-sm; four chips fit. Desktop is unchanged (its own Games nav item; header button is md:hidden).
 - theme.css?v=17; sw.js CACHE_NAME watchvibe-cache-v97. Sweep problems [] at 390, 768 and 1440. Desktop hero 546px, unchanged.
 - Deployed after the user asked for these changes with a phone screenshot.
+
+## v98: "Marquee, refined" redesign (desktop and phone)
+- Built from the Design canvas "WatchVibe Redesign: Marquee, refined". theme.css v18 appends a new layer (soft 8/12px radii, pill chips, Barlow Condensed sentence-case headings, tokens bg #0A0A0B / surface #141418 / line #26262C).
+- Header: text nav, search pill with "/" hint from 1100px, avatar-only profile button, 68px bar. Watchlist and Games labels show from lg.
+- Hero: rating chip, certificate, synopsis (768px+), Play trailer (`heroPlayTrailer`), Watchlist toggle (`heroWl`), More info (desktop only). Segment bar and arrows along the bottom on desktop; on phones a rounded card with the progress bar on top and Play trailer plus "+" only. Tapping the picture still opens the film.
+- Mood chips under the banner (`.wv-moodrow`, phone copy `.wv-moodphone` scrolls above it); matches render under the chips (`#aiVibeResultsSection` moved into `.wv-top`). Language and vibe selects sit beside the chips on desktop.
+- Posters (`posterCard`): rating chip on the picture, one-line title, coloured mood tag plus year and genre.
+- Phone Games: still one option, the header gamepad.
+- sw.js CACHE_NAME watchvibe-cache-v98. Sweep problems [] at 390, 768, 1440.
+- Not done: "Under 2h" chip; phone bottom bar keeps orange icons.

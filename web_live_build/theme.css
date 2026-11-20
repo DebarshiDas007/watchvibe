@@ -147,3 +147,138 @@ button[data-person]:focus-visible { color: var(--accent-hover); outline: 2px sol
   button[data-person] { display: inline-flex; align-items: center; min-height: 44px; }   /* credit names are links: easy to tap */
   button.h-9.w-9, button.h-8.w-8, button.h-10.w-10 { min-width: 44px; min-height: 44px; }
 }
+
+/* =====================================================================================================
+   "Marquee, refined" (v18): soft radii, sentence-case type, pill chips, rating chip on posters,
+   hero with synopsis and Play trailer / Watchlist / More info, text navigation, search pill.
+   Later rules win over the v17 rules above.
+   ===================================================================================================== */
+html:root {
+  --bg: #0A0A0B; --surface: #141418; --elev: #1C1C21; --line: #26262C; --line-strong: #3A3A42;
+  --text: #F5F5F2; --text-2: #A3A39D; --muted: #8A8A84; --accent: #D6502F; --accent-hover: #E5623F;
+}
+header.sticky { background: rgba(10,10,11,.92) !important; border-color: #1F1F24 !important; height: 68px; }
+[class*="from-[#0B0B0F"] { --tw-gradient-from: #0A0A0B var(--tw-gradient-from-position); }
+[class*="via-[#0B0B0F"] { --tw-gradient-via-color: #0A0A0B; }
+
+/* soft shapes again: buttons 8px, cards 12px, chips and avatars round */
+.rounded-lg { border-radius: 8px; } .rounded-xl, .rounded-2xl { border-radius: 12px; } .rounded-3xl { border-radius: 16px; }
+button.rounded-full, a.rounded-full, select.rounded-full, input.rounded-full { border-radius: 9999px; }
+.bg-white.text-black, button.bg-white { text-transform: none; letter-spacing: 0; font-weight: 600; border-radius: 8px; }
+.font-display { font-family: 'Barlow Condensed', 'Inter', sans-serif; font-weight: 700; text-transform: none; letter-spacing: .005em; }
+header .font-display, .wv-hero-title.font-display { text-transform: uppercase; }
+.hero-slide .font-display { text-transform: uppercase; font-weight: 700; }
+h2.font-display { font-size: 28px; line-height: 1.05; }
+@media (min-width: 1024px) { h2.font-display { font-size: 34px; } }
+
+/* ---- header ---- */
+header button[aria-label="WatchVibe home"] { font-family: 'Barlow Condensed', 'Inter', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .02em; text-transform: uppercase; }
+header button[aria-label="WatchVibe home"] .wv-w1 { color: var(--text); }
+@media (min-width: 1100px) { header button[aria-label="WatchVibe home"] { font-size: 24px; } }
+.top-nav-pill { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 500; color: #B4B4AE; }
+.top-nav-pill:hover { background: transparent; color: var(--text); }
+.top-nav-pill[aria-current="page"] { color: var(--text) !important; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0 !important; }
+@media (min-width: 768px) and (max-width: 1099px) { .top-nav-pill { letter-spacing: 0; } }
+#headerSearchBtn { background: #17171B; border: 1px solid #26262C; --tw-ring-shadow: 0 0 #0000; box-shadow: none; }
+.wv-kbd { font: 500 11px/1 Inter, sans-serif; border: 1px solid #33333A; border-radius: 4px; padding: 3px 6px; color: #8A8A84; }
+#cloudAuthBtn { background: transparent; box-shadow: none; padding: 0; }
+#cloudAuthBtn #userProfileAvatar { width: 36px; height: 36px; background: #26262C; font-size: 13px; }
+#cloudAuthBtnLabel { display: none !important; }
+
+/* ---- hero: 48px edge, rating chip, synopsis, three buttons ---- */
+@media (min-width: 1024px) {
+  main { padding-left: 48px !important; padding-right: 48px !important; }
+  #heroCarousel, #heroSkeleton { margin-left: -48px; margin-right: -48px; }
+  #heroCarousel .hero-slide > div.relative { padding-left: 48px; padding-bottom: 96px; max-width: 640px; }
+}
+.hero-slide .text-xs.uppercase { font-size: 12px; font-weight: 600; letter-spacing: .12em; color: #D9D9D3; }
+.hero-slide [data-t].font-display { font-size: clamp(56px, 7.2vw, 104px); line-height: .9; }
+.wv-hmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 14px; color: #D9D9D3; }
+.wv-hrate { background: rgba(245,245,242,.12); border-radius: 6px; padding: 3px 8px; font-weight: 600; color: var(--text) !important; margin: 0 !important; }
+.wv-hrate:empty, .wv-prate:empty { display: none; }
+.wv-hsyn { display: none; margin: 14px 0 0; max-width: 520px; font-size: 16px; line-height: 1.55; color: #C9C9C3; display: none; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+@media (min-width: 768px) { .wv-hsyn { display: -webkit-box; } }
+.wv-hbtns { display: flex; gap: 12px; margin-top: 22px; }
+.wv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 8px; border: 0; font: 600 15px/1 Inter, sans-serif; cursor: pointer; transition: background-color .15s, transform .1s; }
+.wv-btn:active { transform: scale(.97); }
+.wv-btn-p { background: #F5F5F2; color: #0A0A0B; }
+.wv-btn-p:hover { background: #FFFFFF; }
+.wv-btn-g { background: rgba(245,245,242,.14); color: #F5F5F2; }
+.wv-btn-g:hover { background: rgba(245,245,242,.24); }
+.wv-btn i { font-size: 13px; }
+.wv-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* segment bar and arrows along the bottom edge (desktop) */
+@media (min-width: 768px) {
+  #heroCarousel > div.absolute.inset-x-6 { left: 48px; right: 244px; bottom: 36px; gap: 12px; }
+  #heroCarousel .hero-seg { padding: 8px 0; }
+  #heroCarousel .hero-seg > span { height: 3px !important; border-radius: 2px; }
+  #heroCarousel button[aria-label^="Previous featured"], #heroCarousel button[aria-label^="Next featured"] { top: auto; bottom: 22px; transform: none; width: 44px; height: 44px; background: rgba(10,10,11,.55); border: 1px solid rgba(245,245,242,.18); box-shadow: none; }
+  #heroCarousel button[aria-label^="Next featured"] { right: 48px; left: auto; }
+  #heroCarousel button[aria-label^="Previous featured"] { right: 100px; left: auto; }
+  #heroCarousel > div.absolute.bottom-9 { bottom: 22px; right: 160px; }
+}
+.hero-slide .wv-btn { text-transform: none; }
+
+/* ---- chips: mood row under the banner (desktop), pills above it (phone) ---- */
+.wv-chip { height: 38px; padding: 0 16px; border-radius: 9999px; border: 1px solid #2E2E35; background: transparent; color: #D9D9D3; font: 500 14px/1 Inter, sans-serif; white-space: nowrap; cursor: pointer; transition: background-color .15s, border-color .15s; }
+.wv-chip:hover { border-color: #55555D; color: var(--text); }
+.wv-chip.is-on { background: #F5F5F2; border-color: #F5F5F2; color: #0A0A0B; font-weight: 600; }
+.wv-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wv-moodrow { display: flex; gap: 10px; flex-wrap: wrap; }
+.wv-moodphone { display: none; }
+.wv-moodres { grid-column: 1 / -1; padding-top: 8px; }
+@media (min-width: 768px) {
+  div.wv-top.space-y-5 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 16px; align-items: center; }
+  div.wv-top.space-y-5 > * { margin-top: 0 !important; grid-column: 1 / -1; }
+  div.wv-top.space-y-5 > .wv-mooddesk { grid-column: 1; }
+  div.wv-top.space-y-5 > #wvFilterBar { grid-column: 2; }
+}
+.wv-top > .wv-mooddesk { margin-top: 0; }
+#topLanguageSelect, #topVibeSelect, .wv-filters select { height: 38px; border-radius: 9999px; font-size: 14px; font-weight: 500; background-color: transparent; border: 1px solid #2E2E35; color: #D9D9D3; }
+
+/* ---- posters: rating chip on the picture, one-line title, mood tag + year · genre ---- */
+button.group > div[class*="aspect-[2/3]"] { border-radius: 8px; border: 1px solid #1F1F24; --tw-ring-shadow: 0 0 #0000; box-shadow: none; }
+.wv-prate { position: absolute; left: 10px; top: 10px; z-index: 1; font: 700 12px/1 Inter, sans-serif; background: rgba(10,10,11,.7); border-radius: 4px; padding: 4px 6px; color: var(--text); }
+.wv-pinfo { margin-top: 12px; }
+button.group .wv-pt { font: 600 15px/1.25 Inter, sans-serif; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; letter-spacing: 0; -webkit-line-clamp: unset; }
+.wv-pm { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; color: var(--text-2); min-width: 0; }
+.wv-ptag { font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.wv-psub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+button.group:hover > div[class*="aspect-[2/3]"] { border-color: #3A3A42; }
+button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: none; outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ---- phones: top bar, segmented control, rounded hero card with the progress bar on top ---- */
+@media (max-width: 767px) {
+  header button[aria-label="WatchVibe home"] { font-size: 22px; letter-spacing: .02em; }
+  header.sticky { height: 56px; }
+  header #headerGamesBtn { background: transparent; box-shadow: none; --tw-ring-shadow: 0 0 #0000; }
+  /* the four browse chips become one segmented control */
+  .wv-top > div:first-child:not(.wv-moodrow):not(.hero) { background: #141418; border-radius: 10px; padding: 3px; gap: 0 !important; display: flex; }
+  .wv-top > div:first-child:not(.wv-moodrow) > button { flex: 1; justify-content: center; border-radius: 8px !important; height: 36px; min-height: 36px; padding: 0 !important; font-size: 14px; font-weight: 600; background: transparent !important; color: #B4B4AE !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000; border: 0 !important; text-transform: none; }
+  .wv-top > div:first-child:not(.wv-moodrow) > button[aria-pressed="true"], .wv-top > div:first-child:not(.wv-moodrow) > button.bg-white { background: #F5F5F2 !important; color: #0A0A0B !important; }
+  .wv-moodphone { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin-top: 12px; scrollbar-width: none; }
+  .wv-moodphone::-webkit-scrollbar { display: none; }
+  .wv-moodphone .wv-chip { height: 36px; padding: 0 14px; font-size: 13px; flex-shrink: 0; }
+  .wv-moodphone .wv-chip.is-on { background: #D6502F; border-color: #D6502F; color: #0A0A0B; font-weight: 700; }
+  .wv-mooddesk { display: none; }
+  /* rounded hero card */
+  #heroCarousel, #heroSkeleton { margin-left: 0; margin-right: 0; border-radius: 16px; }
+  #heroCarousel .hero-slide > div.relative { padding: 18px; max-width: none; }
+  #heroCarousel .hero-slide [data-t].font-display { font-size: 58px; }
+  #heroCarousel > div.absolute.inset-x-6 { top: 14px; bottom: auto; left: 18px; right: 18px; gap: 6px; }
+  #heroCarousel .hero-seg { padding: 6px 0; }
+  #heroCarousel .hero-seg > span { height: 3px !important; border-radius: 2px; }
+  #heroCarousel button[aria-label^="Previous featured"], #heroCarousel button[aria-label^="Next featured"] { display: none; }
+  #heroCarousel > div.absolute.bottom-9 { top: 28px; right: 12px; }
+  .wv-hbtns { gap: 8px; margin-top: 14px; }
+  .wv-hbtns .wv-btn { height: 46px; border-radius: 10px; font-size: 15px; }
+  .wv-hbtns .wv-btn-p { flex: 1; }
+  .wv-hbtns .wv-btn-g { width: 46px; padding: 0; flex: 0 0 46px; }
+  .wv-hbtns .wv-btn-g span, .wv-hbtns .wv-more { display: none; }
+  .wv-hbtns .wv-btn-g i { font-size: 18px; }
+  .wv-pt { font-size: 13px; }
+  .wv-pm { font-size: 11px; gap: 4px; }
+  .wv-ptag { font-size: 11px; }
+  h2.font-display { font-size: 28px; }
+}
+@media (max-width: 359px) { .wv-hbtns .wv-btn-p span { font-size: 14px; } }
