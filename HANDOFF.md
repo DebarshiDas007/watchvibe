@@ -299,3 +299,17 @@ Open / next, in the order we discussed:
 - Sweep problems [] at 375, 768 and 1440 (18 checks each).
 - sw.js CACHE_NAME watchvibe-cache-v91.
 - Deployed after the user asked for autonomous deployment.
+
+## v93: title-window animation and design pass
+- Title window opens like Netflix's more-info panel (theme.css `dmBackdrop` and `dmGrow`, `playDetailsEnter` in index.html): the backdrop fades in and the window grows out of the tapped poster. Closing is unchanged. Respects reduced motion.
+- Design pass (from the taste review):
+  - Home: the hero comes first; the language and vibe filters sit below it.
+  - Daily Challenge "Play now" and Game night "Start a room" buttons are outlined; orange stays on each screen's main action.
+  - admin.html loads theme.css?v=13 (black ground, orange accent).
+  - Header wordmark 19px from 1100px wide; 15px below.
+  - `#previewSlot iframe { pointer-events: none }` so YouTube's own controls do not show over the trailer.
+- theme.css?v=13. sw.js CACHE_NAME watchvibe-cache-v93 (v92 was never set).
+- Sweep problems [] at 375, 768 and 1440 (18 checks each). Phone first poster row at 375x667 still y=538.
+- Not verified: the YouTube pause icon on the live site; signed-in admin screens.
+- Not done from the review: larger poster meta text; single typeface idea.
+- Deployed after the user said "Deploy".
