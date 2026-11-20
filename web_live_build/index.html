@@ -2424,6 +2424,9 @@
       IMDB.ens.add(sig); imdbEnsure(items).then(cb);
     }
     function imdbText(k, sep) { const v = IMDB.map.get(k); return v && v.r ? (sep || '') + '\u2605 ' + v.r.toFixed(1) : ''; }
+    // for the hover card (hover-card.js): the same IMDb number the posters show, or '' until it has loaded (never the TMDB score)
+    window.wvImdbRating = function (item) { const k = imdbKey(item), v = k && IMDB.map.get(k); return v && v.r ? v.r.toFixed(1) : ''; };
+    window.wvImdbEnsure = function (item, cb) { if (item && item.title && item.year) imdbEnsureThen([item], 'hc:' + (item.id || item.title), cb); };
     // <span> that shows "★ 8.4" (IMDb) once known and nothing until then; never a made-up or TMDB number
     function rtHtml(item, cls, sep) {
       const k = imdbKey(item);
@@ -2436,6 +2439,8 @@
     }
     function imdbApply(k) {
       document.querySelectorAll('[data-rt="' + k + '"]').forEach(el => { const s = imdbText(k, el.dataset.sp); if (el.textContent !== s) el.textContent = s; });
+      // placeholders that were waiting for a TMDB match (data-rtl): fill them in once this title's IMDb number is known, so a poster never stays blank while the hover card shows it
+      document.querySelectorAll('[data-rtl]').forEach(el => { const s = el.dataset.rtl || '', i = s.lastIndexOf('|'); if (i < 0) return; if (TMAP.m.get(s.slice(0, i).toLowerCase().trim() + '|' + s.slice(i + 1)) !== k) return; el.setAttribute('data-rt', k); el.removeAttribute('data-rtl'); el.textContent = imdbText(k, el.dataset.sp); });
       const row = document.getElementById('imdbRow'), v = IMDB.map.get(k);
       if (row && row.dataset.k === k && v && v.v) { document.getElementById('imdbVotes').textContent = v.v; row.classList.remove('hidden'); }
     }
@@ -7054,6 +7059,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
   <script src="games.js?v=4" defer></script>
-  <script src="hover-card.js?v=2" defer></script>
+  <script src="hover-card.js?v=3" defer></script>
 </body>
 </html>

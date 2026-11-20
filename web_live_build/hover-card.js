@@ -29,8 +29,19 @@
       `<button type="button" class="hc-b${on ? ' on' : ''}" data-a="list" aria-label="${on ? 'Remove from' : 'Add to'} watchlist"><i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}"></i></button>` +
       `<span class="sp"></span>` +
       `<button type="button" class="hc-b" data-a="open" aria-label="More info"><i class="fa-solid fa-chevron-down"></i></button></div>` +
-      `<div class="hc-meta"><span>${kind}</span>${cert ? `<span class="cert">${esc(cert)}</span>` : ''}${it.year ? `<span>${esc(it.year)}</span>` : ''}${it.duration ? `<span>${esc(it.duration)}</span>` : ''}${it.rating ? `<span class="star">&#9733; ${esc(it.rating)}</span>` : ''}</div>` +
+      `<div class="hc-meta"><span>${kind}</span>${cert ? `<span class="cert">${esc(cert)}</span>` : ''}${it.year ? `<span>${esc(it.year)}</span>` : ''}${it.duration ? `<span>${esc(it.duration)}</span>` : ''}</div>` +
       `<div class="hc-tags">${tags.map(esc).join('<i></i>')}</div></div>`;
+    setStar(it);
+  }
+  // the rating is the IMDb one, exactly as on the posters (index.html wvImdbRating). Never the TMDB/local score: that
+  // is what made the same film show 8.7 here and 9.2 on its poster. Blank until IMDb has loaded.
+  function setStar(it) {
+    const r = (typeof window.wvImdbRating === 'function' && window.wvImdbRating(it)) || '';
+    const meta = pop.querySelector('.hc-meta'); if (!meta) return;
+    let s = meta.querySelector('[data-hc-star]');
+    if (!r) { if (s) s.remove(); return; }
+    if (!s) { s = document.createElement('span'); s.className = 'star'; s.setAttribute('data-hc-star', ''); s.title = 'IMDb rating'; meta.appendChild(s); }
+    s.innerHTML = '&#9733; ' + esc(r);
   }
   function place(card) {
     const poster = card.querySelector('div[class*="aspect-[2/3]"]') || card, r = poster.getBoundingClientRect();
@@ -44,6 +55,7 @@
     if (!card.isConnected || document.querySelector('#detailModal:not(.hidden)')) return;
     const it = itemOf(card); if (!it) return;
     cur = card; fill(it);
+    if (typeof window.wvImdbEnsure === 'function') window.wvImdbEnsure(it, () => { if (cur === card && pop && pop.dataset.id === it.id) setStar(it); });   // load its IMDb rating if not yet loaded
     pop.classList.remove('on'); pop.style.display = 'block'; pop.style.visibility = 'hidden';
     place(card); pop.style.visibility = ''; void pop.offsetWidth; pop.classList.add('on');
   }

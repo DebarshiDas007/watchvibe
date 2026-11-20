@@ -359,3 +359,10 @@ Open / next, in the order we discussed:
 - Header wordmark top left is larger: 28px on phones (was 22), 30px on tablets (was 22), 36px from 1100px (was 24). theme.css?v=19, sw.js CACHE_NAME watchvibe-cache-v99. Checked live at 1024px: no overflow in the nav or page.
 - Today in short: v98 "Marquee, refined" redesign (desktop and phone) shipped and pushed (commit 43a53b4); v99 wordmark size.
 - Open: the phone hero keeps Play trailer and "+" buttons from the design (earlier request was to remove them; user can ask to drop them); no "Under 2h" chip; phone bottom bar icons are still orange; revoke the exposed GitHub tokens; the four stale watchlist films (Interstellar, Breaking Bad, Parasite, Stranger Things) need removing once more.
+
+## v101: hover card and poster ratings match (urgent fix)
+- Bug: the hover card showed the TMDB/local score (e.g. The Godfather 8.7) while the poster showed the IMDb rating (9.2). Hover card now uses the same IMDb number (window.wvImdbRating in index.html) and loads it when opened; blank until IMDb has loaded, never a TMDB number.
+- Posters that were waiting for a TMDB match (data-rtl) now fill in as soon as their IMDb rating arrives, so a poster no longer stays blank while the hover card shows a number.
+- Files: index.html (imdbApply, wvImdbRating, wvImdbEnsure; hover-card.js?v=3), hover-card.js, sw.js CACHE_NAME watchvibe-cache-v101.
+- Checked live: syntax OK; product sweep problems [] at 375, 768 and 1440; hover card and poster ratings matched on every title sampled (the rest were blank on both sides until IMDb loaded).
+- Not done: a poster whose IMDb rating has not loaded yet stays blank until it does, by design.
