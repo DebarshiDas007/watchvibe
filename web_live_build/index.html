@@ -1533,7 +1533,7 @@
       userWatchedHistory = [];
       updateProfileUiState();
       updateGoogleSignInUi();
-      if (hadSession) loadUserWatchlistStore(true);
+      loadUserWatchlistStore(hadSession);   // always reload the guest copy: at page start nobody is signed in yet, and the saved list must survive
     }
 
     function handleUnifiedEmailInput(val) {
@@ -3167,6 +3167,7 @@
     function saveWatchlistStore() {
       const prefix = getUserStoragePrefix();
       try {
+        userWatchlistIds = wlDedupe(userWatchlistIds);   // a film is kept once, even if it was saved under two ids before
         Object.keys(userWatchlistMeta).forEach(k => { if (!userWatchlistIds.includes(k)) delete userWatchlistMeta[k]; });   // keep the map tidy
         localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
         localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
@@ -3181,11 +3182,23 @@
     // Initialize user watchlist on load (deferred render)
     loadUserWatchlistStore(false);
 
+    // One film can be saved under two ids (the catalogue id and the TMDB id from search). wlKey gives the film itself,
+    // so a film is saved once, and removing it removes every copy.
+    function wlKey(id) {
+      const t = /^tmdb-(m|tv)-(\d+)$/.exec(String(id || ''));
+      if (t) return t[1] + ':' + t[2];
+      const it = findLibItem(id);
+      if (it && it.tmdbId) return (it.type === 'Series' ? 'tv' : 'm') + ':' + String(it.tmdbId);
+      return 'id:' + String(id);
+    }
+    function wlHas(id) { const k = wlKey(id); return userWatchlistIds.some(x => wlKey(x) === k); }
+    function wlRemoveFilm(id) { const k = wlKey(id); userWatchlistIds = userWatchlistIds.filter(x => wlKey(x) !== k); }
+    function wlDedupe(list) { const seen = new Set(); return list.filter(x => { const k = wlKey(x); if (seen.has(k)) return false; seen.add(k); return true; }); }
+
     function toggleWatchlist(mediaId) {
       if (!mediaId) return;
-      const idx = userWatchlistIds.indexOf(mediaId);
-      if (idx !== -1) {
-        userWatchlistIds.splice(idx, 1);
+      if (wlHas(mediaId)) {
+        wlRemoveFilm(mediaId);
         showToast('Removed title from your Watchlist.');
       } else {
         userWatchlistIds.push(mediaId);
@@ -3213,8 +3226,7 @@
         showToast('Removed from your Watched history.');
       } else if (item) {
         // Also remove from want-to-watch if present
-        const wlIdx = userWatchlistIds.indexOf(mediaId);
-        if (wlIdx !== -1) userWatchlistIds.splice(wlIdx, 1);
+        wlRemoveFilm(mediaId);
 
         const chosenVibe = vibeChoice || item.dominantVibe || 'must_watch';
         userWatchedHistory.unshift({
@@ -6349,7 +6361,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, type: item.type, tmdbId: item.tmdbId || null, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
       const i = userWatchedHistory.findIndex(h => h.id === item.id);
       if (i !== -1) userWatchedHistory[i] = { ...userWatchedHistory[i], ...rec, watchedDate: userWatchedHistory[i].watchedDate || rec.watchedDate };
-      else { const w = userWatchlistIds.indexOf(item.id); if (w !== -1) userWatchlistIds.splice(w, 1); userWatchedHistory.unshift(rec); }
+      else { wlRemoveFilm(item.id); userWatchedHistory.unshift(rec); }
       saveWatchlistStore();
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && RS.open) rateSheetClose(); });
