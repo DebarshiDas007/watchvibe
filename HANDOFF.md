@@ -283,3 +283,11 @@ Open / next, in the order we discussed:
 - Tested locally: duplicate pair merged and removed together; add survives reload; remove survives reload; sweep problems [] at 375, 798 and desktop (18 checks each).
 - Not tested: the signed-in cloud sync path (needs a signed-in user).
 - Deployed after the user said "yes".
+
+## v90: watchlist removal after sign-out (cloud copy kept the removed film)
+- Cause: the cloud save waited 600 ms. A removal followed quickly by sign-out never reached the cloud. The next sign-in then showed the old cloud copy's films again.
+- index.html: `flushUserDataToSupabaseCloud()` writes now. The 600 ms timer calls it. `userSignOut()` calls it before Supabase sign-out. A `visibilitychange` (page hidden) listener also calls it.
+- sw.js CACHE_NAME watchvibe-cache-v90.
+- Tested locally with a stand-in cloud table: remove then sign out at once -> cloud updated -> sign in shows the right list. Sweep problems [] at 375, 798 and desktop (18 checks each).
+- Not tested against the real Supabase table; the signed-in flow still needs a check on the live site.
+- Deployed after the user asked to deploy autonomously.
