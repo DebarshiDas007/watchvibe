@@ -291,3 +291,11 @@ Open / next, in the order we discussed:
 - Tested locally with a stand-in cloud table: remove then sign out at once -> cloud updated -> sign in shows the right list. Sweep problems [] at 375, 798 and desktop (18 checks each).
 - Not tested against the real Supabase table; the signed-in flow still needs a check on the live site.
 - Deployed after the user asked to deploy autonomously.
+
+## v91: search bar typing lag fixed
+- Cause: every keystroke ran the full search and redrew all matching titles at once. A one-letter query matched thousands of films and took up to 460 ms on desktop, far longer on phones, so the typed letters appeared seconds late.
+- index.html: `queueUniversalSearch` runs the search 120 ms after the last keystroke (the box still updates at once). The title grid shows the first 48 results and the People list the first 24; the true title count stays in the heading, with a note when results are cut.
+- Measured locally: one-letter search 14-24 ms (was 462 ms for "b"). No long tasks while typing.
+- Sweep problems [] at 375, 768 and 1440 (18 checks each).
+- sw.js CACHE_NAME watchvibe-cache-v91.
+- Deployed after the user asked for autonomous deployment.

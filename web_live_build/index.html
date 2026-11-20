@@ -5710,7 +5710,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         <div class="space-y-8">
           <div class="relative max-w-2xl">
             <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-sm text-white/40"></i>
-            <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="handleUniversalSearch(this.value)" placeholder="Search movies, series, actors or directors" autocomplete="off"
+            <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="queueUniversalSearch(this.value)" placeholder="Search movies, series, actors or directors" autocomplete="off"
               class="w-full rounded-full bg-white/[0.05] py-3.5 pl-12 pr-12 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
             ${currentSearchQuery ? `<button type="button" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/45 transition hover:text-white" aria-label="Clear search"><i class="fa-solid fa-xmark"></i></button>` : ''}
           </div>
@@ -5818,6 +5818,14 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const text = shown.map((l, i) => `<text x="150" y="${startY + i * 34}" fill="#F4F4F5" font-family="Georgia, 'Times New Roman', serif" font-size="25" text-anchor="middle">${esc2(l)}</text>`).join('');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450"><rect width="300" height="450" fill="#14141A"/><rect x="0.5" y="0.5" width="299" height="449" fill="none" stroke="#ffffff" stroke-opacity="0.06"/><rect x="130" y="64" width="40" height="2" fill="#A855F7"/>${text}<text x="150" y="410" fill="#ffffff" fill-opacity="0.35" font-family="system-ui, sans-serif" font-size="11" letter-spacing="3" text-anchor="middle">POSTER UNAVAILABLE</text></svg>`;
       imgEl.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // Typing: the box itself always updates at once; the search runs after a short pause, so fast typing never queues up work
+    let searchInputTimer = null;
+    function queueUniversalSearch(query) {
+      currentSearchQuery = query || '';
+      clearTimeout(searchInputTimer);
+      searchInputTimer = setTimeout(() => handleUniversalSearch(query), 120);
     }
 
     async function handleUniversalSearch(query) {
@@ -6098,7 +6106,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <section>
             <h2 class="font-display text-[22px] font-medium text-white">People</h2>
             <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              ${matchedActors.map(a => `
+              ${matchedActors.slice(0, 24).map(a => `
                 <button type="button" onclick="openActorProfile('${a.id}')" class="flex items-center gap-4 rounded-2xl bg-white/[0.03] p-3.5 text-left ring-1 ring-white/[0.06] transition hover:bg-white/[0.06]">
                   <img id="actor-img-${esc(a.id)}" src="${esc(a.img)}" alt="${esc(a.name)}" loading="lazy" class="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-white/10" onerror="handleActorImageError(this)">
                   <div class="min-w-0">
@@ -6118,8 +6126,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               ${isLiveSyncing ? '<span class="text-xs text-white/40">Searching more…</span>' : ''}
             </div>
             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9">
-              ${matchedMovies.map(item => posterCard(item, { wide: true })).join('')}
+              ${matchedMovies.slice(0, 48).map(item => posterCard(item, { wide: true })).join('')}
             </div>
+            ${matchedMovies.length > 48 ? `<p class="mt-5 text-center text-sm text-white/45">Showing the first 48 of ${matchedMovies.length}. Type a longer word to narrow it down.</p>` : ''}
           </section>`;
       }
 
