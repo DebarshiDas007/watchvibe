@@ -61,6 +61,18 @@ window.runProductSweep = async () => {
     if (!problems.some(p => /Watch together/.test(p))) passed.push('Watch together refuses bad data');
   } catch (e) { problems.push('Watch together checks failed to run: ' + e.message); }
 
+  // ---- credits are links: a name opens that person's page, and a hostile name never injects markup
+  try {
+    const m = db.find(x => x.director && !/^(Director|Showrunner)$/.test(x.director) && x.cast && x.cast.length >= 3);
+    openDetails(m.id); await wait(1500);
+    if (document.querySelectorAll('#detailModal [data-person]').length < 2) problems.push('credits are not links on a title page');
+    else { openPerson(m.cast[0], 'Actor'); await wait(1200); if (document.getElementById('actorModal').classList.contains('hidden')) problems.push('clicking a credit does not open the person page'); closeActorProfile(); }
+    openPerson('<img src=x onerror=alert(1)>', 'Actor'); await wait(600);
+    if (document.querySelector('#actorModal img[src="x"]')) problems.push('person page lets a name inject markup');
+    closeActorProfile(); closeDetails();
+    if (!problems.some(p => /credit|person page/.test(p))) passed.push('credits open person pages safely');
+  } catch (e) { problems.push('credits check failed to run: ' + e.message); }
+
   // ---- game rooms: no value a player controls may reach an onclick
   try { if (typeof gnClick !== 'function' || typeof gnHandle !== 'function') problems.push('game room code is missing'); else passed.push('game room code present'); } catch (e) {}
 

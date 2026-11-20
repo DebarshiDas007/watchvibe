@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=9">
+  <link rel="stylesheet" href="/theme.css?v=10">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -4871,12 +4871,12 @@ function posterCard(item, opts) {
           </div>
 
           <div class="space-y-9 px-5 pb-8 sm:px-8">
-            <section>
+            ${actor.bio ? `<section>
               <h3 class="text-xs font-medium uppercase tracking-[0.14em] text-white/40">About</h3>
-              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(actor.bio || '')}</p>
-            </section>
+              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(actor.bio)}</p>
+            </section>` : ''}
 
-            <section>
+            <section${Object.keys(actor.vibeBreakdown || {}).length ? '' : ' hidden'}>
               <div class="flex flex-wrap items-baseline justify-between gap-x-4">
                 <h3 class="text-xs font-medium uppercase tracking-[0.14em] text-white/40">How audiences see them</h3>
               </div>
@@ -4914,11 +4914,11 @@ function posterCard(item, opts) {
                     </div>
                     <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(movie.title)}</div>
                     <div class="px-0.5 text-xs text-white/45">${esc(movie.year)}${rtHtml(movie, '', ' · ')}</div>
-                    <div class="break-words px-0.5 text-xs text-white/35">as ${esc(movie.char || '')}</div>
+                    ${movie.char ? `<div class="break-words px-0.5 text-xs text-white/35">${/^(Director|Creator|Writer|Producer)/i.test(movie.char) ? '' : 'as '}${esc(movie.char)}</div>` : ''}
                     ${movie.boxOffice ? `<div class="px-0.5 text-xs text-white/35">${esc(movie.boxOffice)}</div>` : ''}
                   </button>`;
                 }).join('')}
-              </div>` : `<div class="mt-5 rounded-2xl bg-white/[0.03] py-10 text-center text-sm text-white/50 ring-1 ring-white/[0.06]">No titles with this vibe.</div>`}
+              </div>` : `<div class="mt-5 rounded-2xl bg-white/[0.03] py-10 text-center text-sm text-white/50 ring-1 ring-white/[0.06]">${currentActorVibeFilter ? 'No titles with this vibe.' : 'No titles found for this person yet.'}</div>`}
             </section>
           </div>
         </div>
@@ -4966,14 +4966,15 @@ function posterCard(item, opts) {
           const rating = c.vote_average ? Number(c.vote_average.toFixed(1)) : 0;
           const dv = rating >= 8 ? 'must_watch' : genreVibe(c.genre_ids);
           added.push({ id: `tmdb-${isTv ? 'tv' : 'm'}-${c.id}`, title, char: c.character || c.job || '', year: String((c.release_date || c.first_air_date || '').slice(0, 4) || ''), rating, poster: `${TMDB_IMG_URL}${c.poster_path}`, dominantVibe: dv, vibes: [...new Set([dv, rating >= 7.5 ? 'must_watch' : dv])], popularity: c.vote_count || 0, boxOfficeVal: 0, boxOffice: '' });
-          if ((actor.filmography || []).length + added.length >= 14) break;
+          if ((actor.filmography || []).length + added.length >= (/^person-/.test(actor.id) ? 40 : 14)) break;
         }
         actor.filmography = [...(actor.filmography || []), ...added];
         if (!actor.avgRating) {
           const rs = actor.filmography.map(f => Number(f.rating)).filter(Boolean);
           if (rs.length) actor.avgRating = (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1);
         }
-        if (/is a celebrated cinema personality/.test(actor.bio || '') && p.biography) actor.bio = p.biography.length > 520 ? p.biography.slice(0, 520).replace(/\s+\S*$/, '') + '…' : p.biography;
+        if ((!actor.img || /ui-avatars\.com/.test(actor.img)) && p.profile_path) actor.img = `${TMDB_IMG_URL}${p.profile_path}`;
+        if ((!actor.bio || /is a celebrated cinema personality/.test(actor.bio)) && p.biography) actor.bio = p.biography.length > 520 ? p.biography.slice(0, 520).replace(/\s+\S*$/, '') + '…' : p.biography;
         if (!actor.born && (p.birthday || p.place_of_birth)) actor.born = [p.birthday, p.place_of_birth].filter(Boolean).join(' • ');
         actor.__enriched = true;
       } catch (e) { /* keep what we have */ }
@@ -4984,6 +4985,38 @@ function posterCard(item, opts) {
       }
     }
     function closeActorProfile() { document.getElementById('actorModal').classList.add('hidden'); }
+
+    // ---- credits are links: a cast or director name on a title page opens that person's filmography
+    const PERSON_SKIP = /^(Director|Showrunner|Creator \/ Showrunner|Celebrated Director|Unknown)$|Starrer$/i;   // placeholders, never links
+    const personNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+    const personNames = str => String(str || '').split(/\s*[,;]\s*/).map(s => s.trim()).filter(s => s && s.length <= 80 && !PERSON_SKIP.test(s));
+    const personLink = (name, role) => `<button type="button" data-person="${esc(name)}" data-role="${esc(role)}" class="inline-block cursor-pointer py-1 text-left underline decoration-white/25 underline-offset-4 transition hover:text-white hover:decoration-white focus:outline-none focus-visible:decoration-white">${esc(name)}</button>`;
+    function openPerson(name, role) {
+      name = String(name || '').trim().slice(0, 80); if (!name) return;
+      const key = personNorm(name); if (!key) return;
+      let actor = Object.values(ACTORS || {}).find(a => personNorm(a.name) === key)               // a curated profile
+        || Object.values(window.DYNAMIC_ACTORS || {}).find(a => personNorm(a.name) === key);      // or one built earlier
+      if (!actor) {
+        let acted = false, directed = false;
+        const films = mediaDatabase.filter(m => {
+          const a = (m.cast || []).some(c => personNorm(c) === key), d = personNames(m.director).some(x => personNorm(x) === key);
+          if (a) acted = true; if (d) directed = true;
+          return a || d;
+        }).map(m => {
+          const dv = m.dominantVibe || 'fun_time', d = personNames(m.director).some(x => personNorm(x) === key) && !(m.cast || []).some(c => personNorm(c) === key);
+          return { id: m.id, title: m.title, char: d ? 'Director' : '', year: String(m.year || ''), rating: Number(m.rating) || 0, poster: m.poster, dominantVibe: dv, vibes: [dv], popularity: m.totalVotes || 0, boxOfficeVal: 0, boxOffice: '' };
+        });
+        const counts = {}; films.forEach(f => { counts[f.dominantVibe] = (counts[f.dominantVibe] || 0) + 1; });
+        const vibeBreakdown = {}; films.forEach(f => { vibeBreakdown[f.dominantVibe] = Math.round(counts[f.dominantVibe] * 100 / films.length); });
+        const rs = films.map(f => f.rating).filter(Boolean);
+        actor = { id: 'person-' + key, name, role: acted && directed ? 'Actor and director' : directed ? 'Director' : acted ? 'Actor' : (role === 'Director' ? 'Director' : 'Actor'), img: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2C2C3A&color=D6502F&size=256&bold=true`, born: '', bio: '', boxOfficeTotal: '', avgRating: rs.length ? (rs.reduce((a, b) => a + b, 0) / rs.length).toFixed(1) : '', vibeBreakdown, filmography: films };
+        window.DYNAMIC_ACTORS[actor.id] = actor;
+      }
+      closeDetails();
+      currentActorVibeFilter = null;
+      openActorProfile(actor.id);
+    }
+    document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-person]'); if (b) { e.preventDefault(); openPerson(b.dataset.person, b.dataset.role); } });
 
     // --- FULL TITLE DETAIL MODAL ---
 window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
@@ -5533,8 +5566,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           ${item.synopsis ? `<p class="max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(item.synopsis)}</p>` : ''}
 
           <dl class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-            ${item.director ? `<div><dt class="text-white/40">Director</dt><dd class="break-words text-white/85">${esc(item.director)}</dd></div>` : ''}
-            ${item.cast && item.cast.length ? `<div><dt class="text-white/40">Cast</dt><dd class="break-words text-white/85">${esc(item.cast.slice(0, 5).join(', '))}</dd></div>` : ''}
+            ${item.director ? `<div><dt class="text-white/40">Director</dt><dd class="break-words text-white/85">${personNames(item.director).length ? personNames(item.director).map(n => personLink(n, 'Director')).join(', ') : esc(item.director)}</dd></div>` : ''}
+            ${item.cast && item.cast.length ? `<div><dt class="text-white/40">Cast</dt><dd class="break-words text-white/85">${item.cast.slice(0, 5).map(n => PERSON_SKIP.test(String(n)) ? esc(n) : personLink(n, 'Actor')).join(', ')}</dd></div>` : ''}
             <div id="topVibeRow" class="hidden"><dt class="text-white/40">Community verdict</dt><dd id="topVibeVal" class="flex flex-wrap items-center gap-2 break-words text-white/85"></dd></div>
             <div id="imdbRow" data-k="${imdbKey(item)}" class="hidden"><dt class="text-white/40">IMDb votes</dt><dd id="imdbVotes" class="break-words text-white/85"></dd></div>
           </dl>
