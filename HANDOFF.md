@@ -313,3 +313,15 @@ Open / next, in the order we discussed:
 - Not verified: the YouTube pause icon on the live site; signed-in admin screens.
 - Not done from the review: larger poster meta text; single typeface idea.
 - Deployed after the user said "Deploy".
+
+## v94: phone fixes (from a real phone screenshot)
+- Logo: 24px on phones (theme.css, max-width 767px). Desktop 19px from 1100px, 15px between.
+- Games: a gamepad button in the header on phones (`#headerGamesBtn`, md:hidden) and a "Games" chip in the tab row (`mobileTabs`). Tab chips are tighter (px-2.5, 13px) so all five fit at 390px.
+- Featured banner: the mute and pause buttons are 32px round buttons at the top right on phones (they were 44px squares at the bottom right, on top of the title). Desktop unchanged.
+- Trailer: a "Trailer" button next to View details on touch screens (`data-hero-trailer`, shown by `(hover: none) and (pointer: coarse)`), `heroPlayTrailer()`. It plays the trailer on tap even when data saver or reduced motion is on (`startTrailerPreview` takes `force`), holds the carousel and shows the volume button; "No trailer found for this title." if none. Cause of the silent non-start: the automatic start is blocked by data saver, reduced motion, 2g/3g or low memory, with no message.
+- Filters on phones: language and vibe side by side, sort below, reset under (`.wv-filters`, `.wv-toolbar`, `.wv-sort`). After a language or vibe change the page scrolls so the filters stay in view (`wvToFilters`; the banner disappears and the page used to jump).
+- Title window on phones: "Where to watch" (max 300px) and "How did it feel?" (max 250px) fold with a "Show ..." button (`dmCollapsePhones`, `.dm-collapsible`, `.dm-more`). Interstellar at 390x844: 3.3 screens down to 2.3.
+- theme.css?v=14 (index.html, admin.html, sw.js precache). sw.js CACHE_NAME watchvibe-cache-v94.
+- Sweep problems [] at 390, 768 and 1440 (18 checks each).
+- Not verified: the trailer playing on a real phone (the test pane counts as a hidden page; only the button path was run); signed-in flows.
+- Deployed after the user reported the issues with a screenshot.
