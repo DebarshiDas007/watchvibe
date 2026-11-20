@@ -337,3 +337,10 @@ Open / next, in the order we discussed:
 - theme.css?v=15; sw.js CACHE_NAME watchvibe-cache-v96.
 - Sweep problems [] at 390, 768 and 1440.
 - Not verified: the trailer on a real phone; sign-in against the real database (needs a signed-in user).
+
+## v97: phone layout, one Games option
+- Featured banner on phones is taller: `.hero-slide` min-height clamp(260px, 44svh, 400px) (was 220 to 320); 371px at 390x844 (was 304). Short phones (max-height 720px): clamp(190px, 31svh, 240px), 207px at 375x667; first poster row still clear of the bottom bar (y=524, bar 602).
+- Filters (language and vibe) sit lower: 28px under the banner and 30px above "Streaming now" (the gap below them was about 100px): `div.space-y-5 > #wvFilterBar { margin-top: 28px; margin-bottom: -26px }` on phones only.
+- One Games option on phones: the gamepad button in the header (`#headerGamesBtn`). The "Games" chip is removed from the tab row (`mobileTabs`), whose chips are back to px-4 / text-sm; four chips fit. Desktop is unchanged (its own Games nav item; header button is md:hidden).
+- theme.css?v=17; sw.js CACHE_NAME watchvibe-cache-v97. Sweep problems [] at 390, 768 and 1440. Desktop hero 546px, unchanged.
+- Deployed after the user asked for these changes with a phone screenshot.

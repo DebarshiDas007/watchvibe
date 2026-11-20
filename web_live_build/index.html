@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=15">
+  <link rel="stylesheet" href="/theme.css?v=17">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -4021,7 +4021,7 @@ function posterCard(item, opts) {
       }
       if (gridTitle && activeMood) gridItems = gridItems.filter(m => (getVibePercentages(m)[activeMood] || 0) >= 20);
 
-      const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-1.5 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-2.5 py-1.5 text-[13px] font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + '<button type="button" onclick="openGames()" class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] font-medium text-white/65 ring-1 ring-white/15 transition"><i class="fa-solid fa-gamepad text-[11px]"></i>Games</button></div>';
+      const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + '</div>';   // Games is the gamepad button in the header (one option, always visible)
       const selectCls = 'rounded-full bg-white/[0.05] px-3.5 py-2 text-sm text-white/80 ring-1 ring-white/10 outline-none transition hover:bg-white/[0.08] focus:ring-white/30';
       const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
       const toolbar = `
