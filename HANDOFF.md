@@ -268,3 +268,9 @@ Open / next, in the order we discussed:
 - sw.js CACHE_NAME watchvibe-cache-v88. tailwind.css rebuilt.
 - Not covered: very rare names with no TMDB match show only catalogue films; real-device touch not tested.
 - Deployed after the user said "deploy it".
+
+## Database: analytics event types (applied to live Supabase 2026-11-20)
+- Applied supabase/admin_analytics_event_types.sql to project lbtuikgpgcgrizijfiyl as migration `events_allow_game_and_daily_types`.
+- `events_type_check` on public.events now allows game_room, game_start, game_conn and daily_done (21 types in all).
+- Verified: the constraint definition lists all 21 types; a test insert of the four new types succeeded inside a block that rolled itself back; no test rows were left.
+- Closes the open item: those events were previously rejected with a 400. Events sent from now on are stored.
