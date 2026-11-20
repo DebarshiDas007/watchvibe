@@ -101,6 +101,14 @@ button[data-person]:focus-visible { color: var(--accent-hover); outline: 2px sol
   #detailModal.dm-enter, #detailModal.dm-enter #detailScroll { animation: none; }
 }
 
+/* ---- wordmark: a little larger where there is room ---- */
+@media (min-width: 1100px) {
+  header button[aria-label="WatchVibe home"] { font-size: 19px; }
+}
+
+/* ---- the trailer preview in the title window is a picture, not a player: the YouTube controls never pop up over it (our own volume and replay buttons stay) ---- */
+#previewSlot iframe { pointer-events: none; }
+
 /* ---- touch targets: at least 44 px on phones ---- */
 @media (max-width: 767px) {
   button.rounded-full, a.rounded-full, select { min-height: 44px; }
