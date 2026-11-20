@@ -87,6 +87,11 @@ button.group:hover > div[class*="aspect-[2/3]"] { transform: none; }   /* the ho
   #heroCarousel { display: none; }
 }
 
+/* ---- credit names (cast, director) are links: no underline, brighter than the text around them, orange on hover or focus ---- */
+button[data-person] { color: var(--text); text-decoration: none; }
+button[data-person]:hover { color: var(--accent-hover); }
+button[data-person]:focus-visible { color: var(--accent-hover); outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ---- touch targets: at least 44 px on phones ---- */
 @media (max-width: 767px) {
   button.rounded-full, a.rounded-full, select { min-height: 44px; }

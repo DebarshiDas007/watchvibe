@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=10">
+  <link rel="stylesheet" href="/theme.css?v=11">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -4990,7 +4990,7 @@ function posterCard(item, opts) {
     const PERSON_SKIP = /^(Director|Showrunner|Creator \/ Showrunner|Celebrated Director|Unknown)$|Starrer$/i;   // placeholders, never links
     const personNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
     const personNames = str => String(str || '').split(/\s*[,;]\s*/).map(s => s.trim()).filter(s => s && s.length <= 80 && !PERSON_SKIP.test(s));
-    const personLink = (name, role) => `<button type="button" data-person="${esc(name)}" data-role="${esc(role)}" class="inline-block cursor-pointer py-1 text-left underline decoration-white/25 underline-offset-4 transition hover:text-white hover:decoration-white focus:outline-none focus-visible:decoration-white">${esc(name)}</button>`;
+    const personLink = (name, role) => `<button type="button" data-person="${esc(name)}" data-role="${esc(role)}" class="inline-block cursor-pointer py-1 text-left transition focus:outline-none">${esc(name)}</button>`;
     function openPerson(name, role) {
       name = String(name || '').trim().slice(0, 80); if (!name) return;
       const key = personNorm(name); if (!key) return;
