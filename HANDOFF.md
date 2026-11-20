@@ -236,3 +236,13 @@ Open / next, in the order we discussed:
 - Open: Daily Challenge timer starts after leaving a game room without a tap.
 - Open: verdict clear is instant (no fade).
 - Not verified live: clearing a verdict (signed-in user), real phones, multi-player rooms.
+
+## v86 (phone layout): hero and posters scale with the screen; landscape hero is a strip
+- theme.css?v=6 (index.html and sw.js precache). sw.js CACHE_NAME watchvibe-cache-v86.
+- Phone (max-width 639px): hero min-height clamp(220px, 36svh, 320px); row posters clamp(118px, 38vw, 160px).
+- Landscape with max-height 500px: #heroCarousel is 58svh (200 to 300px) instead of the 16:8 tablet ratio.
+- Measured before: 320x640 first poster row at y=708; 844x390 landscape hero 418px and first row at y=705.
+- After: 375x812 first row y=628 (was 656); 844x390 first row y=513 (still below the fold; the filter bar takes the space).
+- Still open: 320x640 first row at y=680 (below the fold); filter bar height is the cause.
+- Product sweep: problems [] at 375 and 768 locally (17 passed each).
+- Deployed after the user said "ship".
