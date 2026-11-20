@@ -325,3 +325,15 @@ Open / next, in the order we discussed:
 - Sweep problems [] at 390, 768 and 1440 (18 checks each).
 - Not verified: the trailer playing on a real phone (the test pane counts as a hidden page; only the button path was run); signed-in flows.
 - Deployed after the user reported the issues with a screenshot.
+
+## v95 and v96: watchlist removals that stick, banner, trailer
+- ROOT CAUSE of "removed films come back after sign out and sign in": syncing combined the two lists (this copy plus the cloud) when this device had no change time, and a copy that still held a removed film put it back and then saved it into the cloud. Nothing recorded that a film was removed. The earlier v90 fix (flush before sign-out) did not touch this.
+- Fix: each film's last add and last removal are stored with their time (`userWatchlistAdded/Removed`, `userWatchedAdded/Removed`; keys are `wlKey(id)` for the watchlist, the film id for watched). `stampMerge` and `stampKeeps` merge them: a film stays removed unless it was added again after the removal. Stored locally (`_wl_added`, `_wl_removed`, `_wh_added`, `_wh_removed`) and in the cloud payload (`watchlist_added`, `watchlist_removed`, `watched_added`, `watched_removed`). Removal stamps older than 365 days are dropped; at most 600 per map. `persistWatchlistLocal(touch)` saves without bumping the change time when a merge only read the cloud. Cloud save failures are now logged and retried (3 times).
+- Tested with a stand-in cloud: device A adds four films and removes two; a second device with an old copy of all four signs in: the two stay removed and the cloud keeps its list. Re-adding after a removal works and survives sign-out and sign-in. An old cloud copy with no removal records cannot bring back a film removed on this device.
+- Existing films already back in a list have no removal record yet: removing them once more records it.
+- Banner (phones, below 768px): no View details or Trailer buttons; tap the picture to open the film (`.hero-slide` has the click). Tablet and desktop keep View details (`hidden md:flex`).
+- Trailer reveal: some phones ignore the 16 s start. The picture used to stay hidden until the video reached 16 s, longer than the banner stays on one film. It now seeks once to the highlight and shows after 2.5 s of playing. Player load wait: 14 s (muted), 40 handshake tries.
+- YouTube header bar over the trailer on phones: the player is zoomed 1.6x (desktop 1.25x) and at least 17% of its height is cut at the top.
+- theme.css?v=15; sw.js CACHE_NAME watchvibe-cache-v96.
+- Sweep problems [] at 390, 768 and 1440.
+- Not verified: the trailer on a real phone; sign-in against the real database (needs a signed-in user).

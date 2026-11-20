@@ -2202,9 +2202,12 @@
       const params = `${Preview.fixedStart ? 'start=' + Preview.fixedStart + '&' : ''}autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
       // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
       const box = slot.getBoundingClientRect();
-      const cw = Math.max(box.width, (box.height * 16) / 9) * 1.25, ch = (cw * 9) / 16;
-      const fit = box.width > 0 && box.height > 0 ? `style="left:50%;top:50%;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translate(-50%,-50%)"` : '';
-      slot.innerHTML = `<iframe class="pointer-events-none absolute ${fit ? '' : 'inset-0 h-full w-full scale-[1.35]'}" ${fit} src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
+      // 1.6 and a shift up push YouTube's own title bar (top) and brand strip (bottom) outside the frame, so only the picture shows
+      const zoom = box.width < 768 ? 1.6 : 1.25;   // phones need the stronger zoom; desktop keeps its original framing
+      const cw = Math.max(box.width, (box.height * 16) / 9) * zoom, ch = (cw * 9) / 16;
+      const overflowY = ch - box.height, topCrop = Math.min(overflowY, Math.max(0.17 * ch, overflowY / 2));   // at least 17% of the player's height is cut at the top
+      const fit = box.width > 0 && box.height > 0 ? `style="left:50%;top:${-Math.round(topCrop)}px;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translateX(-50%)"` : '';
+      slot.innerHTML = `<iframe class="pointer-events-none absolute ${fit ? '' : 'inset-0 h-full w-full scale-[1.7]'}" ${fit} src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
       Preview.iframe = slot.querySelector('iframe');
       setPreviewUi();
       const token = Preview.token;
@@ -3062,6 +3065,7 @@
     let userWatchlistIds = [];
     let userWatchlistMeta = {};   // id -> { title, poster, year, ... } for saved titles that are not in our catalogue
     let userWatchedHistory = [];
+    let userWatchlistAdded = {}, userWatchlistRemoved = {}, userWatchedAdded = {}, userWatchedRemoved = {};   // film -> time of its last add / removal (ISO)
     let currentWatchlistSubTab = 'want'; // 'want' or 'watched'
     let syncCloudDebounceTimer = null;
 
@@ -3081,17 +3085,20 @@
             watchlist: userWatchlistIds,
             watchlist_meta: userWatchlistMeta,
             watched_history: userWatchedHistory,
+            watchlist_added: userWatchlistAdded, watchlist_removed: userWatchlistRemoved,
+            watched_added: userWatchedAdded, watched_removed: userWatchedRemoved,
             modified_at: localStorage.getItem(getUserStoragePrefix() + '_lastmod') || new Date().toISOString(),
             last_active: new Date().toISOString()
           };
-          await window.supabaseClient
+          const { error } = await window.supabaseClient
             .from('user_watchlists')
             .upsert({
               user_id: currentAuthUser.id,
               watchlist_data: userPayload,
               updated_at: new Date().toISOString()
             });
-          console.log('[WatchVibe] User data synced to Cloud Vault for:', currentUserSession.email);
+          if (error) { console.warn('[WatchVibe] Cloud save failed:', error.message); window.__wlRetries = (window.__wlRetries || 0) + 1; if (window.__wlRetries <= 3) setTimeout(syncUserDataToSupabaseCloud, 5000); }
+          else { window.__wlRetries = 0; console.log('[WatchVibe] User data synced to Cloud Vault.'); }
         } catch(e) {
           console.warn('[WatchVibe] Cloud sync notice:', e);
         }
@@ -3109,34 +3116,27 @@
 
         if (data && data.watchlist_data) {
           const cloud = data.watchlist_data;
-          const prefix = getUserStoragePrefix();
-          const cloudMod = String(cloud.modified_at || '');
-          const localMod = localStorage.getItem(prefix + '_lastmod') || '';
+          const obj = v => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
           const cloudList = Array.isArray(cloud.watchlist) ? cloud.watchlist : [];
           const cloudWatched = Array.isArray(cloud.watched_history) ? cloud.watched_history : [];
-          if (cloudMod && localMod && cloudMod > localMod) {
-            // changed on another device more recently: take that copy as it is, so removals carry over too
-            userWatchlistIds = cloudList.slice();
-            userWatchlistMeta = (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') ? { ...cloud.watchlist_meta } : {};
-            userWatchedHistory = cloudWatched.slice();
-            try {
-              localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
-              localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
-              localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
-              localStorage.setItem(prefix + '_lastmod', cloudMod);
-            } catch (e) {}
-          } else if (cloudMod && localMod) {
-            // this device has the newest copy: keep it and make sure the cloud has it too
-            if (localMod > cloudMod) syncUserDataToSupabaseCloud();
-          } else {
-            // first sync on this device (or an older cloud copy with no timestamp): combine both once,
-            // then save so every later sync can use "newest copy wins"
-            userWatchlistIds = Array.from(new Set([...userWatchlistIds, ...cloudList]));
-            if (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') Object.keys(cloud.watchlist_meta).forEach(k => { if (!userWatchlistMeta[k]) userWatchlistMeta[k] = cloud.watchlist_meta[k]; });
-            const existingIds = new Set(userWatchedHistory.map(h => h.id));
-            cloudWatched.forEach(item => { if (!existingIds.has(item.id)) userWatchedHistory.push(item); });
-            saveWatchlistStore();
-          }
+          // Merge by what happened to each film, not by which copy looks newer. A removal is remembered with its time, so a stale
+          // copy (another device, or the cloud) can never bring a removed film back. A film returns only if it was added again later.
+          const w = stampMerge(userWatchlistAdded, userWatchlistRemoved, obj(cloud.watchlist_added), obj(cloud.watchlist_removed));
+          userWatchlistAdded = w.A; userWatchlistRemoved = w.R;
+          const listBefore = JSON.stringify(userWatchlistIds);
+          userWatchlistIds = wlDedupe([...userWatchlistIds, ...cloudList].filter(id => stampKeeps(w.A, w.R, wlKey(id))));
+          if (cloud.watchlist_meta && typeof cloud.watchlist_meta === 'object') Object.keys(cloud.watchlist_meta).forEach(k => { if (!userWatchlistMeta[k] && userWatchlistIds.includes(k)) userWatchlistMeta[k] = cloud.watchlist_meta[k]; });
+          const h = stampMerge(userWatchedAdded, userWatchedRemoved, obj(cloud.watched_added), obj(cloud.watched_removed));
+          userWatchedAdded = h.A; userWatchedRemoved = h.R;
+          const haveWatched = new Set(userWatchedHistory.map(x => x.id));
+          cloudWatched.forEach(x => { if (x && x.id && !haveWatched.has(x.id)) { haveWatched.add(x.id); userWatchedHistory.push(x); } });
+          userWatchedHistory = userWatchedHistory.filter(x => stampKeeps(h.A, h.R, x.id));
+          const sameAsCloud = JSON.stringify(cloudList) === JSON.stringify(userWatchlistIds)
+            && Object.keys(userWatchlistRemoved).length === Object.keys(obj(cloud.watchlist_removed)).length
+            && Object.keys(userWatchedRemoved).length === Object.keys(obj(cloud.watched_removed)).length
+            && cloudWatched.length === userWatchedHistory.length;
+          if (sameAsCloud && JSON.stringify(userWatchlistIds) === listBefore) persistWatchlistLocal(false);   // nothing new either way
+          else saveWatchlistStore();                                                                           // something merged: keep it here and in the cloud
           if (typeof updateProfileUiState === 'function') updateProfileUiState();
           if (typeof refreshViews === 'function') refreshViews();
         }
@@ -3166,6 +3166,9 @@
       } catch(e) {
         userWatchlistMeta = {};
       }
+      const readStamps = k => { try { const v = JSON.parse(localStorage.getItem(prefix + k) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } };
+      userWatchlistAdded = readStamps('_wl_added'); userWatchlistRemoved = readStamps('_wl_removed');
+      userWatchedAdded = readStamps('_wh_added'); userWatchedRemoved = readStamps('_wh_removed');
 
       // One-time legacy migration for superadmin Debarshi so testing data is preserved:
       if (isSuperAdmin()) {
@@ -3182,16 +3185,25 @@
       if (shouldRefresh && typeof refreshViews === 'function') refreshViews();
     }
 
-    function saveWatchlistStore() {
+    // touch = true when the visitor changed something (a merge that only reads the cloud leaves the change time alone)
+    function persistWatchlistLocal(touch) {
       const prefix = getUserStoragePrefix();
       try {
         userWatchlistIds = wlDedupe(userWatchlistIds);   // a film is kept once, even if it was saved under two ids before
         Object.keys(userWatchlistMeta).forEach(k => { if (!userWatchlistIds.includes(k)) delete userWatchlistMeta[k]; });   // keep the map tidy
+        userWatchlistRemoved = stampPrune(userWatchlistRemoved); userWatchedRemoved = stampPrune(userWatchedRemoved);
         localStorage.setItem(prefix + '_watchlist', JSON.stringify(userWatchlistIds));
         localStorage.setItem(prefix + '_watchlist_meta', JSON.stringify(userWatchlistMeta));
         localStorage.setItem(prefix + '_watched', JSON.stringify(userWatchedHistory));
-        localStorage.setItem(prefix + '_lastmod', new Date().toISOString());   // lets the newest copy win when syncing between devices
+        localStorage.setItem(prefix + '_wl_added', JSON.stringify(userWatchlistAdded));
+        localStorage.setItem(prefix + '_wl_removed', JSON.stringify(userWatchlistRemoved));
+        localStorage.setItem(prefix + '_wh_added', JSON.stringify(userWatchedAdded));
+        localStorage.setItem(prefix + '_wh_removed', JSON.stringify(userWatchedRemoved));
+        if (touch) localStorage.setItem(prefix + '_lastmod', new Date().toISOString());
       } catch(e) {}
+    }
+    function saveWatchlistStore() {
+      persistWatchlistLocal(true);
       if (typeof updateProfileUiState === 'function') updateProfileUiState();
       syncUserDataToSupabaseCloud();
     }
@@ -3210,7 +3222,21 @@
       return 'id:' + String(id);
     }
     function wlHas(id) { const k = wlKey(id); return userWatchlistIds.some(x => wlKey(x) === k); }
-    function wlRemoveFilm(id) { const k = wlKey(id); userWatchlistIds = userWatchlistIds.filter(x => wlKey(x) !== k); }
+    function wlRemoveFilm(id) { const k = wlKey(id); userWatchlistRemoved[k] = new Date().toISOString(); userWatchlistIds = userWatchlistIds.filter(x => wlKey(x) !== k); }   // the removal is remembered with its time
+    // Each film's last add and last removal are kept with their time. When two copies of the lists meet (another device, or the cloud),
+    // a film stays removed unless it was added again after the removal. Before this, the two lists were simply combined,
+    // so a copy that still had a removed film put it back, and then saved it back into the cloud.
+    function stampMerge(a1, r1, a2, r2) {
+      const A = { ...a2 }, R = { ...r2 };
+      Object.keys(a1).forEach(k => { if (!A[k] || a1[k] > A[k]) A[k] = a1[k]; });
+      Object.keys(r1).forEach(k => { if (!R[k] || r1[k] > R[k]) R[k] = r1[k]; });
+      return { A, R };
+    }
+    const stampKeeps = (A, R, k) => !R[k] || (!!A[k] && A[k] > R[k]);
+    function stampPrune(m) {
+      const cut = new Date(Date.now() - 365 * 864e5).toISOString();
+      return Object.fromEntries(Object.entries(m).filter(([, v]) => v > cut).sort((a, b) => (a[1] < b[1] ? 1 : -1)).slice(0, 600));
+    }
     function wlDedupe(list) { const seen = new Set(); return list.filter(x => { const k = wlKey(x); if (seen.has(k)) return false; seen.add(k); return true; }); }
 
     function toggleWatchlist(mediaId) {
@@ -3220,6 +3246,7 @@
         showToast('Removed title from your Watchlist.');
       } else {
         userWatchlistIds.push(mediaId);
+        userWatchlistAdded[wlKey(mediaId)] = new Date().toISOString();
         { const it = findLibItem(mediaId); if (it) userWatchlistMeta[mediaId] = libMeta(it); }
         Track.event('watchlist_add', trackTitleInfo(mediaId));
         showToast('📌 Added to your Saved Watchlist!');
@@ -3241,12 +3268,14 @@
       
       if (existingIdx !== -1) {
         userWatchedHistory.splice(existingIdx, 1);
+        userWatchedRemoved[mediaId] = new Date().toISOString();
         showToast('Removed from your Watched history.');
       } else if (item) {
         // Also remove from want-to-watch if present
         wlRemoveFilm(mediaId);
 
         const chosenVibe = vibeChoice || item.dominantVibe || 'must_watch';
+        userWatchedAdded[item.id] = new Date().toISOString();
         userWatchedHistory.unshift({
           id: item.id,
           title: item.title,
@@ -6447,7 +6476,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const rec = { id: item.id, title: item.title, poster: item.poster, year: item.year, duration: item.duration, rating: item.rating, type: item.type, tmdbId: item.tmdbId || null, dominantVibe: item.dominantVibe || 'must_watch', myVibe: vibe, watchedDate: 'Just now' };
       const i = userWatchedHistory.findIndex(h => h.id === item.id);
       if (i !== -1) userWatchedHistory[i] = { ...userWatchedHistory[i], ...rec, watchedDate: userWatchedHistory[i].watchedDate || rec.watchedDate };
-      else { wlRemoveFilm(item.id); userWatchedHistory.unshift(rec); }
+      else { wlRemoveFilm(item.id); userWatchedAdded[item.id] = new Date().toISOString(); userWatchedHistory.unshift(rec); }
       saveWatchlistStore();
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && RS.open) rateSheetClose(); });
