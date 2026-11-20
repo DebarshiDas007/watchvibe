@@ -559,8 +559,11 @@
     }
     function handleAuthSubmit(e) { return handleMimiCoreEmailSubmit(e); }
 
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushUserDataToSupabaseCloud(); });
+
     async function userSignOut() {
       try {
+        await flushUserDataToSupabaseCloud();   // the last removal is saved to the cloud before the session ends
         if (window.supabaseClient) await window.supabaseClient.auth.signOut();
       } catch(e) {}
       setLoggedOutUser();
@@ -3057,7 +3060,14 @@
     function syncUserDataToSupabaseCloud() {
       if (!window.supabaseClient || !currentAuthUser) return;
       clearTimeout(syncCloudDebounceTimer);
-      syncCloudDebounceTimer = setTimeout(async () => {
+      syncCloudDebounceTimer = setTimeout(flushUserDataToSupabaseCloud, 600);
+    }
+    // Writes the saved list to the cloud now. Also run before sign-out and when the page is hidden,
+    // so a removal made just before signing out still reaches the cloud (it used to wait 600 ms and was lost).
+    async function flushUserDataToSupabaseCloud() {
+      clearTimeout(syncCloudDebounceTimer);
+      if (!window.supabaseClient || !currentAuthUser) return;
+      {
         try {
           const userPayload = {
             watchlist: userWatchlistIds,
@@ -3077,7 +3087,7 @@
         } catch(e) {
           console.warn('[WatchVibe] Cloud sync notice:', e);
         }
-      }, 600);
+      }
     }
 
     async function syncUserDataFromSupabaseCloud() {
