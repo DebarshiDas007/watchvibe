@@ -354,3 +354,8 @@ Open / next, in the order we discussed:
 - Phone Games: still one option, the header gamepad.
 - sw.js CACHE_NAME watchvibe-cache-v98. Sweep problems [] at 390, 768, 1440.
 - Not done: "Under 2h" chip; phone bottom bar keeps orange icons.
+
+## v99: bigger WatchVibe wordmark (today's progress)
+- Header wordmark top left is larger: 28px on phones (was 22), 30px on tablets (was 22), 36px from 1100px (was 24). theme.css?v=19, sw.js CACHE_NAME watchvibe-cache-v99. Checked live at 1024px: no overflow in the nav or page.
+- Today in short: v98 "Marquee, refined" redesign (desktop and phone) shipped and pushed (commit 43a53b4); v99 wordmark size.
+- Open: the phone hero keeps Play trailer and "+" buttons from the design (earlier request was to remove them; user can ask to drop them); no "Under 2h" chip; phone bottom bar icons are still orange; revoke the exposed GitHub tokens; the four stale watchlist films (Interstellar, Breaking Bad, Parasite, Stranger Things) need removing once more.
