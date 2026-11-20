@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=14">
+  <link rel="stylesheet" href="/theme.css?v=15">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -2173,7 +2173,13 @@
         if (!Preview.reported) { Preview.reported = true; const ti = trackTitleInfo(Preview.itemId); Track.event('trailer_play', ti); }
         Preview.playing = true;
         clearTimeout(Preview.fallbackTimer);
-        if (Preview.seeked && (info.currentTime || 0) >= Preview.startAt - 1) {
+        // Featured banner: some phones ignore the start=16 setting and begin at 0. The picture used to stay hidden until the video
+        // reached the highlight, which could take longer than the banner stays on one film. Jump there once, and show the video
+        // anyway after 2.5 s of playing.
+        const tNow = info.currentTime || 0;
+        if (Preview.fixedStart && !Preview.fixedSeekTried && tNow < Preview.startAt - 1 && (info.duration || 0) > Preview.startAt + 25) { Preview.fixedSeekTried = true; previewCmd('seekTo', [Preview.startAt, true]); }
+        if (!Preview.playSince) Preview.playSince = performance.now();
+        if (Preview.seeked && (tNow >= Preview.startAt - 1 || performance.now() - Preview.playSince > 2500)) {
           const slot = pv('slot');
           if (slot) slot.style.opacity = '1';
           showPreviewControls(true);
@@ -2191,6 +2197,7 @@
       const slot = pv('slot');
       if (!slot || !Preview.key) return;
       Preview.seeked = !!Preview.fixedStart; Preview.startAt = Preview.fixedStart || 0; Preview.durChecked = false; Preview.playing = false; Preview.muted = !!startMuted;
+      Preview.fixedSeekTried = false; Preview.playSince = 0;
       slot.style.opacity = '0';
       const params = `${Preview.fixedStart ? 'start=' + Preview.fixedStart + '&' : ''}autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
       // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
@@ -2207,7 +2214,7 @@
         let tries = 0;
         clearInterval(Preview.retry);
         Preview.retry = setInterval(() => {
-          if (token !== Preview.token || ++tries > 20) { clearInterval(Preview.retry); return; }
+          if (token !== Preview.token || ++tries > 40) { clearInterval(Preview.retry); return; }   // 16 s: phones load the player slowly
           try { Preview.iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'wv', channel: 'widget' }), '*'); } catch (e) {}
         }, 400);
       });
@@ -2217,7 +2224,7 @@
         if (token !== Preview.token || Preview.playing) return;
         if (!startMuted) { Preview.token++; mountPreviewIframe(true); }
         else { nextTrailerCandidate(); } // still nothing (e.g. embedding disabled): try the next trailer, else keep the backdrop
-      }, startMuted ? 8000 : 6000);
+      }, startMuted ? 14000 : 8000);   // longer than before: a phone connection needs time to load the player
     }
 
     function nextTrailerCandidate() {
@@ -4634,7 +4641,7 @@ function posterCard(item, opts) {
       const meta = [item.year, (item.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), item.duration].filter(Boolean).join('  ·  ');
       const cert = certBadgeHtml(certFor(EXTRAS.cache.get(extrasKeyOf(item)), selectedCountry));
       return `
-        <div class="hero-slide relative col-start-1 row-start-1 flex min-h-[320px] items-end sm:min-h-0 ${i === HERO.idx ? '' : 'pointer-events-none opacity-0'}" data-slide="${i}" ${i === HERO.idx ? '' : 'aria-hidden="true"'}>
+        <div class="hero-slide relative col-start-1 row-start-1 flex min-h-[320px] cursor-pointer items-end sm:min-h-0 ${i === HERO.idx ? '' : 'pointer-events-none opacity-0'}" data-slide="${i}" ${i === HERO.idx ? '' : 'aria-hidden="true"'} role="button" tabindex="${i === HERO.idx ? 0 : -1}" aria-label="Open ${esc(item.title)}" onclick="openDetails('${esc(item.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetails('${esc(item.id)}')}">
           <img src="${esc(item.backdrop)}" alt="" ${i === 0 ? '' : 'loading="lazy"'} class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
           <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-500"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
@@ -4643,9 +4650,8 @@ function posterCard(item, opts) {
             <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60"><span class="h-1.5 w-1.5 rounded-full" style="background:${dom.color}"></span>Featured · ${esc(item.__badge || dom.label)}</div>
             <h2 class="mt-3" data-hero-title>${heroTitleHtml(item, i)}</h2>
             <p class="mt-3 text-sm text-white/70 lg:text-base"><span data-hero-cert>${cert}</span>${esc(meta)}${rtHtml(item, 'ml-3 text-amber-300')}</p>
-            <div class="mt-5 flex flex-wrap gap-3">
-              <button type="button" onclick="openDetails('${item.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90 lg:px-8 lg:py-3 lg:text-base">View details</button>
-              <button type="button" data-hero-trailer onclick="heroPlayTrailer()" class="items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/35 transition active:scale-95" aria-label="Play trailer"><i class="fa-solid fa-play text-xs"></i>Trailer</button>
+            <div class="mt-5 hidden flex-wrap gap-3 md:flex">
+              <button type="button" onclick="event.stopPropagation();openDetails('${item.id}')" class="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90 lg:px-8 lg:py-3 lg:text-base">View details</button>
             </div>
           </div>
         </div>`;
@@ -4779,7 +4785,7 @@ function posterCard(item, opts) {
       if (Preview.ids !== PV_DEFAULT) stopTrailerPreview();
       HERO.idx = next;
       const reduce = prefersNoAutoplay();
-      HERO.el.querySelectorAll('.hero-slide').forEach((s, k) => { const on = k === next; s.classList.toggle('opacity-0', !on); s.classList.toggle('pointer-events-none', !on); if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true'); });
+      HERO.el.querySelectorAll('.hero-slide').forEach((s, k) => { const on = k === next; s.classList.toggle('opacity-0', !on); s.classList.toggle('pointer-events-none', !on); s.tabIndex = on ? 0 : -1; if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true'); });
       const segs = HERO.el.querySelectorAll('.hero-seg');
       HERO.elapsed = 0; HERO.last = performance.now();
       segs.forEach((s, k) => {

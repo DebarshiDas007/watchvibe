@@ -113,8 +113,6 @@ button[data-person]:focus-visible { color: var(--accent-hover); outline: 2px sol
   #heroCarousel > div.absolute.bottom-9 { bottom: auto; top: 10px; right: 10px; gap: 8px; }
   #heroCarousel > div.absolute.bottom-9 button { border-radius: 50%; }
 }
-[data-hero-trailer] { display: none; }
-@media (hover: none) and (pointer: coarse) { [data-hero-trailer] { display: inline-flex; } }   /* touch screens get a Trailer button */
 
 /* ---- filters on a phone: language and vibe side by side, sort below, reset under that ---- */
 @media (max-width: 767px) {
