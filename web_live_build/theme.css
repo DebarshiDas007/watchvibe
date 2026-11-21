@@ -311,3 +311,17 @@ button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: none; outl
 .wv-acct-foot.is-primary:hover { background: var(--accent-hover); }
 /* phones: the bottom bar already has Profile, so the header carries no second profile icon */
 @media (max-width: 767px) { #cloudAuthBtn { display: none; } }
+
+/* ---- one vibe picker: mood chips plus a describe field (v21) ---- */
+.wv-describe { position: relative; display: flex; align-items: center; width: 100%; max-width: 560px; }
+.wv-describe input { width: 100%; height: 44px; border-radius: 9999px; background: #141418; border: 1px solid #2E2E35; color: var(--text); padding: 0 52px 0 18px; font: 400 14px/1 Inter, sans-serif; }
+.wv-describe input::placeholder { color: #8A8A84; }
+.wv-describe input:focus { outline: none; border-color: #55555D; box-shadow: 0 0 0 2px rgba(214,80,47,.55); }
+.wv-describe button { position: absolute; right: 5px; width: 34px; height: 34px; min-height: 0; border-radius: 9999px; border: 0; background: var(--accent); color: #0A0A0B; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.wv-describe button:hover { background: var(--accent-hover); }
+@media (min-width: 768px) {
+  div.wv-top.space-y-5 > .wv-mooddesk { grid-row: 2; }
+  div.wv-top.space-y-5 > #wvFilterBar { grid-row: 2; }
+  div.wv-top.space-y-5 > .wv-describe { grid-column: 1; grid-row: 3; }
+}
+@media (max-width: 767px) { .wv-describe input { height: 46px; font-size: 16px; } .wv-describe button { min-width: 34px; } }

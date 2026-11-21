@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=20">
+  <link rel="stylesheet" href="/theme.css?v=21">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -3408,13 +3408,17 @@
 
     // --- MOOD PICKER: each mood boosts vibe categories and adds keyword hints ---
     const AI_MOODS = [
-      { id: 'cry',      label: 'Need a good cry',   emoji: '😭', genres: ['Drama','Romance','Family'], vibes: { emotional_damage: 8, must_watch: 3 }, words: ['family','loss','love','drama','father','brother'] },
-      { id: 'mind',     label: 'Blow my mind',      emoji: '🤯', genres: ['Sci-Fi','Mystery','Thriller'], vibes: { mind_blown: 8, must_watch: 3 },       words: ['sci-fi','thriller','mystery','time','twist','dream'] },
-      { id: 'laugh',    label: 'Make me laugh',     emoji: '😂', genres: ['Comedy'], vibes: { fun_time: 8 },                         words: ['comedy','funny','friends','chaos'] },
-      { id: 'comfort',  label: 'Cozy & comforting', emoji: '🫶', genres: ['Family','Comedy','Romance','Animation'], vibes: { fun_time: 4, hidden_gem: 3, emotional_damage: 2 }, words: ['family','village','wholesome','small','music'] },
-      { id: 'hype',     label: 'Pure adrenaline',   emoji: '🔥', genres: ['Action','Adventure','War','Thriller'], vibes: { must_watch: 5, fun_time: 3, mind_blown: 3 }, words: ['action','war','hero','fight','epic','thriller'] },
-      { id: 'gem',      label: 'Hidden gems',       emoji: '💎', genres: [], vibes: { hidden_gem: 8, must_watch: 2 },        words: ['indie','realism','small'] }
+      { id: 'cry',     label: 'Need a good cry',   emoji: '😭', want: { Drama: .7, Romance: .6, Family: .4, War: .4, History: .4, Music: .3 }, avoid: { Horror: 1, Action: .5, Comedy: .5 }, words: 'loss grief death dying mother father sacrifice love family tragic memory cancer brother sister orphan farewell goodbye widow', vibes: ['emotional_damage'], minRating: 7 },
+      { id: 'mind',    label: 'Blow my mind',      emoji: '🤯', want: { SciFi: 1, Mystery: .9, Thriller: .7, Fantasy: .3 }, avoid: { Family: .6, Animation: .3, Comedy: .3, Action: .25 }, words: 'time dream reality memory simulation loop parallel mind twist secret experiment identity universe conspiracy alien future', vibes: ['mind_blown'], minRating: 7 },
+      { id: 'laugh',   label: 'Make me laugh',     emoji: '😂', want: { Comedy: 1, Animation: .3, Family: .2 }, avoid: { Horror: 1, War: .8, Thriller: .5, Crime: .3 }, words: 'hilarious chaos awkward prank wedding friends misadventure mishap quirky ridiculous', vibes: ['fun_time'], minRating: 6.2 },
+      { id: 'comfort', label: 'Cozy & comforting', emoji: '🫶', want: { Family: .7, Comedy: .6, Romance: .6, Animation: .45, Music: .4, Fantasy: .3 }, avoid: { Horror: 1, Crime: .8, War: .8, Thriller: .7 }, words: 'village friendship town holiday wholesome heartwarming home together neighbour kindness', vibes: ['fun_time', 'hidden_gem'], minRating: 6.8 },
+      { id: 'hype',    label: 'Pure adrenaline',   emoji: '🔥', want: { Action: 1, Adventure: .7, War: .5, Thriller: .5, SciFi: .3 }, avoid: { Documentary: .8, Family: .5, Romance: .4, Music: .4 }, words: 'mission fight battle heist chase assassin revenge explosive army hero rescue', vibes: ['must_watch'], minRating: 6.5 },
+      { id: 'gem',     label: 'Hidden gems',       emoji: '💎', gem: true, want: {}, avoid: {}, words: '', vibes: ['hidden_gem'], minRating: 6.8 }
     ];
+    // words in a typed request that point at a mood
+    const AI_MOOD_HINTS = [[/\b(cry|tear|tears|sad|heartbreak|heartbreaking|emotional|devastat\w*|tearjerker|weep)\b/, 'cry'], [/\b(mind|twist|twists|sci-?fi|puzzle|mindfuck|nolan|confusing|trippy|thought-provoking)\b/, 'mind'],
+      [/\b(laugh|funny|comedy|hilarious|chaotic|humou?r|silly)\b/, 'laugh'], [/\b(comfort|comforting|wholesome|cozy|cosy|feel-?good|relax\w*|warm|sweet|light-?hearted)\b/, 'comfort'],
+      [/\b(action|adrenaline|epic|fight|hype|mass|thrilling|explosive)\b/, 'hype'], [/\b(underrated|hidden|gem|gems|overlooked|unknown|niche)\b/, 'gem']];
 
     function parseRuntimeMinutes(d) {
       if (!d) return 0;
@@ -3428,14 +3432,36 @@
     }
 
     function setAiRuntime(mins) {
-      aiMaxRuntime = mins;
+      aiMaxRuntime = aiMaxRuntime === mins ? 0 : mins;
       runAiVibeMatcher(undefined, true);
     }
 
+    // ---- Vibe matcher ----
+    // Each mood is a profile: genres that fit it, genres that spoil it, plot words, a rating floor. A title's fit to a mood is computed from
+    // its own genres and plot (never from the placeholder vote splits), several moods must ALL fit (geometric mean), a typed request adds
+    // its own match (title, cast, director, genre, and plot similarity), and a vote-weighted rating keeps well-loved films on top.
+    // Films already watched are left out, the viewer's own taste nudges the order, and the final eight are varied (no franchise twice).
+    const AI_STEMS = new Map(), AI_TOK = new Map();
+    const aiStems = mood => { let s = AI_STEMS.get(mood.id); if (!s) { s = new Set(synTok(mood.words)); AI_STEMS.set(mood.id, s); } return s; };
+    const aiToks = m => { let s = AI_TOK.get(m.id); if (!s) { s = new Set(synTok(m.synopsis)); AI_TOK.set(m.id, s); } return s; };
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    function aiMoodFit(mood, m, g, pop, votes) {
+      const rating = Number(m.rating) || 0;
+      if (mood.gem) return votes < 250 ? 0 : clamp01((rating - 6.8) / 1.6) * (1 - 0.85 * pop);
+      // a genre listed first says more about a title than one listed last
+      let miss = 1; (m.genres || []).forEach((name, i) => { const f = i === 0 ? 1 : i === 1 ? 0.8 : 0.6; (GENRE_GROUPS[name] || []).forEach(x => { if (mood.want[x]) miss *= (1 - 0.85 * f * mood.want[x]); }); });
+      const genreFit = 1 - miss;
+      let avoid = 0; g.forEach(x => { if (mood.avoid[x]) avoid = Math.max(avoid, mood.avoid[x]); });
+      const stems = aiStems(mood), toks = aiToks(m); let hits = 0; stems.forEach(w => { if (toks.has(w)) hits++; });
+      const wordFit = Math.min(1, hits / 3);
+      const tag = mood.vibes.includes(m.dominantVibe) ? 1 : 0;
+      let fit = (0.5 * genreFit + 0.25 * wordFit + 0.25 * tag) * (1 - 0.9 * avoid);
+      if (rating && rating < mood.minRating) fit *= 0.6;
+      return fit;
+    }
     function runAiVibeMatcher(promptText, keepScroll) {
-      const typed = (promptText || document.getElementById('aiVibeInput')?.value || '').trim();
-      const q = typed;
-      if (!q && aiMoods.length === 0) {
+      const q = (promptText || document.getElementById('aiVibeInput')?.value || '').trim();
+      if (!q && aiMoods.length === 0 && !aiMaxRuntime) {
         showToast('Type what you feel like, or pick a mood.');
         return;
       }
@@ -3443,92 +3469,70 @@
       aiVibeQuery = q;
       const lower = q.toLowerCase();
 
-      const vibeWeights = { must_watch: 0, mind_blown: 0, emotional_damage: 0, hidden_gem: 0, fun_time: 0, time_pass: 0, skip_it: 0 };
-
-      if (lower.match(/mind|twist|sci-fi|crazy|nolan|confus|dimension|matrix|wormhole|puzzle|intellect|mindfuck/)) {
-        vibeWeights.mind_blown += 6;
-        vibeWeights.must_watch += 3;
-      }
-      if (lower.match(/cry|tear|sad|heart|brother|father|loss|feel|pain|devastat|trauma|emotional|deep|touch|tears/)) {
-        vibeWeights.emotional_damage += 7;
-        vibeWeights.must_watch += 3;
-      }
-      if (lower.match(/fun|laugh|comedy|smile|cheer|good time|entertain|humor|hilarious|chaotic|ranga|party|stree/)) {
-        vibeWeights.fun_time += 6;
-      }
-      if (lower.match(/underrated|hidden|gem|indie|realism|malayalam|grounded|village|niche|unknown|overlook/)) {
-        vibeWeights.hidden_gem += 6;
-        vibeWeights.must_watch += 3;
-      }
-      if (lower.match(/mass|action|adrenaline|hero|srk|prabhas|vijay|epic|hype|fight|goosebump|entry|jawan|leo|kgf|kalki/)) {
-        vibeWeights.must_watch += 5;
-        vibeWeights.fun_time += 4;
-        vibeWeights.mind_blown += 3;
-      }
-      if (lower.match(/comfort|wholesome|relax|peace|cozy|feel good|warm|sweet|panchayat/)) {
-        vibeWeights.fun_time += 4;
-        vibeWeights.emotional_damage += 2;
-        vibeWeights.hidden_gem += 3;
-      }
-
-      // selected moods add their own weights and keyword hints
-      const moodWords = [];
-      const moodGenres = [];
-      aiMoods.forEach(id => {
-        const mood = AI_MOODS.find(x => x.id === id);
-        if (!mood) return;
-        Object.entries(mood.vibes).forEach(([v, w]) => { vibeWeights[v] += w; });
-        moodWords.push(...mood.words);
-        moodGenres.push(...(mood.genres || []));
-      });
-
-      // Typed text also implies moods, so free-text prompts benefit from genre matching too.
-      [[/mind|twist|sci-fi|puzzle|mindfuck|nolan/, 'mind'], [/cry|tear|sad|heart|emotional|devastat/, 'cry'],
-       [/fun|laugh|comedy|hilarious|chaotic/, 'laugh'], [/comfort|wholesome|cozy|feel good|relax|warm/, 'comfort'],
-       [/mass|action|adrenaline|epic|fight|hype/, 'hype']].forEach(([rx, id]) => {
-        if (lower.match(rx)) {
-          const mood = AI_MOODS.find(x => x.id === id);
-          if (mood) { moodGenres.push(...(mood.genres || [])); moodWords.push(...mood.words); }
-        }
-      });
+      // moods: the chosen chips plus any the typed words point at
+      const ids = new Set(aiMoods);
+      AI_MOOD_HINTS.forEach(([rx, id]) => { if (rx.test(lower)) ids.add(id); });
+      const moods = [...ids].map(id => AI_MOODS.find(x => x.id === id)).filter(Boolean);
+      const qWords = lower.split(/[^a-z0-9']+/).filter(w => w.length > 2 && !SYN_STOP.has(w));
+      const wordRx = qWords.map(w => new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      const textOnly = !!q && !moods.length;
+      const qVec = q ? synVec(q) : null;
+      const genreWords = new Set(); Object.keys(GENRE_GROUPS).forEach(k => genreWords.add(k.toLowerCase()));
+      const qGenres = qWords.filter(w => genreWords.has(w));
 
       const typeFilter = selectedTopCategory && selectedTopCategory !== 'all' ? selectedTopCategory : null;
+      const watched = new Set((userWatchedHistory || []).map(h => h.id));
       const candidates = mediaDatabase.filter(m => {
+        if (!m || !m.genres || watched.has(m.id)) return false;
         if (aiMaxRuntime && parseRuntimeMinutes(m.duration) > aiMaxRuntime) return false;
         if (typeFilter && (m.type || 'Movie') !== typeFilter) return false;
         return true;
       });
       aiMatchTotal = candidates.length;
 
-      const words = lower.split(/\s+/).filter(w => w.length > 2);
-      const scored = candidates.map(m => {
-        let score = 0;
-        // Many catalog titles carry placeholder vote splits (e.g. 100/100/100). Normalise each title's split
-        // to 100% and scale by a vote-confidence factor so unreliable data can't dominate the ranking.
-        const rawPcts = getVibePercentages(m);
-        const pSum = Object.values(rawPcts).reduce((a, b) => a + (b || 0), 0) || 1;
-        const conf = Math.min(1, Math.log10((m.totalVotes || 0) + 10) / 4.5);
-        for (const [vibe, weight] of Object.entries(vibeWeights)) {
-          score += ((rawPcts[vibe] || 0) / pSum * 100) * conf * weight;
+      let maxLog = 1; candidates.forEach(m => { maxLog = Math.max(maxLog, Math.log10((m.totalVotes || 0) + 10)); });
+      const taste = userTaste(), hasTaste = Object.keys(taste).length > 0;
+      const rows = [];
+      candidates.forEach(m => {
+        const g = genresFromNames(m.genres), votes = m.totalVotes || 0, R = Number(m.rating) || 0;
+        const pop = clamp01(Math.log10(votes + 10) / maxLog);
+        const bayes = (votes / (votes + 500)) * R + (500 / (votes + 500)) * 6.6;
+        const Q = clamp01((bayes - 5.5) / 3.5);
+        const tasteS = hasTaste && g.length ? Math.max(...g.map(x => taste[x] || 0)) : 0;
+        let F = null;
+        if (moods.length) { let prod = 1; moods.forEach(mo => { prod *= (aiMoodFit(mo, m, g, pop, votes) + 0.05); }); F = Math.pow(prod, 1 / moods.length) - 0.05; if (F < 0.12) return; }
+        let T = null, hits = [];
+        if (q) {
+          const blob = (m.title + ' ' + (m.cast || []).join(' ') + ' ' + (m.director || '')).toLowerCase();
+          let e = 0; wordRx.forEach((rx, i) => { if (rx.test(blob)) { e++; hits.push(qWords[i]); } });
+          const E = qWords.length ? e / qWords.length : 0;
+          const G = qGenres.length && qGenres.some(w => m.genres.some(x => String(x).toLowerCase() === w) || g.some(x => (GENRE_LABEL[x] || x).toLowerCase() === w)) ? 0.8 : 0;
+          const C = qVec ? clamp01(synCos(qVec, itemSynVec(m)) * 4) : 0;
+          T = Math.max(E, G, C);
+          if (textOnly && T < 0.12) return;
         }
-        (m.genres || []).forEach(g => { if (moodGenres.includes(g)) score += 250; });
-        const textBlob = `${m.title} ${m.director} ${(m.cast || []).join(' ')} ${m.genres.join(' ')} ${m.synopsis} ${m.region || ''}`.toLowerCase();
-        const hits = [];
-        for (const w of words) {
-          if (textBlob.includes(w)) { score += 120; hits.push(w); }
-        }
-        for (const w of moodWords) {
-          if (textBlob.includes(w)) score += 40;
-        }
-        score += (m.rating || 0) * 8; // gentle quality tiebreaker
-        return { ...m, aiScore: score, aiHits: hits.slice(0, 3) };
+        let score;
+        if (F != null && T != null) score = 0.35 * F + 0.35 * T + 0.20 * Q + 0.10 * tasteS;
+        else if (F != null) score = 0.62 * F + 0.28 * Q + 0.10 * tasteS;
+        else if (T != null) score = 0.60 * T + 0.28 * Q + 0.12 * tasteS;
+        else score = 0.80 * Q + 0.20 * tasteS;
+        rows.push({ m, g, score: score * 100, hits });
       });
 
-      scored.sort((a, b) => b.aiScore - a.aiScore);
-      const top = scored.slice(0, 8);
-      const best = top.length ? Math.max(top[0].aiScore, 1) : 1;
-      // Match % is each title's score relative to the best candidate (honest, not random).
-      aiVibeResults = top.map(m => ({ ...m, alignmentPct: Math.max(55, Math.min(99, Math.round(99 * m.aiScore / best))) }));
+      rows.sort((a, b) => b.score - a.score);
+      // pick eight, varied: one title per franchise, and no more than four of the same lead genre
+      const picked = [], seenFr = new Set(), seenG = {};
+      for (const r of rows) {
+        if (picked.length >= 8) break;
+        const fr = String(r.m.title || '').toLowerCase().split(/[\s:\-–]+/).filter(w => w.length > 3)[0] || r.m.id;
+        const lead = r.g[0] || 'x';
+        if (seenFr.has(fr) || (seenG[lead] || 0) >= 4) continue;
+        seenFr.add(fr); seenG[lead] = (seenG[lead] || 0) + 1; picked.push(r);
+      }
+      for (const r of rows) { if (picked.length >= 8) break; if (!picked.includes(r)) picked.push(r); }
+      const best = picked.length ? Math.max(picked[0].score, 1) : 1;
+      // Match % compares each pick with the best one, so it reads as "how close to the top answer"
+      aiVibeResults = picked.map(r => ({ ...r.m, aiScore: r.score, aiHits: r.hits.slice(0, 3), alignmentPct: Math.max(55, Math.min(99, Math.round(99 * r.score / best))) }));
       refreshViews();
 
       if (!keepScroll) {
@@ -3953,6 +3957,63 @@
 
         // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
 // TMDB serves posters in several widths: ask for the one that fits the card instead of the 500 px original
+    // ================= Trending stars: real, this week's popular actors (TMDB), only those who have films here =================
+    // Nothing is made up: names and photos come from TMDB's trending and popular lists, and each card opens a profile built from the films in our catalogue.
+    // Until the lists arrive (or if they cannot), the row shows the actors who lead the most recent, best-voted films in the catalogue.
+    const STARS = { list: null, busy: false };
+    const STARS_KEY = 'watchvibe_stars_v2';
+    function starsCatalogue() {
+      const idx = new Map(), yr = new Date().getFullYear();
+      (mediaDatabase || []).forEach(m => (m.cast || []).slice(0, 3).forEach((c, i) => {
+        const k = personNorm(c); if (!k) return;
+        let o = idx.get(k); if (!o) { o = { name: c, n: 0, score: 0 }; idx.set(k, o); }
+        o.n++; o.score += Math.log10((m.totalVotes || 0) + 10) * (Number(m.year) >= yr - 3 ? 1.5 : 1) * (i === 0 ? 1 : 0.6);
+      }));
+      return idx;
+    }
+    function starsFallback() {
+      return [...starsCatalogue().values()].filter(o => o.n >= 2).sort((a, b) => b.score - a.score).slice(0, 12)
+        .map(o => ({ name: o.name, img: '', known: o.n + ' films here' }));
+    }
+    function starsCards(list) {
+      return list.map(a => `
+        <button type="button" data-person="${esc(a.name)}" data-role="Actor" class="group w-[104px] shrink-0 text-center focus:outline-none sm:w-[120px]">
+          <span class="mx-auto block h-[88px] w-[88px] overflow-hidden rounded-full bg-[#26262C] ring-1 ring-white/10 transition duration-300 group-hover:ring-2 group-hover:ring-white/40 group-focus-visible:ring-2 group-focus-visible:ring-purple-400 sm:h-[104px] sm:w-[104px]"><img src="${esc(a.img || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(a.name) + '&background=26262C&color=D6502F&size=208&bold=true'))}" alt="" loading="lazy" decoding="async" data-n="${esc(a.name)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name='+encodeURIComponent(this.dataset.n)+'&background=26262C&color=D6502F&size=208&bold=true'"></span>
+          <div class="mt-3 truncate text-[13px] font-semibold text-white">${esc(a.name)}</div>
+          ${a.known ? `<div class="mt-0.5 truncate text-xs text-white/45">${esc(a.known)}</div>` : ''}
+        </button>`).join('');
+    }
+    function starsInner() {
+      const list = STARS.list || starsFallback();
+      if (list.length < 4) return '';
+      return `<div class="mb-4"><h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2><p class="mt-1 text-sm text-white/45">Popular this week. Tap one for their films.</p></div>
+        <div class="no-scrollbar -mx-1 flex gap-5 overflow-x-auto px-1 pb-2 sm:gap-6">${starsCards(list)}</div>`;
+    }
+    async function hydrateStars() {
+      if (STARS.busy) return;
+      let list = STARS.list;
+      if (!list) { try { const s = JSON.parse(localStorage.getItem(STARS_KEY) || 'null'); if (s && s.day === featDay() && Array.isArray(s.list) && s.list.length >= 6) list = s.list; } catch (e) {} }
+      if (!list) {
+        STARS.busy = true;
+        try {
+          const key = getActiveTmdbKey();
+          const urls = ['trending/person/week', 'person/popular?page=1', 'person/popular?page=2'];
+          const res = await Promise.all(urls.map(u => fetch(`${TMDB_BASE_URL}/${u}${u.includes('?') ? '&' : '?'}api_key=${key}`).then(r => r.ok ? r.json() : null).catch(() => null)));
+          const idx = starsCatalogue(), seen = new Set(), out = [];
+          res.forEach(j => ((j && j.results) || []).forEach(p => {
+            if (!p || !p.name || !p.profile_path || p.known_for_department !== 'Acting' || seen.has(p.id)) return;
+            const k = personNorm(p.name); if (!idx.has(k)) return;
+            seen.add(p.id);
+            const kf = (p.known_for || []).map(x => x.title || x.name).filter(Boolean)[0] || '';
+            out.push({ name: p.name, img: 'https://image.tmdb.org/t/p/w185' + p.profile_path, known: kf });
+          }));
+          if (out.length >= 6) { list = out.slice(0, 12); try { localStorage.setItem(STARS_KEY, JSON.stringify({ day: featDay(), list })); } catch (e) {} }
+        } catch (e) {}
+        STARS.busy = false;
+      }
+      if (list) { STARS.list = list; const el = document.getElementById('starsRow'); if (el) el.innerHTML = starsInner(); }
+    }
+
 function ps(u, w) { return typeof u === 'string' ? u.replace('/t/p/w500/', '/t/p/w' + (w || 342) + '/') : u; }
 function posterCard(item, opts) {
       opts = opts || {};
@@ -4033,10 +4094,6 @@ function posterCard(item, opts) {
           <select id="topLanguageSelect" onchange="setTopLanguage(this.value)" class="${selectCls}" aria-label="Language">
             ${langOptions.map(([v, l]) => `<option value="${v}" class="bg-[#14141A]" ${v === selectedTopLanguage ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
-          <select id="topVibeSelect" onchange="setTopVibe(this.value)" class="${selectCls}" aria-label="Vibe">
-            <option value="all" class="bg-[#14141A]">All vibes</option>
-            ${(() => { const has = new Set(mediaDatabase.map(m => m.dominantVibe)); has.add('must_watch'); return Object.values(VIBES).filter(v => has.has(v.id)); })().map(v => `<option value="${v.id}" class="bg-[#14141A]" ${v.id === selectedTopVibe ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}
-          </select>
           ${(hasTopFilter || window.homeRow) ? `<button type="button" onclick="goHome()" class="rounded-full px-3 py-2 text-sm text-white/55 transition hover:text-white">Reset</button>` : ''}
         </div>`;
 
@@ -4092,29 +4149,10 @@ function posterCard(item, opts) {
         : (FEAT.state === 'loading' ? '<section id="heroSkeleton" class="-mx-4 min-h-[320px] animate-pulse bg-white/[0.03] sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" aria-hidden="true"></section>' : '');
       if (heroPool.length) setTimeout(() => heroMount(heroPool), 0);
 
-      const moodChips = AI_MOODS.map(mo => {
-        const on = aiMoods.includes(mo.id);
-        return `<button type="button" onclick="toggleAiMood('${mo.id}')" aria-pressed="${on}" class="rounded-full px-3.5 py-1.5 text-[13px] font-medium ring-1 transition ${on ? 'bg-white text-black ring-white' : 'bg-white/[0.04] text-white/70 ring-white/10 hover:bg-white/10 hover:text-white'}">${esc(mo.label)}</button>`;
-      }).join('');
-      const runtimeChips = [[0, 'Any length'], [60, 'Under 1 hour'], [100, 'Under 100 min'], [130, 'Under 2h 10m']].map(([mins, lbl]) =>
-        `<button type="button" onclick="setAiRuntime(${mins})" aria-pressed="${aiMaxRuntime === mins}" class="rounded-full px-3 py-1 text-xs ring-1 transition ${aiMaxRuntime === mins ? 'bg-white/90 text-black ring-white' : 'text-white/60 ring-white/10 hover:text-white'}">${lbl}</button>`).join('');
-      const moodHtml = `
-        <section class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] sm:p-6">
-          <div class="grid gap-5 lg:grid-cols-[minmax(230px,300px)_1fr] lg:items-center lg:gap-10">
-            <div>
-              <h2 class="font-display text-[22px] font-medium text-white lg:text-2xl">What are you in the mood for?</h2>
-              <p class="mt-1 text-sm text-white/45">Pick a feeling, or describe it in your own words.</p>
-            </div>
-            <div class="min-w-0 space-y-3">
-              <div class="flex gap-2">
-                <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" onkeydown="if(event.key === 'Enter') runAiVibeMatcher();" placeholder="e.g. a cozy rainy-night film" class="min-w-0 flex-1 rounded-full bg-white/[0.05] px-4 py-2.5 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
-                <button type="button" onclick="runAiVibeMatcher()" class="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Match</button>
-              </div>
-              <div class="flex flex-wrap gap-2">${moodChips}</div>
-              <details ${aiMaxRuntime ? 'open' : ''}><summary class="cursor-pointer select-none text-xs text-white/40 hover:text-white/70">Runtime</summary><div class="mt-2 flex flex-wrap gap-2">${runtimeChips}</div></details>
-            </div>
-          </div>
-        </section>`;
+      const describeHtml = `<form class="wv-describe" role="search" aria-label="Describe a mood" onsubmit="event.preventDefault();runAiVibeMatcher()">
+          <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" maxlength="120" autocomplete="off" placeholder="Or describe it: a cozy rainy-night film" aria-label="Describe what you feel like watching">
+          <button type="submit" aria-label="Find matches"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        </form>`;
       // the mood chips sit right under the banner, and the matches open straight under the chips
       const moodResultsHtml = aiVibeResults && aiVibeResults.length > 0 ? `
             <div id="aiVibeResultsSection" class="wv-moodres">
@@ -4125,28 +4163,18 @@ function posterCard(item, opts) {
               <div class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">${aiVibeResults.map(m => posterCard(m, { wide: true, badge: m.alignmentPct + '% match' })).join('')}</div>
             </div>` : '';
       const moodPill = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}</button>`;
-      const moodRowChips = moodPill('All moods', aiMoods.length === 0, 'clearAiVibeMatcher()') + AI_MOODS.map(mo => moodPill(mo.label, aiMoods.includes(mo.id), `toggleAiMood('${mo.id}')`)).join('');
+      const moodRowChips = moodPill('All moods', aiMoods.length === 0 && !aiVibeQuery && !aiMaxRuntime, 'clearAiVibeMatcher()') + AI_MOODS.map(mo => moodPill(mo.label, aiMoods.includes(mo.id), `toggleAiMood('${mo.id}')`)).join('') + moodPill('Under 2h', aiMaxRuntime === 130, 'setAiRuntime(130)');
 
-      const starsHtml = `
-        <section>
-          <div class="mb-4"><h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2></div>
-          <div class="no-scrollbar -mx-1 flex gap-6 overflow-x-auto px-1 pb-2">
-            ${Object.values(ACTORS).slice(0, 10).map(a => `
-              <button type="button" onclick="openActorProfile('${a.id}')" class="group w-[84px] shrink-0 text-center focus:outline-none">
-                <img src="${esc(a.img)}" alt="${esc(a.name)}" loading="lazy" class="mx-auto h-[84px] w-[84px] rounded-full object-cover ring-1 ring-white/10 transition duration-300 group-hover:ring-2 group-hover:ring-white/40" onerror="handleActorImageError(this)">
-                <div class="mt-2.5 truncate text-[13px] text-white/80 group-hover:text-white">${esc(a.name)}</div>
-              </button>`).join('')}
-          </div>
-        </section>`;
+      const starsHtml = `<section id="starsRow" aria-label="Trending stars">${starsInner()}</section>`;
+      setTimeout(hydrateStars, 0);
 
       setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 0);
       return `
         <div class="space-y-14">
-          <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div><div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div>${moodResultsHtml}</div>
+          <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div>${describeHtml}<div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div>${moodResultsHtml}</div>
           <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
           ${dailyCardHtml()}
           ${gamesCardHtml()}
-          ${moodHtml}
           ${watchRowHtml()}
           ${homeRowSection('Indian & regional cinema', 'Hindi, Tamil, Telugu, Malayalam and Kannada', desiAll.slice(0, 16), "setHomeRow('desi')")}
           ${homeRowSection('Series worth bingeing', null, seriesAll.slice(0, 16), "setHomeRow('series')")}
