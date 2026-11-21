@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=23">
+  <link rel="stylesheet" href="/theme.css?v=24">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -2818,7 +2818,7 @@
       const list = freshStreamingList(cands, selectedCountry);
       window.__freshVerified = list; window.__freshRegion = selectedCountry;
       if (list.length < 4) return '';
-      return homeRowSection('Streaming now', `New titles you can watch in ${esc(regionName(selectedCountry))}`, list.slice(0, 16), "setHomeRow('fresh')");
+      return homeRowSection('Streaming now', `New titles you can watch in ${esc(regionName(selectedCountry))}`, list.slice(0, 40), "setHomeRow('fresh')");
     }
     async function hydrateFreshRow(cands) {
       const token = ++OTT.freshToken; const cc = selectedCountry;
@@ -4264,24 +4264,169 @@ function posterCard(item, opts) {
         </button>`;
     }
 
-    function homeRowSection(title, subtitle, items, seeAll) {
-      if (!items || !items.length) return '';
+    // ================= Home shelves (rows like Netflix and Prime) =================
+    // Every shelf is picked from the whole catalogue by rules (genre, language, rating with enough votes, year, length), best first, up to 40 titles you can
+    // scroll sideways; "See all" opens the full list. A title appears in at most two shelves. Shelves below the first screens are drawn only as they near the
+    // viewport, so the long page stays light. Three card shapes: posters, wide cards (backdrops) and a numbered Top 10.
+    const bs = u => typeof u === 'string' ? u.replace('/t/p/w1280/', '/t/p/w780/') : u;
+    function wideCard(item) {
+      const dom = VIBES[item.dominantVibe] || VIBES.must_watch;
+      const gen = ((item.genres || []).find(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g))) || '';
+      const tagCol = ({ must_watch: '#7BD4A0', mind_blown: '#8CB8E8', emotional_damage: '#E4736A', hidden_gem: '#7BD4A0', fun_time: '#E9A23B', time_pass: '#E9A23B', skip_it: '#E4736A' })[dom.id] || '#8CB8E8';
       return `
-        <section>
-          <div class="mb-4 flex items-end justify-between gap-4">
+        <button type="button" onclick="openDetails('${esc(item.id)}')" class="group wv-wide shrink-0 self-start text-left focus:outline-none">
+          <div class="wv-wide-img relative aspect-video overflow-hidden rounded-xl bg-[#14141A]">
+            <img src="${esc(bs(item.backdrop || item.poster))}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(ps(item.poster))}'">
+            ${rtHtml(item, 'wv-prate')}
+          </div>
+          <div class="wv-pinfo"><div class="wv-pt">${esc(item.title)}</div><div class="wv-pm"><span class="wv-ptag" style="color:${tagCol}">${esc(dom.label)}</span><span class="wv-psub">${esc([item.year, gen].filter(Boolean).join(' · '))}</span></div></div>
+        </button>`;
+    }
+    function top10Card(item, rank) {
+      return `
+        <button type="button" onclick="openDetails('${esc(item.id)}')" class="group wv-t10 shrink-0 self-start text-left focus:outline-none" aria-label="Number ${rank}: ${esc(item.title)}">
+          <span class="wv-t10n" aria-hidden="true">${rank}</span>
+          <span class="wv-t10p"><span class="wv-t10img relative block aspect-[2/3] overflow-hidden rounded-lg bg-[#14141A]"><img src="${esc(ps(item.poster))}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">${rtHtml(item, 'wv-prate')}</span><span class="wv-pt">${esc(item.title)}</span></span>
+        </button>`;
+    }
+    function homeRowSection(title, subtitle, items, seeAll, fmt) {
+      if (!items || !items.length) return '';
+      const cards = fmt === 'wide' ? items.map(i => wideCard(i)).join('') : fmt === 'top10' ? items.map((i, n) => top10Card(i, n + 1)).join('') : items.map(i => posterCard(i)).join('');
+      return `
+        <section class="wv-shelf${fmt ? ' wv-shelf-' + fmt : ''}">
+          <div class="wv-shelf-h">
             <div class="min-w-0">
               <h2 class="font-display text-[22px] font-medium leading-tight text-white lg:text-2xl xl:text-[28px]">${title}</h2>
               ${subtitle ? `<p class="mt-1 text-sm text-white/45">${subtitle}</p>` : ''}
             </div>
-            <div class="flex shrink-0 items-center gap-1">
-              ${seeAll ? `<button type="button" onclick="${seeAll}" class="mr-2 text-sm text-white/55 transition hover:text-white">See all</button>` : ''}
-              <button type="button" onclick="scrollRow(this,-1)" class="hidden h-8 w-8 items-center justify-center rounded-full text-white/50 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white md:flex" aria-label="Scroll left"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-              <button type="button" onclick="scrollRow(this,1)" class="hidden h-8 w-8 items-center justify-center rounded-full text-white/50 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white md:flex" aria-label="Scroll right"><i class="fa-solid fa-chevron-right text-xs"></i></button>
-            </div>
+            ${seeAll ? `<button type="button" onclick="${seeAll}" class="wv-seeall">See all <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>` : ''}
           </div>
-          <div class="row-scroll no-scrollbar -mx-1 flex gap-4 overflow-x-auto px-1 pb-2">${items.map(i => posterCard(i)).join('')}</div>
+          <div class="wv-rowwrap">
+            <button type="button" onclick="scrollRow(this,-1)" class="wv-rarrow l" aria-label="Scroll left"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+            <div class="row-scroll no-scrollbar flex gap-4 overflow-x-auto pb-2">${cards}</div>
+            <button type="button" onclick="scrollRow(this,1)" class="wv-rarrow r" aria-label="Scroll right"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+          </div>
         </section>`;
     }
+    const GG = new Map();
+    const gOf = m => { let g = GG.get(m.id); if (!g) { g = genresFromNames(m.genres); GG.set(m.id, g); } return g; };
+    const bayesQ = m => { const v = m.totalVotes || 0, R = Number(m.rating) || 0; return (v / (v + 400)) * R + (400 / (v + 400)) * 6.4; };
+    const durMin = m => parseRuntimeMinutes(m.duration);
+    const isMov = m => m.type === 'Movie';
+    const lang = (...l) => m => l.includes(m.language);
+    const HOME_DEFS = [
+      { k: 'top10', t: 'Top 10 films right now', s: 'Newer films with the biggest ratings and crowds', fmt: 'top10', max: 10, f: m => isMov(m) && Number(m.year) >= new Date().getFullYear() - 2 && (m.totalVotes || 0) >= 800, sc: m => bayesQ(m) + Math.log10((m.totalVotes || 0) + 10) * 0.6 },
+      { k: 'foryou', t: 'Picked for you', s: 'Matched to what you saved and watched', f: m => isMov(m) && (m.totalVotes || 0) >= 600 && (Number(m.rating) || 0) >= 6.8, sc: null, taste: true },
+      { k: 'new', t: 'New releases', s: 'Out in the last year', fmt: 'wide', f: m => isMov(m) && Number(m.year) >= new Date().getFullYear() - 1 && (m.totalVotes || 0) >= 80, sc: m => Number(m.year) * 10 + bayesQ(m) },
+      { k: 'bolly', t: 'Bollywood blockbusters', s: 'Hindi cinema, best loved first', f: m => isMov(m) && lang('hi')(m) && (m.totalVotes || 0) >= 300, sc: bayesQ },
+      { k: 'south', t: 'South Indian cinema', s: 'Tamil, Telugu, Malayalam and Kannada', fmt: 'wide', f: m => isMov(m) && lang('ta', 'te', 'ml', 'kn')(m) && (m.totalVotes || 0) >= 150, sc: bayesQ },
+      { k: 'acclaimed', t: 'Critically acclaimed', s: 'Rated 8 and above by thousands of people', f: m => isMov(m) && (Number(m.rating) || 0) >= 8 && (m.totalVotes || 0) >= 3000, sc: bayesQ },
+      { k: 'mind', t: 'Mind-bending thrillers', s: 'Twists you will want to talk about', f: m => isMov(m) && gOf(m).some(g => ['Mystery', 'Thriller', 'SciFi'].includes(g)) && (m.dominantVibe === 'mind_blown' || (Number(m.rating) || 0) >= 7.4) && (m.totalVotes || 0) >= 1000 && !gOf(m).includes('Family'), sc: bayesQ },
+      { k: 'laugh', t: 'Laugh-out-loud comedies', s: 'Straight comedies, no heavy drama', f: m => isMov(m) && gOf(m).includes('Comedy') && !gOf(m).some(g => ['Horror', 'War', 'Crime'].includes(g)) && (m.totalVotes || 0) >= 800 && (Number(m.rating) || 0) >= 6.8, sc: bayesQ },
+      { k: 'cry', t: 'Tearjerkers', s: 'Dramas and romances that earn the tears', fmt: 'wide', f: m => isMov(m) && gOf(m).includes('Drama') && (gOf(m).includes('Romance') || m.dominantVibe === 'emotional_damage') && !gOf(m).some(g => ['Action', 'Comedy', 'Horror', 'Crime'].includes(g)) && (m.totalVotes || 0) >= 800 && (Number(m.rating) || 0) >= 7.3, sc: bayesQ },
+      { k: 'action', t: 'Edge-of-your-seat action', s: 'Big fights, chases and heists', f: m => isMov(m) && gOf(m)[0] === 'Action' && (m.totalVotes || 0) >= 1500 && (Number(m.rating) || 0) >= 6.8, sc: bayesQ },
+      { k: 'scifi', t: 'Sci-fi and fantasy worlds', s: 'Other planets, other rules', f: m => isMov(m) && gOf(m).some(g => ['SciFi', 'Fantasy'].includes(g)) && (m.totalVotes || 0) >= 1000 && (Number(m.rating) || 0) >= 7, sc: bayesQ },
+      { k: 'crime', t: 'Crime, mystery and suspense', s: 'Detectives, heists and dark secrets', fmt: 'wide', f: m => isMov(m) && gOf(m).some(g => ['Crime', 'Mystery'].includes(g)) && (m.totalVotes || 0) >= 1000 && (Number(m.rating) || 0) >= 7.2, sc: bayesQ },
+      { k: 'family', t: 'Family and animation', s: 'For a movie night with everyone', f: m => isMov(m) && gOf(m).some(g => ['Family', 'Animation'].includes(g)) && (m.totalVotes || 0) >= 800 && (Number(m.rating) || 0) >= 7, sc: bayesQ },
+      { k: 'romance', t: 'Romance', s: 'Love stories, old and new', f: m => isMov(m) && gOf(m).includes('Romance') && (m.totalVotes || 0) >= 600 && (Number(m.rating) || 0) >= 7, sc: bayesQ },
+      { k: 'gems', t: 'Hidden gems', s: 'Great films hardly anyone has seen', fmt: 'wide', f: m => isMov(m) && (m.totalVotes || 0) >= 250 && (m.totalVotes || 0) <= 2500 && (Number(m.rating) || 0) >= 7.4, sc: m => Number(m.rating) || 0 },
+      { k: 'korean', t: 'Korean cinema', s: 'Thrillers, romances and dramas from Seoul', f: m => lang('ko')(m) && (m.totalVotes || 0) >= 100 && (Number(m.rating) || 0) >= 6.8, sc: bayesQ },
+      { k: 'anime', t: 'Anime and Japanese cinema', s: 'From Ghibli to the latest hits', f: m => lang('ja')(m) && (m.totalVotes || 0) >= 100, sc: bayesQ },
+      { k: 'series', t: 'Series worth bingeing', s: null, f: m => m.type === 'Series', sc: bayesQ },
+      { k: 'horror', t: 'Horror nights', s: 'Lights off, volume up', f: m => isMov(m) && gOf(m).includes('Horror') && (m.totalVotes || 0) >= 1000 && (Number(m.rating) || 0) >= 6.4, sc: bayesQ },
+      { k: 'history', t: 'True stories and history', s: 'War, biopics and documentaries', fmt: 'wide', f: m => isMov(m) && gOf(m).some(g => ['History', 'War', 'Documentary'].includes(g)) && (m.totalVotes || 0) >= 500 && (Number(m.rating) || 0) >= 7.1, sc: bayesQ },
+      { k: 'regional', t: 'Bengali, Marathi and Punjabi cinema', s: 'Regional stories close to home', f: m => isMov(m) && lang('bn', 'mr', 'pa')(m) && (m.totalVotes || 0) >= 80 && (Number(m.rating) || 0) >= 6.8, sc: bayesQ },
+      { k: 'quick', t: 'Quick watches', s: 'Great films under 100 minutes', f: m => isMov(m) && durMin(m) > 0 && durMin(m) <= 100 && (m.totalVotes || 0) >= 800 && (Number(m.rating) || 0) >= 7, sc: bayesQ },
+      { k: 'classics', t: 'Timeless classics', s: 'Before 1990 and still great', f: m => isMov(m) && Number(m.year) < 1990 && (m.totalVotes || 0) >= 800 && (Number(m.rating) || 0) >= 7.8, sc: bayesQ },
+      { k: 'world', t: 'World cinema', s: 'French, Spanish, Italian, German and more', f: m => isMov(m) && !['en', 'hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa', 'ko', 'ja'].includes(m.language) && (m.totalVotes || 0) >= 300 && (Number(m.rating) || 0) >= 7, sc: bayesQ },
+      { k: 'standup', t: 'Stand-up specials', s: null, f: m => m.type === 'Stand-Up', sc: bayesQ }
+    ];
+    const HOME_ROWS = { sig: '', rows: [], byKey: {}, tiles: [] };
+    function buildHomeRows() {
+      const sig = mediaDatabase.length + '|' + (userWatchedHistory || []).length + '|' + (userWatchlistIds || []).length;
+      if (HOME_ROWS.sig === sig) return HOME_ROWS;
+      const pool = mediaDatabase.filter(m => m && m.poster && m.title), used = new Map(), taste = userTaste(), hasTaste = Object.keys(taste).length > 0 && ((userWatchedHistory || []).length + (userWatchlistIds || []).length) >= 3;
+      const mine = new Set([...(userWatchedHistory || []).map(h => h.id), ...(userWatchlistIds || [])]);
+      const rows = [], byKey = {};
+      HOME_DEFS.forEach(d => {
+        if (d.taste && !hasTaste) return;
+        let list = pool.filter(d.f);
+        if (d.taste) { list = list.filter(m => !mine.has(m.id)); list.sort((a, b) => { const ta = x => { const g = gOf(x); return g.length ? g.reduce((s, y) => s + (taste[y] || 0), 0) / g.length : 0; }; return (ta(b) * 3 + bayesQ(b) / 10) - (ta(a) * 3 + bayesQ(a) / 10); }); }
+        else list.sort((a, b) => d.sc(b) - d.sc(a));
+        const max = d.max || 40, shown = [];
+        for (const m of list) { if (shown.length >= max) break; if ((used.get(m.id) || 0) >= 2) continue; shown.push(m); }
+        if (shown.length < Math.min(max, 12)) return;
+        shown.forEach(m => used.set(m.id, (used.get(m.id) || 0) + 1));
+        const row = { ...d, items: shown, all: list.slice(0, 400) };
+        rows.push(row); byKey[d.k] = row;
+      });
+      // genre tiles: one backdrop from the best film of each genre
+      const tileDefs = [['Action', 'Action'], ['Comedy', 'Comedy'], ['Drama', 'Drama'], ['Romance', 'Romance'], ['Thriller', 'Thriller'], ['SciFi', 'Sci-Fi'], ['Horror', 'Horror'], ['Animation', 'Animation'], ['Crime', 'Crime'], ['Fantasy', 'Fantasy'], ['Mystery', 'Mystery'], ['Family', 'Family'], ['History', 'History'], ['War', 'War'], ['Music', 'Music']];
+      const tiles = tileDefs.map(([g, label]) => {
+        const all = pool.filter(m => isMov(m) && gOf(m).includes(g) && (m.totalVotes || 0) >= 500).sort((a, b) => bayesQ(b) - bayesQ(a));
+        byKey['genre:' + g] = { k: 'genre:' + g, t: label + ' films', all: all.slice(0, 400) };
+        const pick = all.find(m => m.backdrop && (m.totalVotes || 0) >= 3000) || all[0];
+        return pick ? { g, label, img: bs(pick.backdrop) } : null;
+      }).filter(Boolean);
+      Object.assign(HOME_ROWS, { sig, rows, byKey, tiles });
+      return HOME_ROWS;
+    }
+    function genreTilesHtml(tiles) {
+      if (!tiles.length) return '';
+      return `<section class="wv-shelf"><div class="wv-shelf-h"><div><h2 class="font-display text-[22px] font-medium leading-tight text-white lg:text-2xl xl:text-[28px]">Browse by genre</h2><p class="mt-1 text-sm text-white/45">Every film in the catalogue, one tap away</p></div></div>
+        <div class="wv-rowwrap"><button type="button" onclick="scrollRow(this,-1)" class="wv-rarrow l" aria-label="Scroll left"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+        <div class="row-scroll no-scrollbar flex gap-3 overflow-x-auto pb-2">${tiles.map(x => `<button type="button" onclick="setHomeRow('genre:${x.g}')" class="wv-gtile shrink-0 focus:outline-none" style="--img:url('${esc(x.img)}')"><span>${esc(x.label)}</span></button>`).join('')}</div>
+        <button type="button" onclick="scrollRow(this,1)" class="wv-rarrow r" aria-label="Scroll right"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button></div></section>`;
+    }
+    // the first screens are drawn at once, the rest as they come near the viewport
+    const SHELF_LAZY = { obs: null, thunks: {} };
+    function homeShelvesHtml(ottAll) {
+      const H = buildHomeRows(), parts = [];
+      let n = 0;
+      const put = (key, html, lazyFn) => {
+        if (!html && !lazyFn) return;
+        if (lazyFn && n >= 4) { parts.push(`<div class="wv-lazy" data-lazy="${key}" style="min-height:${/top10|wide/.test(key) ? 330 : 400}px" aria-hidden="true"></div>`); }
+        else parts.push(lazyFn ? lazyFn() : html);
+        n++;
+      };
+      const rowOf = k => H.byKey[k];
+      const shelf = r => () => homeRowSection(r.t, r.s, r.items, `setHomeRow('${r.k}')`, r.fmt);
+      const seq = k => { const r = rowOf(k); if (r) put(k, '', shelf(r)); };
+      const lazyOf = (key, fn) => { if (n >= 4) { parts.push(`<div class="wv-lazy" data-lazy="${key}" style="min-height:330px" aria-hidden="true"></div>`); } else parts.push(fn()); n++; };
+      seq('top10');
+      put('fresh', `<div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>`);
+      put('watch', watchRowHtml());
+      seq('foryou'); seq('new'); seq('bolly'); seq('south');
+      lazyOf('genres', () => genreTilesHtml(H.tiles));
+      lazyOf('daily', () => dailyCardHtml());
+      ['acclaimed', 'mind', 'laugh'].forEach(seq);
+      lazyOf('games', () => gamesCardHtml());
+      ['cry', 'action', 'scifi', 'crime', 'family', 'romance', 'gems', 'korean', 'anime', 'series', 'horror', 'history', 'regional', 'quick', 'classics', 'world', 'standup'].forEach(seq);
+      setTimeout(initLazyShelves, 0);
+      return parts.join('\n          ');
+    }
+    function initLazyShelves() {
+      if (SHELF_LAZY.obs) { SHELF_LAZY.obs.disconnect(); SHELF_LAZY.obs = null; }
+      const els = [...document.querySelectorAll('.wv-lazy')];
+      const fill = el => {
+        const k = el.dataset.lazy, H = buildHomeRows(), r = H.byKey[k];
+        const html = k === 'genres' ? genreTilesHtml(H.tiles) : k === 'daily' ? dailyCardHtml() : k === 'games' ? gamesCardHtml() : (r && r.items ? homeRowSection(r.t, r.s, r.items, `setHomeRow('${r.k}')`, r.fmt) : '');
+        const wrap = document.createElement('div'); wrap.innerHTML = html; const node = wrap.firstElementChild;
+        if (node) { el.replaceWith(node); node.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; }); node.querySelectorAll('.row-scroll').forEach(shelfArrows); } else el.remove();
+      };
+      if (!els.length) return;
+      if (!('IntersectionObserver' in window)) { els.forEach(fill); return; }
+      SHELF_LAZY.obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { SHELF_LAZY.obs.unobserve(e.target); fill(e.target); } }), { rootMargin: '1400px 0px' });
+      els.forEach(el => SHELF_LAZY.obs.observe(el));
+    }
+    // arrows appear only when there is more to scroll
+    function shelfArrows(row) {
+      const w = row && row.closest('.wv-rowwrap'); if (!w) return;
+      w.classList.toggle('can-prev', row.scrollLeft > 8);
+      w.classList.toggle('at-end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 8);
+    }
+    document.addEventListener('scroll', e => { const t = e.target; if (t && t.classList && t.classList.contains('row-scroll')) shelfArrows(t); }, true);
+    window.addEventListener('resize', () => document.querySelectorAll('.row-scroll').forEach(shelfArrows));
 
     function renderDiscover() {
       const isAll = (selectedTopCategory === 'all');
@@ -4302,7 +4447,8 @@ function posterCard(item, opts) {
       let gridTitle = null, gridItems = [];
       if (window.homeRow) {
         const map = { fresh: ['Streaming now', (window.__freshVerified && window.__freshRegion === selectedCountry && window.__freshVerified.length) ? window.__freshVerified : ottAll], desi: ['Indian & regional cinema', desiAll], series: ['Series worth bingeing', seriesAll], standup: ['Stand-up specials', standupAll], all: ['All titles', mediaDatabase.filter(langOk)] };
-        const [tt, list] = map[window.homeRow] || map.all;
+        const hr = buildHomeRows().byKey[window.homeRow];
+        const [tt, list] = hr ? [hr.t, hr.all] : (map[window.homeRow] || map.all);
         gridTitle = tt; gridItems = list;
       } else if (hasTopFilter) {
         let f = mediaDatabase.filter(langOk);
@@ -4393,13 +4539,7 @@ function posterCard(item, opts) {
       return `
         <div class="space-y-14">
           <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div><div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
-          <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
-          ${dailyCardHtml()}
-          ${gamesCardHtml()}
-          ${watchRowHtml()}
-          ${homeRowSection('Indian & regional cinema', 'Hindi, Tamil, Telugu, Malayalam and Kannada', desiAll.slice(0, 16), "setHomeRow('desi')")}
-          ${homeRowSection('Series worth bingeing', null, seriesAll.slice(0, 16), "setHomeRow('series')")}
-          ${homeRowSection('Stand-up specials', null, standupAll.slice(0, 14), "setHomeRow('standup')")}
+          ${homeShelvesHtml(ottAll)}
           ${starsHtml}
           <div class="text-center"><button type="button" onclick="setHomeRow('all')" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">Browse the full catalogue</button></div>
           ${homeFooter()}
@@ -7279,7 +7419,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       HOME.reuse = false;
       if (reuse) {
         viewport.replaceChildren(HOME.node);
-        const pool = HOME.pool; setTimeout(() => heroMount(pool), 0);
+        const pool = HOME.pool; setTimeout(() => heroMount(pool), 0); setTimeout(initLazyShelves, 0);
       } else {
         let content = '';
         if (activeTab === 'discover') content = renderDiscover();
