@@ -380,3 +380,13 @@ Open / next, in the order we discussed:
 - Trending stars (`starsInner`, `hydrateStars`): real, from TMDB trending and popular people, only actors who have films in our catalogue, cached per day (`watchvibe_stars_v2`); falls back to the lead actors of recent, well-voted catalogue films. Cards open the real profile (`data-person`, `openPerson`). The old hard-coded ACTORS stats (box office, "hype") are no longer shown on the home page.
 - theme.css?v=21, sw.js CACHE_NAME watchvibe-cache-v103. Sweep problems [] at 390, 768, 1440; syntax check passes.
 - Not done: the phone hero buttons question, orange bottom-bar icons, token revoke, four stale watchlist films. Not verified: matcher quality on real users' taste (tested without watch history).
+
+## v104: mood pages (a full page of films per mood, from TMDB)
+- Clicking a mood chip (or typing in "Or describe it", or "Under 2h") opens a MOOD PAGE: nothing else on it (no banner, rows, stars or cards), just the chips, the describe field, the language select, a heading and a grid of 60 films, with "Show more films" adding 60 more. Code: `openMoodPage`, `mpLoad`, `mpFetchState`, `mpUrl`, `moodPageHtml`, `MOOD_SRC`, `MP` state. "All moods", Home and the category tabs return to the home page.
+- The films come from TMDB's own catalogue (discover by genre and story keywords, best audience rating first with a vote floor), NOT from WatchVibe votes. Each mood in `MOOD_SRC` has an ordered list of sources, strict first (e.g. cry: Drama tagged tearjerker, grief, terminal illness, death of a loved one, heartbreak, loss of loved one, leaving out action, crime, comedy, sci-fi, horror), then broader ones, so the page keeps going. Keyword ids are looked up once with TMDB's keyword search and cached (`watchvibe_kw_v1`). Several moods are interleaved. The language select and "Under 2h" (`with_runtime.lte=120`) apply.
+- Typed text: words like cry or funny switch on moods (`AI_MOOD_HINTS`); other text searches by keyword and TMDB title search.
+- Films not in the catalogue are built from the TMDB row and registered in `DYNAMIC_MEDIA` (id `tmdb-m-<id>`, same as the featured picks); the poster shows the IMDb rating when it loads.
+- If TMDB cannot be reached, the page falls back to the local matcher (`runLocalVibeMatcher`, up to 60) and says so.
+- Header wordmark is larger (28px phone, 30px tablet, 36px at 1100px+) was v99.
+- theme.css?v=22, sw.js CACHE_NAME watchvibe-cache-v104. Sweep problems [] at 390, 768, 1440; mood page has no sideways scroll at 390.
+- Not verified: the page for the Indian-film mood mix (results are global unless a language is chosen); TMDB rate limits under heavy use.

@@ -325,3 +325,14 @@ button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: none; outl
   div.wv-top.space-y-5 > .wv-describe { grid-column: 1; grid-row: 3; }
 }
 @media (max-width: 767px) { .wv-describe input { height: 46px; font-size: 16px; } .wv-describe button { min-width: 34px; } }
+
+/* ---- mood page: a whole page of films for one mood (v22) ---- */
+.wv-moodbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.wv-moodbar .wv-describe { flex: 1 1 320px; }
+.wv-moodbar .wv-filters { flex: 0 0 auto; }
+@media (max-width: 767px) {
+  .wv-moodpage { flex-wrap: nowrap; overflow-x: auto; gap: 8px; scrollbar-width: none; }
+  .wv-moodpage .wv-chip { height: 36px; padding: 0 14px; font-size: 13px; flex-shrink: 0; }
+  .wv-moodpage .wv-chip.is-on { background: #D6502F; border-color: #D6502F; color: #0A0A0B; font-weight: 700; }
+  .wv-moodbar .wv-filters { width: 100%; }
+}
