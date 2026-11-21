@@ -390,3 +390,14 @@ Open / next, in the order we discussed:
 - Header wordmark is larger (28px phone, 30px tablet, 36px at 1100px+) was v99.
 - theme.css?v=22, sw.js CACHE_NAME watchvibe-cache-v104. Sweep problems [] at 390, 768, 1440; mood page has no sideways scroll at 390.
 - Not verified: the page for the Indian-film mood mix (results are global unless a language is chosen); TMDB rate limits under heavy use.
+
+## v105: mood filter redesign (one mood at a time)
+- Audit finding: several moods at once did not combine, they interleaved unrelated films (all six gave 328 mixed titles; cry + laugh alternated sad and funny). The describe box found 1 film for "something with dinosaurs" and duplicated the header search. Both are gone.
+- ONE mood at a time: `toggleAiMood` selects a mood, tapping the chosen one clears it (the chip shows an x). No "All moods" chip. "Under 2h" is a modifier (it also works alone: "Films under 2 hours").
+- Mood page toolbar (sticky under the header): mood chips; second row Movies | Series toggle, Under 2h (movies only), language select, sort (Top rated, Newest, Most popular). Each mood has a one-line description, a film count, and films load as you scroll (IntersectionObserver on `#mpSentinel`, plus a "Show more" button).
+- Series: `MOOD_TV` holds TMDB's TV genre sources (TV has no Romance/Thriller/Horror genres); items get ids `tmdb-tv-<id>`, type Series.
+- Address: `#mood=cry&type=series&sort=new&lang=hi&rt=1` (`mpHash`, `mpPush`, `mpFromHash`; popstate and load). Back, refresh and shared links work; clearing the mood returns to the home page and the hash goes away. Auth error hashes are untouched (they use `#error=`).
+- Remembered per visit: `MP_CACHE` (24 pages) makes reopening a mood instant (35 ms measured). Keyword ids stay cached in `watchvibe_kw_v1`.
+- The home page keeps one chip row (moods + Under 2h) and the language select. The phone mood pills scroll sideways.
+- theme.css?v=23, sw.js CACHE_NAME watchvibe-cache-v105. Sweep problems [] at 390, 768, 1440; mood page has no sideways scroll at 390, 768, 1440.
+- Not verified: series quality for every mood (TV discover returns fewer strict matches); the Newest sort on series with a high vote floor starts at 2024.

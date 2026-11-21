@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/tailwind.css">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
-  <link rel="stylesheet" href="/theme.css?v=22">
+  <link rel="stylesheet" href="/theme.css?v=23">
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -3336,7 +3336,7 @@
     function goHome() {
       window.homeRow = null;
       selectedTopCategory = 'all'; selectedTopVibe = 'all'; selectedTopLanguage = ''; activeMood = null;
-      aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; MP.gen++;
+      mpReset();
       window.currentFeedLimit = 36;
       syncTopNav();
       switchTab('discover');
@@ -3375,7 +3375,7 @@
     }
 
     function setTopCategory(cat) {
-      aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; MP.gen++;
+      mpReset();
       selectedTopCategory = cat;
       window.homeRow = null;
       syncTopNav();
@@ -3429,8 +3429,8 @@
       return (h ? parseInt(h[1], 10) * 60 : 0) + (m ? parseInt(m[1], 10) : 0);
     }
 
-    function toggleAiMood(id) {
-      aiMoods = aiMoods.includes(id) ? aiMoods.filter(x => x !== id) : [...aiMoods, id];
+    function toggleAiMood(id) {   // one mood at a time: a second tap on the chosen one clears it
+      aiMoods = aiMoods[0] === id ? [] : [id];
       openMoodPage();
     }
 
@@ -3548,11 +3548,7 @@
     }
 
     function clearAiVibeMatcher() {
-      aiVibeQuery = '';
-      aiVibeResults = null;
-      aiMoods = [];
-      aiMaxRuntime = 0;
-      MP.gen++;
+      mpReset(); aiVibeResults = null;
       refreshViews();
       window.scrollTo({ top: 0 });
     }
@@ -3964,12 +3960,14 @@
         // --- HOME SCREEN (FULL SCREEN RESPONSIVE) ---
 // TMDB serves posters in several widths: ask for the one that fits the card instead of the 500 px original
     // ================= Mood pages =================
-    // Clicking a mood opens a whole page of films for it. Which films is decided by TMDB, not by WatchVibe's own votes: for each mood we ask
-    // TMDB's catalogue for films of the right genres and story keywords (for "a good cry": dramas and romances tagged tearjerker, grief,
-    // terminal illness, sacrifice...), best audience rating first with a minimum number of votes, then widen to broader sets so the page keeps going.
-    const TMDB_GENRE_NAME = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 53: 'Thriller', 10752: 'War', 37: 'Western' };
+    // One mood at a time. Picking a mood opens a whole page of films (or series) for it. Which titles is decided by TMDB, not by WatchVibe's own
+    // votes: for each mood we ask TMDB's catalogue for the right genres and story keywords (for "a good cry": dramas and romances tagged
+    // tearjerker, grief, terminal illness...), then widen to broader sets so the page keeps going. Sort, language, Movies/Series and "Under 2h"
+    // refine the page. The choice lives in the address (#mood=cry) so back, refresh and sharing work, and each page is remembered for the visit.
+    const TMDB_GENRE_NAME = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 53: 'Thriller', 10752: 'War', 37: 'Western', 10759: 'Action & Adventure', 10762: 'Kids', 10765: 'Sci-Fi & Fantasy', 10768: 'War & Politics' };
     const MOOD_VIBE = { cry: 'emotional_damage', mind: 'mind_blown', laugh: 'fun_time', comfort: 'fun_time', hype: 'must_watch', gem: 'hidden_gem' };
-    const MOOD_SRC = {   // g = genres (, = and, | = or), w = genres to leave out, k = story keywords, a = lowest TMDB rating, v = fewest votes, vmax = most votes
+    const MOOD_DESC = { cry: 'Dramas and romances that earn the tears.', mind: 'Twists, puzzles and stories that rearrange your head.', laugh: 'Straight comedies, with the heavy drama left out.', comfort: 'Warm, easy watches for a soft evening.', hype: 'Action and adventure at full speed.', gem: 'Highly rated titles most people have missed.' };
+    const MOOD_SRC = {   // movies. g = genres (, = and, | = or), w = genres to leave out, k = story keywords, a = lowest TMDB rating, v = fewest votes, vmax = most votes
       cry: [{ g: '18', k: ['tearjerker', 'grief', 'terminal illness', 'death of a loved one', 'heartbreak', 'loss of loved one'], w: '28,80,12,878,27,35,14', a: 6.8, v: 500 }, { g: '10749,18', w: '28,80,12,878,27,35,14', a: 7, v: 1500 }, { g: '18', w: '35,28,12,27,878,14,80,36', a: 7.6, v: 3000 }],
       mind: [{ g: '878|9648|53', k: ['plot twist', 'twist ending', 'mind-bending', 'surprise ending', 'unreliable narrator'], a: 7, v: 800 }, { g: '878|9648', k: ['time travel', 'dream', 'simulation', 'parallel universe', 'nonlinear timeline'], a: 7, v: 1000 }, { g: '878,9648', a: 7.2, v: 3000 }, { g: '9648,53', a: 7.2, v: 3000 }],
       laugh: [{ g: '35', w: '27,10752,53,80,18', a: 6.8, v: 2000 }, { g: '35', w: '27,10752,53,80', a: 6.4, v: 800 }],
@@ -3977,7 +3975,17 @@
       hype: [{ g: '28', k: ['chase', 'heist', 'assassin', 'revenge', 'mission', 'martial arts', 'explosion', 'rescue'], w: '99,10751,10749,10402', a: 6.8, v: 2000 }, { g: '28|12', w: '99,10751,10749,10402', a: 7, v: 3000 }],
       gem: [{ w: '99', a: 7.4, v: 300, vmax: 3000 }, { w: '99', a: 7.2, v: 150, vmax: 1000 }]
     };
-    const MP = { gen: 0, states: [], items: [], seen: new Set(), loading: false, exhausted: false, fallback: false };
+    const MOOD_TV = {   // series (TMDB's TV genres differ: no Romance, Thriller or Horror of their own)
+      cry: [{ g: '18', k: ['tearjerker', 'grief', 'terminal illness', 'death of a loved one', 'heartbreak', 'loss of loved one'], w: '35,10759,10765,80,16', a: 7, v: 150 }, { g: '18', w: '35,10759,10765,80,16,10768', a: 7.8, v: 400 }],
+      mind: [{ g: '9648|10765', k: ['plot twist', 'twist ending', 'mind-bending', 'surprise ending', 'time travel', 'parallel universe', 'simulation'], a: 7.2, v: 200 }, { g: '10765,9648', a: 7.5, v: 500 }],
+      laugh: [{ g: '35', w: '18,80,10768', a: 7, v: 400 }, { g: '35', a: 6.6, v: 150 }],
+      comfort: [{ g: '35|10751', w: '10759,80,10768,10765', a: 7, v: 250 }, { g: '35|10751|18', k: ['feel good', 'heartwarming', 'friendship', 'small town', 'wholesome'], w: '10759,80,10768,10765', a: 7, v: 150 }],
+      hype: [{ g: '10759', a: 7, v: 400 }, { g: '10759|10765', a: 7.4, v: 800 }],
+      gem: [{ w: '99', a: 7.6, v: 100, vmax: 1500 }, { w: '99', a: 7.3, v: 60, vmax: 800 }]
+    };
+    const MPF = { kind: 'movie', sort: 'top' };   // what the page lists, and how it is ordered
+    const MP = { gen: 0, states: [], items: [], seen: new Set(), loading: false, exhausted: false, fallback: false, obs: null };
+    const MP_CACHE = new Map();
     const KW = { map: (() => { try { return JSON.parse(localStorage.getItem('watchvibe_kw_v1') || '{}') || {}; } catch (e) { return {}; } })() };
     async function kwIds(terms) {
       const out = [];
@@ -3996,44 +4004,77 @@
       try { localStorage.setItem('watchvibe_kw_v1', JSON.stringify(KW.map)); } catch (e) {}
       return out;
     }
-    const moodPageActive = () => aiMoods.length > 0 || !!aiVibeQuery || aiMaxRuntime > 0;
+    const moodPageActive = () => aiMoods.length > 0 || aiMaxRuntime > 0;
+    function mpReset() { aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; mpPush(false); }
     function moodTitle() {
-      const names = aiMoods.map(id => (AI_MOODS.find(x => x.id === id) || {}).label).filter(Boolean);
-      if (names.length) return names.join(' + ') + (aiMaxRuntime ? ' · under 2h' : '');
-      if (aiVibeQuery) return '“' + aiVibeQuery + '”';
+      const mood = AI_MOODS.find(x => x.id === aiMoods[0]);
+      if (mood) return mood.label;
       return 'Films under 2 hours';
     }
+    function mpKey() { return [MPF.kind, aiMoods[0] || 'time', aiMaxRuntime, selectedTopLanguage, MPF.sort].join('|'); }
+    // ---- the address: #mood=cry&type=series&sort=new&lang=hi&rt=1
+    function mpHash() {
+      if (!moodPageActive()) return '';
+      const p = new URLSearchParams();
+      if (aiMoods[0]) p.set('mood', aiMoods[0]);
+      if (aiMaxRuntime) p.set('rt', '1');
+      if (MPF.kind === 'tv') p.set('type', 'series');
+      if (MPF.sort !== 'top') p.set('sort', MPF.sort);
+      if (selectedTopLanguage) p.set('lang', selectedTopLanguage);
+      return '#' + p.toString();
+    }
+    function mpPush(replace) {
+      try {
+        const h = mpHash(), base = location.pathname + location.search;
+        if (h) { if (h !== location.hash) history[replace ? 'replaceState' : 'pushState'](null, '', base + h); }
+        else if (/^#(mood|rt)=/.test(location.hash)) history[replace ? 'replaceState' : 'pushState'](null, '', base);
+      } catch (e) {}
+    }
+    function mpFromHash() {
+      const h = location.hash;
+      if (h === mpHash() || (!h && !moodPageActive())) return;
+      if (/^#(mood|rt)=/.test(h)) {
+        const p = new URLSearchParams(h.slice(1));
+        const id = p.get('mood');
+        aiMoods = AI_MOODS.some(x => x.id === id) ? [id] : [];
+        aiMaxRuntime = p.get('rt') ? 120 : 0;
+        MPF.kind = p.get('type') === 'series' ? 'tv' : 'movie';
+        MPF.sort = ['new', 'pop'].includes(p.get('sort')) ? p.get('sort') : 'top';
+        const lg = p.get('lang'); selectedTopLanguage = /^[a-z]{2}$/.test(lg || '') ? lg : '';
+        if (MPF.kind === 'tv') aiMaxRuntime = 0;
+        if (moodPageActive()) { openMoodPage(true); return; }
+      }
+      if (moodPageActive()) { aiMoods = []; aiMaxRuntime = 0; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; refreshViews(); }
+    }
+    window.addEventListener('popstate', mpFromHash);
+    window.addEventListener('load', () => setTimeout(mpFromHash, 700));
+
     function mpUrl(src, page) {
-      const key = getActiveTmdbKey();
-      if (src.search) return `${TMDB_BASE_URL}/search/movie?api_key=${key}&include_adult=false&language=en-US&query=${encodeURIComponent(src.search)}&page=${page}`;
-      const p = new URLSearchParams({ api_key: key, include_adult: 'false', language: 'en-US', sort_by: 'vote_average.desc', page: String(page), 'vote_count.gte': String(src.v || 500) });
+      const key = getActiveTmdbKey(), tv = MPF.kind === 'tv', kind = tv ? 'tv' : 'movie';
+      if (src.search) return `${TMDB_BASE_URL}/search/${kind}?api_key=${key}&include_adult=false&language=en-US&query=${encodeURIComponent(src.search)}&page=${page}`;
+      const today = new Date().toISOString().slice(0, 10);
+      const sorts = { top: 'vote_average.desc', pop: 'popularity.desc', new: (tv ? 'first_air_date.desc' : 'primary_release_date.desc') };
+      const p = new URLSearchParams({ api_key: key, include_adult: 'false', language: 'en-US', sort_by: sorts[MPF.sort] || sorts.top, page: String(page), 'vote_count.gte': String(src.v || 500) });
+      if (MPF.sort === 'new') p.set(tv ? 'first_air_date.lte' : 'primary_release_date.lte', today);
       if (src.a) p.set('vote_average.gte', String(src.a));
       if (src.vmax) p.set('vote_count.lte', String(src.vmax));
       if (src.g) p.set('with_genres', src.g);
       if (src.w) p.set('without_genres', src.w);
       if (src.kids && src.kids.length) p.set('with_keywords', src.kids.join('|'));
-      if (aiMaxRuntime) p.set('with_runtime.lte', String(aiMaxRuntime));
+      if (aiMaxRuntime && !tv) p.set('with_runtime.lte', String(aiMaxRuntime));
       if (selectedTopLanguage) p.set('with_original_language', selectedTopLanguage);
-      return `${TMDB_BASE_URL}/discover/movie?${p}`;
+      return `${TMDB_BASE_URL}/discover/${kind}?${p}`;
     }
     async function mpPrepare() {
-      const states = [];
-      for (const id of aiMoods) {
+      const states = [], table = MPF.kind === 'tv' ? MOOD_TV : MOOD_SRC;
+      for (const id of aiMoods.slice(0, 1)) {
         const srcs = [];
-        for (const s0 of (MOOD_SRC[id] || [])) {
+        for (const s0 of (table[id] || [])) {
           const s = { ...s0 };
           if (s.k) { s.kids = await kwIds(s.k); if (!s.kids.length) continue; }
           srcs.push(s);
         }
         if (srcs.length) states.push({ id, srcs, si: 0, page: 1, done: false });
-      }
-      if (aiVibeQuery && !aiMoods.length) {
-        const terms = aiVibeQuery.toLowerCase().split(/[^a-z0-9']+/).filter(w => w.length > 3 && !SYN_STOP.has(w)).slice(0, 4);
-        const kids = terms.length ? await kwIds(terms) : [];
-        const srcs = [];
-        if (kids.length) srcs.push({ kids, a: 6, v: 200 });
-        srcs.push({ search: aiVibeQuery });
-        states.push({ id: 'text', srcs, si: 0, page: 1, done: false });
       }
       if (!states.length && aiMaxRuntime) states.push({ id: 'time', srcs: [{ a: 7, v: 3000 }], si: 0, page: 1, done: false });
       return states;
@@ -4052,15 +4093,18 @@
       return got;
     }
     function mpItem(r, moodId) {
-      const id = 'tmdb-m-' + r.id;
+      const tv = MPF.kind === 'tv';
+      const id = (tv ? 'tmdb-tv-' : 'tmdb-m-') + r.id;
       const cat = findItemById(id); if (cat) return cat;
-      if (!r.poster_path || !r.title) return null;
-      const item = { id, tmdbId: String(r.id), title: r.title, type: 'Movie', year: (r.release_date || '').slice(0, 4), genres: (r.genre_ids || []).map(x => TMDB_GENRE_NAME[x]).filter(Boolean),
+      const title = tv ? r.name : r.title;
+      if (!r.poster_path || !title) return null;
+      const item = { id, tmdbId: String(r.id), title, type: tv ? 'Series' : 'Movie', year: String((tv ? r.first_air_date : r.release_date) || '').slice(0, 4), genres: (r.genre_ids || []).map(x => TMDB_GENRE_NAME[x]).filter(Boolean),
         backdrop: r.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + r.backdrop_path : '', poster: 'https://image.tmdb.org/t/p/w500' + r.poster_path, synopsis: r.overview || '',
         rating: r.vote_average ? Number(r.vote_average.toFixed(1)) : 0, totalVotes: r.vote_count || 0, language: r.original_language || '', dominantVibe: MOOD_VIBE[moodId] || 'must_watch' };
       window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {}; if (!window.DYNAMIC_MEDIA[id]) window.DYNAMIC_MEDIA[id] = item;
       return item;
     }
+    function mpRemember() { MP_CACHE.set(mpKey(), { items: MP.items.slice(), seen: new Set(MP.seen), states: MP.states, exhausted: MP.exhausted, fallback: MP.fallback }); if (MP_CACHE.size > 24) MP_CACHE.delete(MP_CACHE.keys().next().value); }
     async function mpLoad(g) {
       if (MP.loading) return;
       MP.loading = true;
@@ -4069,54 +4113,74 @@
         if (!MP.states.length) throw new Error('no source');
         const batches = await Promise.all(MP.states.map(st => mpFetchState(st, 3).then(list => ({ id: st.id, list }))));
         if (g !== MP.gen) return;
-        const max = Math.max(0, ...batches.map(b => b.list.length));
-        for (let i = 0; i < max; i++) batches.forEach(b => { const r = b.list[i]; if (!r) return; const it = mpItem(r, b.id); if (it && !MP.seen.has(it.id)) { MP.seen.add(it.id); MP.items.push(it); } });
+        batches.forEach(b => b.list.forEach(r => { const it = mpItem(r, b.id); if (it && !MP.seen.has(it.id)) { MP.seen.add(it.id); MP.items.push(it); } }));
         MP.exhausted = MP.states.every(s => s.done);
         if (!MP.items.length) throw new Error('empty');
+        mpRemember();
       } catch (e) {
         if (g !== MP.gen) return;
-        // TMDB could not be reached: fall back to WatchVibe's own catalogue so the page is never empty
-        window.AI_TOPN = 60; try { runLocalVibeMatcher(aiVibeQuery, true); } catch (e2) {} window.AI_TOPN = 0;
-        MP.items = (aiVibeResults || []).slice(); MP.fallback = true; MP.exhausted = true;
+        if (MPF.kind === 'tv') { MP.exhausted = true; }
+        else {
+          // TMDB could not be reached: fall back to WatchVibe's own catalogue so the page is never empty
+          window.AI_TOPN = 60; try { runLocalVibeMatcher('', true); } catch (e2) {} window.AI_TOPN = 0;
+          MP.items = (aiVibeResults || []).slice(); MP.fallback = true; MP.exhausted = true;
+        }
       } finally {
         if (g === MP.gen) { MP.loading = false; if (activeTab === 'discover') refreshViews(); }
       }
     }
-    function openMoodPage() {
-      if (!moodPageActive()) { MP.gen++; refreshViews(); return; }
-      MP.gen++; MP.states = []; MP.items = []; MP.seen = new Set(); MP.loading = false; MP.exhausted = false; MP.fallback = false;
-      window.homeRow = null; aiVibeResults = null;
+    function openMoodPage(fromHash) {
+      if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; }
+      MP.gen++; MP.loading = false; window.homeRow = null; aiVibeResults = null;
+      const hit = MP_CACHE.get(mpKey());
+      if (hit) { MP.items = hit.items.slice(); MP.seen = new Set(hit.seen); MP.states = hit.states; MP.exhausted = hit.exhausted; MP.fallback = hit.fallback; }
+      else { MP.states = []; MP.items = []; MP.seen = new Set(); MP.exhausted = false; MP.fallback = false; }
+      if (!fromHash) mpPush(false);
       if (activeTab !== 'discover') switchTab('discover'); else refreshViews();
       window.scrollTo({ top: 0 });
-      mpLoad(MP.gen);
+      if (!hit) mpLoad(MP.gen);
     }
     function mpMore() { if (!MP.loading && !MP.exhausted) { mpLoad(MP.gen); refreshViews(); } }
-    function runAiVibeMatcher(promptText) {
-      const q = (promptText || document.getElementById('aiVibeInput')?.value || '').trim().slice(0, 120);
-      if (!q && aiMoods.length === 0 && !aiMaxRuntime) { showToast('Type what you feel like, or pick a mood.'); return; }
-      if (q) Track.event('mood', { q });
-      aiVibeQuery = q;
-      const lower = q.toLowerCase();
-      AI_MOOD_HINTS.forEach(([rx, id]) => { if (rx.test(lower) && !aiMoods.includes(id)) aiMoods.push(id); });
-      openMoodPage();
+    function setMoodKind(k) { if (MPF.kind === k) return; MPF.kind = k; if (k === 'tv') aiMaxRuntime = 0; if (!moodPageActive()) { refreshViews(); return; } openMoodPage(); }
+    function setMoodSort(v) { MPF.sort = ['new', 'pop'].includes(v) ? v : 'top'; openMoodPage(); }
+    // films keep arriving as the visitor nears the bottom
+    function mpObserve() {
+      if (MP.obs) { MP.obs.disconnect(); MP.obs = null; }
+      const el = document.getElementById('mpSentinel');
+      if (!el || !('IntersectionObserver' in window)) return;
+      MP.obs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting) && !MP.loading && !MP.exhausted && MP.items.length) mpMore(); }, { rootMargin: '700px 0px' });
+      MP.obs.observe(el);
     }
     function moodPageHtml(ctx) {
-      const items = MP.items;
+      const items = MP.items, tv = MPF.kind === 'tv';
       const skeleton = Array.from({ length: 18 }, () => '<div><div class="aspect-[2/3] animate-pulse rounded-xl bg-white/[0.05]"></div><div class="mt-3 h-3 w-3/4 animate-pulse rounded bg-white/[0.05]"></div></div>').join('');
       const grid = items.length ? items.map(i => posterCard(i, { wide: true })).join('') : (MP.loading ? skeleton : '');
-      const sub = MP.fallback ? 'Matches from the WatchVibe catalogue (the movie database could not be reached just now).' : 'Ranked by TMDB audience ratings, from the wider movie community. Not by WatchVibe votes.';
+      const mood = AI_MOODS.find(x => x.id === aiMoods[0]);
+      const desc = mood ? MOOD_DESC[mood.id] : 'Films that run two hours or less, best rated first.';
+      const sub = MP.fallback ? 'Matches from the WatchVibe catalogue (the movie database could not be reached just now).' : 'Ranked by the TMDB community, not by WatchVibe votes.';
+      const seg = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-seg-b${on ? ' is-on' : ''}">${label}</button>`;
+      const sortSel = `<select onchange="setMoodSort(this.value)" aria-label="Sort" class="wv-sel">${[['top', 'Top rated'], ['new', 'Newest'], ['pop', 'Most popular']].map(([v, l]) => `<option value="${v}" ${MPF.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+      setTimeout(mpObserve, 0);
       return `
         <div class="space-y-6">
-          ${ctx.mobileTabs}
-          <div class="wv-moodrow wv-moodpage no-scrollbar" role="group" aria-label="Mood">${ctx.moodRowChips}</div>
-          <div class="wv-moodbar">${ctx.describeHtml}<div id="wvFilterBar" class="wv-filters flex justify-end">${ctx.toolbar}</div></div>
+          <div class="wv-moodsticky">
+            <div class="wv-moodrow wv-moodpage no-scrollbar" role="group" aria-label="Mood">${ctx.chips}</div>
+            <div class="wv-moodtools">
+              <div class="wv-seg" role="group" aria-label="Type">${seg('Movies', !tv, "setMoodKind('movie')")}${seg('Series', tv, "setMoodKind('tv')")}</div>
+              ${tv ? '' : ctx.underChip}
+              <span class="wv-grow"></span>
+              ${ctx.langSelect}${sortSel}
+            </div>
+          </div>
           <div>
             <h1 class="font-display text-[34px] leading-none text-white lg:text-[44px]">${esc(moodTitle())}</h1>
-            <p class="mt-2 text-sm text-white/45">${items.length ? items.length + ' films. ' : ''}${esc(sub)}</p>
+            <p class="mt-2 text-[15px] text-white/70">${esc(desc)}</p>
+            <p class="mt-1 text-sm text-white/45">${items.length ? items.length + (MP.exhausted ? '' : '+') + (tv ? ' series. ' : ' films. ') : ''}${esc(sub)}</p>
           </div>
           ${!items.length && !MP.loading ? '<div class="rounded-2xl bg-white/[0.03] py-16 text-center ring-1 ring-white/[0.06]"><div class="text-white/80">Nothing came up for this one.</div><button type="button" onclick="clearAiVibeMatcher()" class="mt-3 text-sm text-purple-300 hover:text-white">Back to all moods</button></div>'
             : `<div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">${grid}</div>`}
-          ${items.length && !MP.exhausted ? `<div class="pt-4 text-center"><button type="button" onclick="mpMore()" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">${MP.loading ? 'Loading more…' : 'Show more films'}</button></div>` : ''}
+          <div id="mpSentinel" aria-hidden="true"></div>
+          ${items.length && !MP.exhausted ? `<div class="pt-2 text-center"><button type="button" onclick="mpMore()" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">${MP.loading ? 'Loading more…' : 'Show more'}</button></div>` : ''}
           ${homeFooter()}
         </div>`;
     }
@@ -4261,13 +4325,14 @@ function posterCard(item, opts) {
           ${(hasTopFilter || window.homeRow) ? `<button type="button" onclick="goHome()" class="rounded-full px-3 py-2 text-sm text-white/55 transition hover:text-white">Reset</button>` : ''}
         </div>`;
 
-      const describeHtml = `<form class="wv-describe" role="search" aria-label="Describe a mood" onsubmit="event.preventDefault();runAiVibeMatcher()">
-          <input id="aiVibeInput" type="text" value="${esc(aiVibeQuery)}" maxlength="120" autocomplete="off" placeholder="Or describe it: a cozy rainy-night film" aria-label="Describe what you feel like watching">
-          <button type="submit" aria-label="Find matches"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-        </form>`;
-      const moodPill = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}</button>`;
-      const moodRowChips = moodPill('All moods', aiMoods.length === 0 && !aiVibeQuery && !aiMaxRuntime, 'clearAiVibeMatcher()') + AI_MOODS.map(mo => moodPill(mo.label, aiMoods.includes(mo.id), `toggleAiMood('${mo.id}')`)).join('') + moodPill('Under 2h', aiMaxRuntime === 120, 'setAiRuntime(120)');
-      if (moodPageActive()) return moodPageHtml({ mobileTabs, moodRowChips, describeHtml, toolbar });
+      const moodPill = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}${on ? ' <i class="fa-solid fa-xmark" aria-hidden="true"></i>' : ''}</button>`;
+      const moodChips = AI_MOODS.map(mo => moodPill(mo.label, aiMoods[0] === mo.id, `toggleAiMood('${mo.id}')`)).join('');
+      const underChip = moodPill('Under 2h', aiMaxRuntime === 120, 'setAiRuntime(120)');
+      const moodRowChips = moodChips + underChip;
+      if (moodPageActive()) {
+        const langSelect = `<select id="topLanguageSelect" onchange="setTopLanguage(this.value)" aria-label="Language" class="wv-sel">${langOptions.map(([v, l]) => `<option value="${v}" ${v === selectedTopLanguage ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+        return moodPageHtml({ chips: moodChips, underChip, langSelect });
+      }
 
       // ---------- Filtered / "see all" grid ----------
       if (gridTitle) {
@@ -4327,7 +4392,7 @@ function posterCard(item, opts) {
       setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 0);
       return `
         <div class="space-y-14">
-          <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div>${describeHtml}<div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
+          <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div><div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
           <div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>
           ${dailyCardHtml()}
           ${gamesCardHtml()}
