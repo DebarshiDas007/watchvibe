@@ -401,3 +401,10 @@ Open / next, in the order we discussed:
 - The home page keeps one chip row (moods + Under 2h) and the language select. The phone mood pills scroll sideways.
 - theme.css?v=23, sw.js CACHE_NAME watchvibe-cache-v105. Sweep problems [] at 390, 768, 1440; mood page has no sideways scroll at 390, 768, 1440.
 - Not verified: series quality for every mood (TV discover returns fewer strict matches); the Newest sort on series with a high vote floor starts at 2024.
+
+## v106: Daily Challenge showed the wrong film after a missed "which came out first?" question
+- Bug: in the "Which of these films came out first?" question (kind `year`) the correct option is the earliest of four films, but the result picture, poster and title always showed the film the round was built from, which is one of the other (incorrect) options. In all 6 such questions across the three levels the two differed (e.g. asked Forrest Gump, correct answer Romancing the Stone).
+- Fix in `renderDaily`: for kind `year`, once the question is done the result shows the correct option's film (`ans`, looked up by the option's new `id` from `dcBuild`). Other kinds were checked: scene, zoom, cast, plot (the shown film is the answer), director and lead (the shown film is the subject, and the correct name is printed as "answer: ...").
+- Checked the other games in games.js: Draw the Movie reveals the drawer's word, Movie Fibber always shows the real film, Who's the Impostor shows both films with labels. No change needed.
+- Verified by building all year questions (6 of 6 differ) and rendering a missed one: the page now has the correct film's backdrop and title and not the asked film's. Sweep problems [] at 798 px wide pane.
+- sw.js CACHE_NAME watchvibe-cache-v106 (theme.css stays v23).
