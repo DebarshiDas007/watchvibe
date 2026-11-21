@@ -417,3 +417,41 @@ button.group:focus-visible > div[class*="aspect-[2/3]"] { box-shadow: none; outl
 @media (min-width: 1024px) { .wv-gtile { width: 200px; height: 112px; } .wv-gtile span { font-size: 28px; } }
 .wv-lazy { width: 100%; }
 @media (prefers-reduced-motion: reduce) { .wv-wide-img, .wv-t10img, .wv-gtile, .wv-seeall i { transition: none; } .wv-wide:hover .wv-wide-img, .wv-t10:hover .wv-t10img, .wv-gtile:hover { transform: none; } }
+
+/* ---- phone audit fixes (v25), checked at 360x780 (Galaxy S25) ---- */
+@media (max-width: 767px) {
+  /* the banner picture was hidden: a side gradient and a heavy bottom gradient covered almost all of a narrow card. Keep the picture, fade only its lower part */
+  #heroCarousel .hero-slide > div.bg-gradient-to-r { display: none; }
+  #heroCarousel .hero-slide > div.bg-gradient-to-t { background-image: linear-gradient(0deg, #0A0A0B 0%, rgba(10,10,11,.86) 24%, rgba(10,10,11,.3) 54%, rgba(10,10,11,0) 80%); }
+  #heroCarousel .hero-slide h2, #heroCarousel .wv-hmeta { text-shadow: 0 1px 14px rgba(0,0,0,.65); }
+  /* the language select is the only filter now: full width, not half a row */
+  .wv-filters { grid-template-columns: 1fr; }
+  /* touch targets: 40 px and up */
+  .wv-chip, .wv-moodphone .wv-chip, .wv-moodpage .wv-chip, .wv-moodtools .wv-chip { height: 40px; }
+  .wv-top > div:first-child:not(.wv-moodrow) > button { height: 40px; min-height: 40px; }
+  .wv-seg-b { height: 38px; }
+  .wv-seg-b { padding: 0 18px; }
+  /* card text: 12 px minimum, titles may use two lines so long names are readable */
+  .wv-pm, .wv-ptag, .wv-psub { font-size: 12px; }
+  button.group .wv-pt { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.25; min-height: 2.5em; font-size: 14px; }
+  button.group.wv-wide .wv-pt { white-space: nowrap; display: block; -webkit-line-clamp: unset; min-height: 0; }
+  .wv-t10 { width: 250px; }
+  /* mood page: only the mood chips stay under the header while scrolling; the filter rows scroll away */
+  .wv-moodsticky { display: contents; }
+  .wv-moodsticky .wv-moodpage { position: sticky; top: 56px; z-index: 30; background: rgba(10,10,11,.97); margin: 0 -4px; padding: 8px 4px; border-bottom: 1px solid #1F1F24; }
+  .wv-moodsticky .wv-moodtools { margin-top: 16px; }
+  /* cast and crew names in the title window: a 40 px touch area without tall gaps between lines */
+  button[data-person] { min-height: 0; padding: 10px 2px; margin: -5px 0; }
+}
+@media (max-width: 767px) {
+  #heroCarousel > div.absolute.bottom-9 { top: 30px; }
+  #heroCarousel > div.absolute.bottom-9 button, #heroCarousel > div.absolute.bottom-9 #heroControls button { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+  #heroCarousel > div.absolute.inset-x-6 { top: 4px; }
+  #heroCarousel .hero-seg { padding: 16px 0; }
+  .wv-seeall { min-height: 40px; padding: 0 4px; }
+  .wv-seg-b { height: 40px; }
+  footer a { display: inline-block; padding: 10px 8px; margin: -10px -8px; }
+}
+/* star cards are credit-link buttons too, but they are cards: keep their block layout on phones */
+button[data-person].wv-star { display: block; min-height: 0; padding: 0; margin: 0; text-align: center; }
+@media (max-width: 767px) { .wv-credits { display: flex; flex-wrap: wrap; column-gap: 18px; } .wv-credits .wv-sep { display: none; } }

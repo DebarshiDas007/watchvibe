@@ -417,3 +417,22 @@ Open / next, in the order we discussed:
 - Shelf rules are in `HOME_DEFS` (filter `f`, score `sc`, `fmt`). To add a shelf, add an entry and put its key in the order list in `homeShelvesHtml`.
 - theme.css?v=24, sw.js CACHE_NAME watchvibe-cache-v107. Sweep problems [] at 390, 768, 1440.
 - Not verified: the Picked-for-you shelf with a real history (tested without one); hover arrows on a real touch-and-mouse laptop.
+
+## v108: phone audit (Galaxy S25, 360 x 780) and fixes
+- Method: every page (home, mood page movies and series, Explore, Watchlist, Profile, Taste Match, Daily intro and question, title window top and bottom, sign-in, Vibe Deck, Game night) checked at 360x780 with a script (sideways overflow, tap targets under 40 px, text under 12 px, broken images, vertical gaps) plus a screenshot of each. Then product sweep at 320, 360, 390, 412, 768, 1440: problems [].
+- FIXED
+  - Featured banner picture was almost hidden on phones: a side gradient and a heavy bottom gradient covered a narrow card. The side gradient is off on phones and the bottom one is lighter (text shadow keeps the title readable).
+  - Trending stars were squashed (photos not round, names overlapping) on phones: the credit-link rule `button[data-person]` (inline-flex, 44 px) also hit the star cards. Star cards have class `wv-star` and keep their block layout.
+  - Home: the language select sat alone in half a row; now full width.
+  - Touch targets: chips and the All/Movies/Series tabs 40 px, Movies/Series switch 40, hero mute and pause 40, progress bars have a 36 px hit area, "See all" 40, footer links padded.
+  - Text: nothing under 12 px any more (card tags and year lines were 11 px, about 260 elements per page). Poster titles may use two lines so long names read in full.
+  - Mood page: only the mood chips stay under the header while scrolling (the three-row bar took a quarter of the screen); the filters scroll away.
+  - Title window: cast and director names have a 40 px touch area without tall gaps, shown as a wrapping row without stray commas (`.wv-credits`, `.wv-sep`).
+  - Explore: "Browse by vibe" (five tiles, one alone on the last row) is now "Browse by mood" with the six moods, opening the mood pages; the vibe-tag chips (Mind-blowing, Must watch, Emotional) are removed from the pills; its Trending stars now use the real list (`starsInner`) instead of the old fixed actors; the search box text is shorter ("Search films, series, people") so it is not cut off.
+- NOT FIXED (decide next)
+  - Taste Match, Watch together and Daily have no link in the phone bottom bar (reachable from the home cards and the desktop menu only).
+  - The Vibe Deck buttons use their own red, green, orange and teal tints and "Want to watch" wraps to two lines.
+  - The sign-in sheet's Discord button is blue-purple (brand colour of Discord).
+  - The title window sheet leaves the page header faintly visible above it.
+  - Top 10 numerals are partly covered by the poster on a 360 px screen.
+- theme.css?v=25, sw.js CACHE_NAME watchvibe-cache-v108.
