@@ -1,0 +1,43 @@
+<title>WatchVibe · Wall and Index</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+/*WALL*/
+.hw{border-bottom:1px solid var(--ink)}.hw .head{padding:34px var(--pad) 0}.hw .head h1{font:600 clamp(46px,8vw,128px)/.86 var(--fb);letter-spacing:-.075em}.hw .head h1 em{font-style:normal;color:var(--accent)}
+.hw .body{display:grid;grid-template-columns:minmax(300px,4fr) 8fr;gap:0 40px;padding:10px var(--pad) 30px;align-items:start}.hw .now{position:sticky;top:84px;padding-top:34px}.hw .wcol{min-width:0;padding-top:6px}
+.hw .wtop{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:0}.hw .wtop .lab{color:var(--mute)}
+@media(max-width:900px){.hw .body{grid-template-columns:1fr;gap:0}.hw .now{position:static;padding-top:10px;order:2}.hw .head{padding-top:22px}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="wall-index.html">← All hybrids</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script><script src="wall-ui.js"></script>
+<script>
+const {films,moods,top10,indian,acclaimed,hero,esc}=WV;
+const tonight=[hero,...top10.filter(f=>f!==hero),...acclaimed].filter((f,i,a)=>a.indexOf(f)===i).slice(0,14);
+const lists={week:top10,month:acclaimed.slice(0,10),all:films.slice().sort((a,b)=>b.rating-a.rating).slice(0,10)};
+const avg=(films.reduce((s,f)=>s+f.rating,0)/films.length).toFixed(1);
+const bestOf=id=>films.filter(f=>f.moods.includes(id)).sort((a,b)=>b.rating-a.rating);
+let cur=tonight;
+const nowHtml=(f,i,n)=>`<div class="mo roll">Now showing ${String(i+1).padStart(2,'0')} / ${String(n).padStart(2,'0')}</div><h2>${esc(f.title)}</h2><div class="meta mo"><b>★ ${f.rating}</b><span>${f.year}</span><span>${esc(f.genre)}</span></div><p>${esc(f.plot)}</p><div class="acts"><a class="btn solid" href="#film-${f.id}">Open film →</a><button type="button" class="btn" data-add="${f.id}">+ Watchlist</button></div>`;
+const mq=moods.map(m=>`<span>${esc(m.label)}</span>`).join('')+['Daily challenge no. 21','New: Project Hail Mary','Hidden gems'].map(t=>`<span>${t}</span>`).join('');
+const home=()=>`<div class="marq mo"><div>${mq}${mq}</div></div>
+<div class="hw"><div class="head"><div class="mo" style="color:var(--accent);margin-bottom:12px">Tonight · pick a mood, scroll the wall</div><h1>Tonight's <em>poster wall.</em></h1></div>
+<div class="body"><div class="now" id="now">${nowHtml(tonight[0],0,tonight.length)}</div><div class="wcol"><div class="wtop"><span class="mo lab">Sort the wall by feeling</span></div><div class="mchips" style="margin:12px 0 0"><button type="button" class="chipb on" data-m="all">All films</button>${moods.map(m=>`<button type="button" class="chipb" data-m="${m.id}">${esc(m.label)}</button>`).join('')}</div><div id="wallhost">${Wall.row('main',tonight)}</div></div></div></div>
+<div class="stats2"><div class="grid"><div class="c"><b data-count="${films.length}">0</b><span class="mo">Films</span></div><div class="c"><b data-count="${moods.length}">0</b><span class="mo">Moods</span></div><div class="c"><b data-count="${avg}" data-dec="1">0</b><span class="mo">Average rating</span></div><div class="c"><b data-count="7">0</b><span class="mo">Day streak</span></div></div></div>
+<div class="sec2"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">01 — Moods</span><h2>Start with a feeling.</h2><p>Each mood is a whole page of films.</p></div><div class="bd mlist2">${moods.map((m,i)=>`<a href="#mood-${m.id}" data-prev="${bestOf(m.id)[0].poster()}"><span class="mo">0${i+1}</span><b>${esc(m.label)}<span class="d">${esc(m.blurb)}</span></b><span class="mini">${bestOf(m.id).slice(0,3).map(f=>`<span style="background-image:url(${f.poster()})"></span>`).join('')}</span><span class="mo">→</span></a>`).join('')}</div></div></div>
+<div class="sec2"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">02 — Chart</span><h2>Top ten.</h2><p>Tabs below. J and K move down the list.</p></div><div class="bd"><div class="tabs"><button type="button" class="on" data-tab="week">This week</button><button type="button" data-tab="month">This month</button><button type="button" data-tab="all">All time</button></div><div id="chart">${SW.indexRows(lists.week)}</div></div></div></div>
+<div class="sec2"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">03 — Regional</span><h2>Indian cinema.</h2><p>Swipe, or use the arrows.</p></div><div class="bd">${Wall.row('ind',indian,{label:'Indian cinema'})}</div></div></div>
+<div class="sec2 wide"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">04 — Canon</span><h2>Critically acclaimed.</h2><p>Rated 8 and above by thousands of people.</p></div><div class="bd">${SW.stripOf(acclaimed,{wide:true})}</div></div></div>
+<div class="dc2"><div class="grid"><h3>Guess the film.<br>Every day.</h3><div class="r"><div class="mo" style="margin-bottom:14px">Day streak 7</div><a class="btn" href="#games">Play today's round →</a></div></div></div>`;
+const setNow=id=>{const f=films[id],i=cur.indexOf(f),n=document.getElementById('now');if(n&&f)n.innerHTML=nowHtml(f,Math.max(0,i),cur.length);document.querySelectorAll('#wallhost .pc').forEach(c=>c.classList.toggle('on',+c.dataset.fid===id))};
+document.addEventListener('wallactive',e=>{if(e.detail.wall==='main')setNow(e.detail.id)});
+document.addEventListener('pointerover',e=>{const c=e.target.closest&&e.target.closest('#wallhost .pc');if(c)setNow(+c.dataset.fid)});
+document.addEventListener('click',e=>{const m=e.target.closest('[data-m]');if(m){document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===m));cur=m.dataset.m==='all'?tonight:bestOf(m.dataset.m);document.getElementById('wallhost').innerHTML=Wall.row('main',cur);Wall.bind();setNow(cur[0].id);return}
+const t=e.target.closest('[data-tab]');if(t){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===t));document.getElementById('chart').innerHTML=SW.indexRows(lists[t.dataset.tab])}});
+WVHook=r=>{if(r.name==='home'){cur=tonight;Wall.bind()}};
+WVApp.mount({name:'WatchVibe · Wall and Index',shell:(i,r)=>SW.shell(i,r,{home:'Tonight'}),home,card:SW.card});
+</script>

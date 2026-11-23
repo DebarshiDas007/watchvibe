@@ -511,3 +511,10 @@ Open / next, in the order we discussed:
 - Era is now five short choices (2020s, 2010s, 2000s, 80s and 90s, Before 1980); old addresses with the long list still open the nearest choice. Sort is two choices (Top rated, Most popular): Newest is what the era filter is for.
 - Filters that lead nowhere are not offered: on the filter page every genre, era, language and mood is checked against TMDB with a quick count under the other filters in use, and the ones that would give no films are hidden (the chosen one always stays). If TMDB cannot be reached every option stays. Counts are remembered for the visit.
 - Tested: Bengali only, Korean before 1980, Telugu + Western, Hype + Romance + before 1980 (hidden options match the empty combinations); sweeps clean at 1864/1500/768/375. swiss.css?v=28, cache v123.
+
+## v125: faster film window, pages match the Swiss look
+- Film window opens faster: backdrop 0.12 s, card 0.22 s, staggered head/actions (Animation Dictionary style); the poster, backdrop, providers and extras are warmed when the mouse rests on a card (90 ms) or on touch-down (`warmTitle`).
+- Taste Match, Profile and Explore rebuilt in the Swiss style (dcl header, hairline cards, square buttons, mood tiles); square buttons, toast and dialogs everywhere (`swiss.css` page-sync block).
+- Filter bar overlap onto the mood chips now only at 1800 px and wider.
+- Known: at ~1300 px the top menu scrolls inside its own bar (labels collapse to icons); not fixed.
+- swiss.css v30, sw cache v125.

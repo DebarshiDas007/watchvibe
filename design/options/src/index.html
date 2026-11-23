@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WatchVibe Design Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+:root{--bg:#f5f5f2;--fg:#151515;--mute:#66665f;--line:#d9d9d2;--card:#fff;--accent:#d6502f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0c0d;--fg:#f2f2ee;--mute:#9a9a92;--line:#2a2a2d;--card:#151517;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c0c0d;--fg:#f2f2ee;--mute:#9a9a92;--line:#2a2a2d;--card:#151517;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.5 Inter,system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 60px}
+.w{max-width:1200px;margin:0 auto}h1{font:700 clamp(34px,5vw,58px)/1.05 'Space Grotesk',sans-serif;letter-spacing:-.03em;margin:0 0 12px;text-wrap:balance}
+.lead{color:var(--mute);max-width:640px;margin:0 0 36px;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px}
+.c{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;color:inherit;transition:.2s}
+.c:hover{transform:translateY(-4px);box-shadow:0 18px 40px -18px rgba(0,0,0,.45)}.c:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.c .im{aspect-ratio:16/10;background:#222 center/cover top}.c .b{padding:18px 20px 20px;display:grid;gap:8px}.c h2{font:700 22px 'Space Grotesk',sans-serif;margin:0;letter-spacing:-.02em}.c p{margin:0;color:var(--mute);font-size:15px}
+.c small{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}.go{margin-top:6px;font-weight:600;color:var(--accent)}
+.note{margin-top:38px;color:var(--mute);font-size:14px;max-width:720px}
+</style></head><body><div class="w">
+<h1>Five ways WatchVibe could look</h1>
+<p class="lead">Each design is a working demo with the same real films. Tap a mood, open a film, save it to the watchlist, press search or the slash key, and play the daily game. Open one to try it.</p>
+<div class="grid">
+<a class="c" href="option-1.html"><div class="im" style="background-image:url(img/thumb-1.jpg)"></div><div class="b"><small>Option 1</small><h2>Noir Cinema</h2><p>Editorial and serif, letterboxed hero, film grain, chapter-style headings.</p><span class="go">Open demo →</span></div></a>
+<a class="c" href="option-2.html"><div class="im" style="background-image:url(img/thumb-2.jpg)"></div><div class="b"><small>Option 2</small><h2>Neon Arcade</h2><p>Synthwave glow, a scrolling ticker, stickers, big rounded cards.</p><span class="go">Open demo →</span></div></a>
+<a class="c" href="option-3.html"><div class="im" style="background-image:url(img/thumb-3.jpg)"></div><div class="b"><small>Option 3</small><h2>Paper Pop</h2><p>Light cream page, thick borders, hard shadows, a playful grid.</p><span class="go">Open demo →</span></div></a>
+<a class="c" href="option-4.html"><div class="im" style="background-image:url(img/thumb-4.jpg)"></div><div class="b"><small>Option 4</small><h2>Glass Aurora</h2><p>Frosted glass over soft moving light, floating menu, italic serif accents.</p><span class="go">Open demo →</span></div></a>
+<a class="c" href="option-5.html"><div class="im" style="background-image:url(img/thumb-5.jpg)"></div><div class="b"><small>Option 5</small><h2>Swiss Index</h2><p>Strict grid, mono labels, the Top 10 as a chart, one electric blue.</p><span class="go">Open demo →</span></div></a>
+</div>
+<p class="note">Films, posters and ratings are real catalogue data. Where-to-watch lists in these demos are samples. Nothing here is live on the WatchVibe site.</p>
+</div></body></html>

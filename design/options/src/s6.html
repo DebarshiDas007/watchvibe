@@ -1,0 +1,36 @@
+<title>WatchVibe · Poster Wall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+.wall{padding:34px 0 20px;border-bottom:1px solid var(--ink);overflow:hidden}.wall .top{display:flex;justify-content:space-between;align-items:flex-end;padding:0 var(--pad);margin-bottom:22px;gap:20px;flex-wrap:wrap}.wall h1{font:600 clamp(44px,7vw,110px)/.88 var(--fb);letter-spacing:-.07em}.wall h1 em{font-style:normal;color:var(--accent)}.arrows{display:flex;gap:8px}.arrows button{width:48px;height:48px;border:1px solid var(--ink);background:transparent;color:var(--ink);font-size:20px;cursor:pointer;transition:.2s}.arrows button:hover{background:var(--ink);color:var(--bg)}
+.snap{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:56px var(--pad) 26px;scrollbar-width:none;scroll-padding-left:var(--pad)}.snap::-webkit-scrollbar{display:none}
+.pc{flex:0 0 auto;width:min(300px,70vw);scroll-snap-align:start;position:relative;transition:transform .3s ease-out;will-change:transform}.pc .ph{aspect-ratio:2/3;background:var(--line) center/cover;box-shadow:0 30px 50px -28px rgba(0,0,0,.6)}.pc .nn{position:absolute;left:-6px;top:-44px;font:600 120px/1 var(--fb);letter-spacing:-.08em;color:transparent;-webkit-text-stroke:1.5px var(--ink);z-index:2;pointer-events:none}.pc:hover .nn{-webkit-text-stroke-color:var(--accent)}
+.pc .t{font:600 20px/1.1 var(--fb);letter-spacing:-.04em;margin-top:14px}.pc .s{color:var(--mute);font:12px var(--fm);margin-top:4px;text-transform:uppercase}
+.prog{height:3px;background:var(--line);margin:0 var(--pad)}.prog i{display:block;height:100%;width:10%;background:var(--accent);transition:width .15s}
+.stack{padding:60px var(--pad) 0}.stack .lab{color:var(--accent);margin-bottom:8px}.stack h2{font:600 clamp(30px,4vw,56px)/1 var(--fb);letter-spacing:-.05em;margin-bottom:30px}
+.sc{position:sticky;display:grid;grid-template-columns:1fr 1.2fr;gap:30px;align-items:center;border:1px solid var(--ink);background:var(--bg);padding:30px;min-height:320px;margin-bottom:22px;transition:.3s}.sc:hover{background:var(--hov)}
+.sc .l b.n{font:500 12px var(--fm);color:var(--accent);display:block;margin-bottom:12px}.sc h3{font:600 clamp(32px,4.6vw,66px)/.95 var(--fb);letter-spacing:-.06em}.sc p{color:var(--mute);margin:14px 0 20px;max-width:360px}
+.sc .mini{display:flex;gap:10px}.sc .mini span{flex:1;aspect-ratio:2/3;background:var(--line) center/cover;transition:.3s}.sc:hover .mini span:nth-child(1){transform:translateY(-8px)}.sc:hover .mini span:nth-child(3){transform:translateY(-8px)}
+.strip2{padding:60px 0 0}.strip2 .grid{padding-bottom:40px}.strip2 h2{grid-column:1/13;font:600 clamp(30px,4vw,56px)/1 var(--fb);letter-spacing:-.05em;margin-bottom:24px}.strip2 .bd{grid-column:1/13;min-width:0}
+.dc{background:var(--accent);color:var(--accent-ink);margin-top:50px}.dc .grid{padding-top:50px;padding-bottom:50px;align-items:end}.dc h3{grid-column:1/9;font:600 clamp(40px,6vw,92px)/.92 var(--fb);letter-spacing:-.06em}.dc .r{grid-column:9/13;justify-self:end;text-align:right}.dc .btn{background:var(--accent-ink);color:var(--accent);border-color:var(--accent-ink)}
+@media(max-width:900px){.sc{grid-template-columns:1fr;position:static!important;min-height:0;padding:20px}.dc h3,.dc .r{grid-column:1/13}.dc .r{justify-self:start;text-align:left;margin-top:20px}.pc .nn{font-size:90px;top:-32px}.arrows{display:none}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="index.html">← All variations</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script>
+<script>
+const {films,moods,top10,indian,acclaimed,hero,esc}=WV;
+const wallList=[hero,...top10.filter(f=>f!==hero),...acclaimed].filter((f,i,a)=>a.indexOf(f)===i).slice(0,14);
+const home=()=>`<div class="wall"><div class="top"><h1>Tonight's<br><em>poster wall.</em></h1><div style="display:grid;gap:14px;justify-items:end"><p class="mo" style="color:var(--mute);max-width:260px;text-align:right">Scroll sideways or use the arrows. Tap a poster to open it.</p><div class="arrows"><button type="button" data-snap="-1" aria-label="Previous">←</button><button type="button" data-snap="1" aria-label="Next">→</button></div></div></div><div class="snap" id="snap">${wallList.map((f,i)=>`<a class="pc" href="#film-${f.id}" data-tilt><span class="nn">${String(i+1).padStart(2,'0')}</span><div class="ph" style="background-image:url(${f.poster()})"></div><div class="t">${esc(f.title)}</div><div class="s">★ ${f.rating} · ${f.year}</div></a>`).join('')}</div><div class="prog"><i id="prog"></i></div></div>
+<div class="stack"><div class="mo lab">Moods</div><h2>Pick a feeling. The cards stack as you scroll.</h2>${moods.map((m,i)=>{const t=films.filter(f=>f.moods.includes(m.id)).sort((a,b)=>b.rating-a.rating).slice(0,3);return `<a class="sc" href="#mood-${m.id}" style="top:${78+i*14}px"><div class="l"><b class="n">0${i+1} / 0${moods.length}</b><h3>${esc(m.label)}</h3><p>${esc(m.blurb)}</p><span class="btn solid">Open this mood →</span></div><div class="mini">${t.map(f=>`<span style="background-image:url(${f.poster()})"></span>`).join('')}</div></a>`}).join('')}</div>
+<div class="strip2"><div class="grid"><h2>Indian cinema.</h2><div class="bd">${SW.stripOf(indian,{tilt:true})}</div></div></div>
+<div class="strip2 wide"><div class="grid"><h2>Critically acclaimed.</h2><div class="bd">${SW.stripOf(acclaimed,{wide:true})}</div></div></div>
+<div class="dc"><div class="grid"><h3>Guess the film.<br>Every day.</h3><div class="r"><div class="mo" style="margin-bottom:14px">Day streak 7</div><a class="btn" href="#games">Play today's round →</a></div></div></div>`;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-snap]');if(!b)return;const s=document.getElementById('snap');s.scrollBy({left:+b.dataset.snap*Math.min(s.clientWidth*.8,640),behavior:'smooth'})});
+WVHook=r=>{if(r.name!=='home')return;const s=document.getElementById('snap'),p=document.getElementById('prog');if(!s||!p)return;const up=()=>{const k=s.scrollLeft/Math.max(1,s.scrollWidth-s.clientWidth);p.style.width=(10+k*90)+'%'};s.addEventListener('scroll',up,{passive:true});up();document.addEventListener('keydown',e=>{if(!document.getElementById('snap')||/INPUT|SELECT/.test(document.activeElement.tagName))return;if(e.key==='ArrowRight')s.scrollBy({left:320,behavior:'smooth'});if(e.key==='ArrowLeft')s.scrollBy({left:-320,behavior:'smooth'})})};
+WVApp.mount({name:'WatchVibe · Poster Wall',shell:(i,r)=>SW.shell(i,r,{home:'Wall'}),home,card:SW.card});
+</script>

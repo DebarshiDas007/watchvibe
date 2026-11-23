@@ -1,0 +1,30 @@
+<title>WatchVibe · Contact Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+.cs{padding:34px var(--pad) 10px;display:grid;grid-template-columns:minmax(280px,4fr) 8fr;gap:40px;align-items:start}
+.panel{position:sticky;top:84px}.panel .roll{color:var(--accent)}.panel h1{font:600 clamp(40px,5vw,76px)/.9 var(--fb);letter-spacing:-.06em;margin:10px 0 14px;min-height:2.7em}.panel .meta{display:flex;gap:16px;color:var(--mute);margin-bottom:12px}.panel .meta b{color:var(--ink)}.panel p{color:var(--mute);max-width:420px;min-height:5.4em;margin-bottom:20px}.panel .pbig{aspect-ratio:16/9;background:var(--line) center/cover;margin-bottom:16px;border:1px solid var(--ink);transition:background-image .2s}
+.panel .acts{display:flex;gap:10px;flex-wrap:wrap}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center}.bar .lab{color:var(--mute);margin-right:6px}
+.sheet{border:1px solid var(--ink);background:var(--surface);padding:0}.sheet .perf{height:18px;background:repeating-linear-gradient(90deg,transparent 0 10px,var(--line) 10px 20px);border-bottom:1px solid var(--ink);opacity:.9}.sheet .perf.b{border-bottom:0;border-top:1px solid var(--ink)}
+.frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:14px;padding:18px}
+.frame{position:relative;display:block;transition:transform .25s ease-out;will-change:transform}.frame .ph{aspect-ratio:2/3;background:var(--line) center/cover;outline:1px solid var(--line)}.frame:hover .ph,.frame.on .ph{outline:2px solid var(--accent);outline-offset:2px}.frame .no{position:absolute;left:0;bottom:-18px;font:500 10px var(--fm);color:var(--mute)}.frame .rr{position:absolute;right:0;bottom:-18px;font:500 10px var(--fm);color:var(--accent)}.frame{margin-bottom:22px}.frame.dim{opacity:.18;filter:grayscale(1)}
+@media(max-width:900px){.cs{grid-template-columns:1fr;gap:18px;padding-top:20px}.panel{position:static}.panel h1{min-height:0}.panel p{min-height:0}.frames{grid-template-columns:repeat(3,1fr);padding:14px}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="index.html">← All variations</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script>
+<script>
+const {films,moods,hero,esc}=WV;
+let mf='all';
+const sel=f=>`<div class="mo roll">Frame ${String(f.id+1).padStart(2,'0')} of ${films.length}</div><h1>${esc(f.title)}</h1><div class="meta mo"><b>★ ${f.rating}</b><span>${f.year}</span><span>${esc(f.genre)}</span></div><div class="pbig" style="background-image:url(${f.back()})"></div><p>${esc(f.plot)}</p><div class="acts"><a class="btn solid" href="#film-${f.id}">Open film →</a><button type="button" class="btn" data-add="${f.id}">+ Watchlist</button></div>`;
+const frames=()=>films.map(f=>`<a class="frame${mf==='all'||f.moods.includes(mf)?'':' dim'}" href="#film-${f.id}" data-fid="${f.id}" data-tilt><div class="ph" style="background-image:url(${f.poster()})"></div><span class="no">${String(f.id+1).padStart(2,'0')}A</span><span class="rr">★${f.rating}</span></a>`).join('');
+const home=()=>`<div class="cs"><aside class="panel" id="sel">${sel(hero)}</aside><div><div class="bar"><span class="mo lab">Develop by mood</span><button type="button" class="chipb on" data-mf="all">All frames</button>${moods.map(m=>`<button type="button" class="chipb" data-mf="${m.id}">${esc(m.label)}</button>`).join('')}</div><div class="sheet"><div class="perf"></div><div class="frames" id="frames">${frames()}</div><div class="perf b"></div></div><p class="mo" style="color:var(--mute);margin-top:14px">Hover a frame to read it. Click to open it. <span class="kbd">/</span> to search.</p></div></div>`;
+document.addEventListener('pointerover',e=>{const fr=e.target.closest&&e.target.closest('.frame');if(!fr||!document.getElementById('sel'))return;const f=films[+fr.dataset.fid];document.getElementById('sel').innerHTML=sel(f);});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mf]');if(!b)return;mf=b.dataset.mf;document.querySelectorAll('[data-mf]').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('frames').innerHTML=frames();});
+WVApp.mount({name:'WatchVibe · Contact Sheet',shell:(i,r)=>SW.shell(i,r,{home:'Sheet'}),home,card:SW.card});
+</script>

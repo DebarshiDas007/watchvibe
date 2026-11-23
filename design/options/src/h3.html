@@ -1,0 +1,39 @@
+<title>WatchVibe · Split Index</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+/*WALL*/
+.sp{display:grid;grid-template-columns:340px 1fr;padding:0 var(--pad);gap:0 var(--pad)}
+.side{position:sticky;top:58px;align-self:start;height:calc(100vh - 58px);overflow:auto;padding:30px 0 30px;border-right:1px solid var(--line);margin-right:-1px;padding-right:var(--pad);scrollbar-width:none}.side::-webkit-scrollbar{display:none}
+.side .hl{font:600 clamp(34px,3.4vw,52px)/.9 var(--fb);letter-spacing:-.07em;margin:8px 0 8px}.side .hl em{font-style:normal;color:var(--accent)}.side p.lead{color:var(--mute);font-size:14px;margin-bottom:22px}
+.side .lab{color:var(--mute);display:block;margin:20px 0 8px}.side .mnl a{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--line);font:600 18px var(--fb);letter-spacing:-.03em;transition:.2s}.side .mnl a:last-child{border-bottom:1px solid var(--line)}.side .mnl a:hover{padding-left:10px;color:var(--accent)}.side .mnl a span{font:400 11px var(--fm);color:var(--mute)}
+.side .jump a{display:flex;gap:10px;color:var(--mute);padding:6px 0;font-size:12px}.side .jump a b{font-weight:500;color:var(--mute)}.side .jump a.on,.side .jump a:hover{color:var(--ink)}.side .jump a.on b{color:var(--accent)}
+.side .st{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}.side .st b{display:block;font:600 34px/1 var(--fb);letter-spacing:-.05em}.side .st span{color:var(--mute);font-size:11px}
+.rowsec{padding:34px 0 8px;border-bottom:1px solid var(--ink)}.rowsec .rh{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}.rowsec .rh h2{font:600 clamp(28px,3.4vw,48px)/1 var(--fb);letter-spacing:-.06em}.rowsec .rh h2 span{color:var(--accent);font:500 12px var(--fm);letter-spacing:0;margin-right:10px;vertical-align:middle}.rowsec .rh a{color:var(--mute)}.rowsec .rh a:hover{color:var(--ink)}
+.rowsec .cap{color:var(--mute);margin-top:4px}
+.dc2{margin:34px 0 0}.dc2 .grid{padding:40px 0}.dc2 h3{grid-column:1/9}
+@media(max-width:900px){.sp{grid-template-columns:1fr;padding:0 var(--pad)}.side{position:static;height:auto;border-right:0;padding:24px 0 10px}.side .jump{display:none}.side .mnl{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-right:calc(-1*var(--pad))}.side .mnl::-webkit-scrollbar{display:none}.side .mnl a{border:1px solid var(--ink)!important;padding:9px 14px;white-space:nowrap;font-size:15px;flex:0 0 auto;gap:10px}.side .mnl a span{display:none}.side .mnl a:hover{padding-left:14px}.dc2 .grid{padding:34px 0}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="wall-index.html">← All hybrids</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script><script src="wall-ui.js"></script>
+<script>
+const {films,moods,top10,indian,acclaimed,hero,esc}=WV;
+const tonight=[hero,...top10.filter(f=>f!==hero),...acclaimed].filter((f,i,a)=>a.indexOf(f)===i).slice(0,14);
+const gems=films.filter(f=>f.moods.includes('gem')).sort((a,b)=>b.rating-a.rating).slice(0,12);
+const sections=[['tonight','Tonight',tonight,'Our pick first, then what everyone is watching.'],['top','Top ten',top10,'Newer films with the biggest ratings.'],['india','Indian cinema',indian,'Hindi, Tamil, Malayalam, Telugu, Kannada.'],['canon','Critically acclaimed',acclaimed,'Rated 8 and above by thousands of people.'],['gems','Hidden gems',gems,'Great films hardly anyone has seen.']];
+const avg=(films.reduce((s,f)=>s+f.rating,0)/films.length).toFixed(1);
+const home=()=>`<div class="sp"><aside class="side"><span class="mo" style="color:var(--accent)">Tonight</span><div class="hl">Tonight's <em>poster wall.</em></div><p class="lead">Pick a mood on the left, or scroll the walls on the right. Press <span class="kbd">/</span> to search.</p>
+<span class="mo lab">Moods</span><div class="mnl">${moods.map((m,i)=>`<a href="#mood-${m.id}" data-prev="${films.filter(f=>f.moods.includes(m.id)).sort((a,b)=>b.rating-a.rating)[0].poster()}">${esc(m.label)}<span>0${i+1} →</span></a>`).join('')}</div>
+<span class="mo lab hide-m">Jump to</span><div class="jump mo">${sections.map((s,i)=>`<a href="#r-${s[0]}"><b>0${i+1}</b>${s[1]}</a>`).join('')}</div>
+<span class="mo lab hide-m">Your numbers</span><div class="st hide-m"><div><b data-count="${films.length}">0</b><span class="mo">films</span></div><div><b data-count="${avg}" data-dec="1">0</b><span class="mo">avg rating</span></div><div><b>${WVApp.wlCount()}</b><span class="mo">saved</span></div><div><b data-count="7">0</b><span class="mo">day streak</span></div></div></aside>
+<main style="min-width:0">${sections.map((s,i)=>`<section class="rowsec" id="r-${s[0]}"><div class="rh"><h2><span>0${i+1}</span>${s[1]}</h2><a class="mo" href="#films">See all →</a></div><p class="cap">${s[3]}</p>${Wall.row(s[0],s[2],{label:s[1]})}</section>`).join('')}
+<div class="dc2"><div class="grid"><h3>Guess the film.<br>Every day.</h3><div class="r"><div class="mo" style="margin-bottom:14px">Day streak 7</div><a class="btn" href="#games">Play today's round →</a></div></div></div></main></div>`;
+document.addEventListener('click',e=>{const a=e.target.closest('.side .jump a');if(!a)return;e.preventDefault();const s=document.querySelector(a.getAttribute('href'));if(s)window.scrollTo({top:s.getBoundingClientRect().top+scrollY-70,behavior:'smooth'})});
+WVHook=r=>{if(r.name!=='home')return;Wall.bind();const links=[...document.querySelectorAll('.side .jump a')],secs=links.map(a=>document.querySelector(a.getAttribute('href')));const on=()=>{let k=0;secs.forEach((s,i)=>{if(s&&s.getBoundingClientRect().top<innerHeight*.45)k=i});links.forEach((a,i)=>a.classList.toggle('on',i===k))};window.addEventListener('scroll',on,{passive:true});on()};
+WVApp.mount({name:'WatchVibe · Split Index',shell:(i,r)=>SW.shell(i,r,{home:'Tonight'}),home,card:SW.card});
+</script>

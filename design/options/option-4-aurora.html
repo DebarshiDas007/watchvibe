@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WatchVibe · Option 4 · Glass Aurora</title>
+<!-- Fonts: General Sans (Fontshare, free for commercial use) + Instrument Serif (Google Fonts, OFL). -->
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+:root{--bg:#050b14;--ink:#eaf4ff;--mute:#8ea6bf;--glass:rgba(255,255,255,.06);--gb:rgba(255,255,255,.14);--teal:#35e0c1;--blue:#4c8dff;--rose:#ff8fb1}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 'General Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.aur{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}.aur i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.55;animation:fl 22s ease-in-out infinite alternate}
+.aur i:nth-child(1){width:620px;height:620px;background:#0f8f8a;left:-160px;top:-120px}.aur i:nth-child(2){width:560px;height:560px;background:#3354d6;right:-140px;top:120px;animation-delay:-8s}.aur i:nth-child(3){width:480px;height:480px;background:#7a3d9c;left:30%;top:60%;animation-delay:-14s;opacity:.4}
+@keyframes fl{to{transform:translate(70px,50px) scale(1.12)}}
+a{color:inherit;text-decoration:none}.ser{font-family:'Instrument Serif',serif;font-style:italic}.gl{background:var(--glass);border:1px solid var(--gb);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%)}
+.wrap{position:relative;z-index:1}
+.nav{position:sticky;top:18px;z-index:30;margin:18px auto 0;width:min(1120px,calc(100% - 32px));border-radius:99px;padding:10px 12px 10px 26px;display:flex;align-items:center;gap:22px;box-shadow:0 18px 50px -20px rgba(0,0,0,.7)}
+.logo{font:600 21px 'General Sans';letter-spacing:-.02em}.logo em{font:italic 400 25px 'Instrument Serif';color:var(--teal)}
+.nav nav{display:flex;gap:4px;margin-left:8px}.nav nav a{padding:8px 16px;border-radius:99px;font-size:14px;color:var(--mute);transition:.2s}.nav nav a:hover{color:var(--ink)}.nav nav a.on{background:rgba(255,255,255,.12);color:var(--ink)}
+.sp{flex:1}.sr{color:var(--mute);font-size:14px;padding:8px 18px;border-radius:99px;background:rgba(255,255,255,.05)}.av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--blue))}
+.hero{position:relative;width:min(1240px,calc(100% - 32px));margin:26px auto 0;border-radius:40px;overflow:hidden;min-height:560px;display:flex;align-items:flex-end;border:1px solid var(--gb)}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center 28%;transform:scale(1.05)}.hero .sh{position:absolute;inset:0;background:linear-gradient(0deg,rgba(5,11,20,.96),rgba(5,11,20,.15) 62%)}
+.hero .in{position:relative;padding:48px;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:end;width:100%}
+.hero h1{font:600 clamp(48px,6.4vw,92px)/.95 'General Sans';letter-spacing:-.045em}.hero h1 em{font:italic 400 1.04em 'Instrument Serif';color:var(--teal);letter-spacing:-.02em}
+.hero p{color:#c8d8e8;max-width:520px;margin:14px 0 24px;font-size:17px}.pills{display:flex;gap:8px;margin-bottom:18px}.pill{padding:6px 14px;border-radius:99px;font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 28px;border-radius:99px;font-weight:500;transition:.25s;cursor:pointer}.btn.p{background:linear-gradient(135deg,var(--teal),#7cf0d9);color:#02221e;box-shadow:0 12px 36px -10px rgba(53,224,193,.7)}.btn.g{margin-left:10px}.btn:hover{transform:translateY(-3px)}
+.thumb{width:170px;aspect-ratio:2/3;border-radius:22px;background-size:cover;border:1px solid var(--gb);box-shadow:0 30px 60px -20px #000;transform:rotate(3deg)}
+main{width:min(1240px,calc(100% - 32px));margin:0 auto}.sec{margin-top:72px}.sh2{display:flex;align-items:baseline;gap:14px;margin-bottom:22px}.sh2 h2{font:600 clamp(26px,3vw,38px) 'General Sans';letter-spacing:-.03em}.sh2 h2 em{font:italic 400 1.1em 'Instrument Serif';color:var(--teal)}.sh2 a{margin-left:auto;color:var(--mute);font-size:14px}
+.moods{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}.mood{border-radius:28px;padding:22px;min-height:168px;display:flex;flex-direction:column;justify-content:flex-end;transition:.3s;position:relative;overflow:hidden}
+.mood::before{content:"";position:absolute;width:140px;height:140px;border-radius:50%;filter:blur(40px);right:-40px;top:-40px;background:var(--c);opacity:.5;transition:.3s}.mood:hover{transform:translateY(-6px);background:rgba(255,255,255,.1)}.mood:hover::before{opacity:.9}
+.mood b{font:600 20px/1.15 'General Sans';letter-spacing:-.02em;position:relative}.mood small{color:var(--mute);font-size:12.5px;position:relative;margin-top:6px}
+.row{display:flex;gap:18px;overflow-x:auto;padding:6px 2px 20px;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 94%,transparent)}.row::-webkit-scrollbar{display:none}
+.card{display:block;flex:0 0 auto;width:192px;transition:.3s}.card .ph{aspect-ratio:2/3;border-radius:26px;background:#10202f center/cover;border:1px solid var(--gb);transition:.3s;position:relative;overflow:hidden}.card:hover .ph{transform:translateY(-8px) scale(1.02);box-shadow:0 26px 50px -14px rgba(53,224,193,.35)}
+.card .rt{position:absolute;left:10px;bottom:10px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600}.card .t{font-weight:500;font-size:16px;margin:12px 4px 0;letter-spacing:-.01em}.card .s{font-size:13px;color:var(--mute);margin:2px 4px}
+.t10 .card{width:232px;position:relative}.t10 .n{position:absolute;left:8px;top:-6px;font:italic 400 92px/1 'Instrument Serif';color:rgba(255,255,255,.9);z-index:2;text-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none}
+.wide .card{width:360px}.wide .ph{aspect-ratio:16/9;border-radius:28px}
+.daily{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}.box{border-radius:36px;padding:40px}.box h3{font:600 clamp(28px,3.2vw,42px)/1.05 'General Sans';letter-spacing:-.04em;margin:12px 0 12px}.box h3 em{font:italic 400 1.1em 'Instrument Serif';color:var(--teal)}.box p{color:var(--mute);max-width:420px;margin-bottom:24px}
+.sc{display:grid;place-items:center;text-align:center}.sc .big{font:italic 400 130px/1 'Instrument Serif';background:linear-gradient(135deg,var(--teal),var(--rose));-webkit-background-clip:text;color:transparent}
+footer{width:min(1240px,calc(100% - 32px));margin:90px auto 30px;padding:24px 30px;border-radius:99px;display:flex;justify-content:space-between;color:var(--mute);font-size:14px;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.nav nav,.sr{display:none}.nav{padding:8px 8px 8px 20px;top:10px}.hero{min-height:520px;border-radius:30px}.hero .in{grid-template-columns:1fr;padding:26px}.thumb{display:none}.moods{grid-template-columns:repeat(2,1fr)}.daily{grid-template-columns:1fr}.card{width:150px}.t10 .card{width:190px}.t10 .n{font-size:68px}.wide .card{width:280px}.box{padding:28px}footer{border-radius:26px}}
+</style></head><body>
+<div class="aur"><i></i><i></i><i></i></div>
+<div class="wrap">
+<div class="gl nav"><a class="logo" href="#">Watch<em>vibe</em></a><nav><a class="on" href="#">Home</a><a href="#">Movies</a><a href="#">Series</a><a href="#">Games</a><a href="#">Watchlist</a></nav><span class="sp"></span><span class="sr">Search films, moods, people</span><div class="av"></div></div>
+<div class="hero" id="hero"><div class="bg"></div><div class="sh"></div><div class="in"></div></div>
+<main>
+<div class="sec"><div class="sh2"><h2>What's your <em>mood</em> tonight?</h2><a href="#">All moods →</a></div><div class="moods" id="moods"></div></div>
+<div class="sec t10"><div class="sh2"><h2>Top <em>ten</em> this week</h2><a href="#">See all →</a></div><div class="row" id="top"></div></div>
+<div class="sec"><div class="sh2"><h2>Indian <em>cinema</em></h2><a href="#">See all →</a></div><div class="row" id="ind"></div></div>
+<div class="sec wide"><div class="sh2"><h2>Critically <em>acclaimed</em></h2><a href="#">See all →</a></div><div class="row" id="acc"></div></div>
+<div class="sec daily"><div class="gl box"><span class="pill gl" style="font-size:12px;padding:5px 14px;border-radius:99px">Daily challenge · No. 21</span><h3>Guess the film from a <em>single frame</em></h3><p>Twenty questions, three levels. The same for everyone today.</p><a class="btn p" href="#">Play now</a></div><div class="gl box sc"><div><div class="big">7</div><div style="color:var(--mute);margin-top:4px">day streak</div></div></div></div>
+</main>
+<footer class="gl"><span>WatchVibe · find what to watch by feeling</span><span>Privacy · Terms · Film data from TMDB</span></footer>
+</div>
+<script src="data.js"></script><script>
+const {moods,top10,indian,acclaimed,hero,esc}=WV;
+const h=document.getElementById('hero');h.querySelector('.bg').style.backgroundImage=`url(${hero.back(1280)})`;
+h.querySelector('.in').innerHTML=`<div><div class="pills"><span class="pill gl">★ ${hero.rating}</span><span class="pill gl">${hero.year}</span><span class="pill gl">${esc(hero.genre)}</span></div><h1>Project <em>Hail Mary</em></h1><p>${esc(hero.plot)}</p><a class="btn p" href="#">▶ Play trailer</a><a class="btn g gl" href="#">+ Watchlist</a></div><div class="thumb" style="background-image:url(${hero.poster(342)})"></div>`;
+const cc=['#ff8fb1','#4c8dff','#ffd36b','#35e0c1','#ff6b6b','#b79bff'];
+document.getElementById('moods').innerHTML=moods.map((m,i)=>`<a class="gl mood" href="#" style="--c:${cc[i]}"><b>${esc(m.label)}</b><small>${esc(m.blurb)}</small></a>`).join('');
+const card=(f,w)=>`<a class="card" href="#"><div class="ph" style="background-image:url(${w?f.back(780):f.poster(342)})"><span class="rt gl">★ ${f.rating}</span></div><div class="t">${esc(f.title)}</div><div class="s">${f.year} · ${esc(f.genre.split(' · ')[0])}</div></a>`;
+document.getElementById('top').innerHTML=top10.map((f,i)=>`<div style="position:relative;flex:0 0 auto;width:220px"><span style="position:absolute;left:10px;top:-8px;font:italic 400 88px/1 'Instrument Serif';color:rgba(255,255,255,.92);z-index:2;text-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none">${i+1}</span>${card(f).replace('class="card"','class="card" style="width:220px"')}</div>`).join('');
+document.getElementById('ind').innerHTML=indian.map(f=>card(f)).join('');
+document.getElementById('acc').innerHTML=acclaimed.map(f=>card(f,true)).join('');
+</script></body></html>

@@ -1,0 +1,28 @@
+<title>WatchVibe Wall and Index</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f4f4f0;--fg:#0d0d0d;--mute:#66665f;--line:#d4d4cd;--card:#fff;--accent:#1d3dff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e0e0d;--fg:#f3f3ee;--mute:#9a9a93;--line:#2e2e2c;--card:#181817;--accent:#6c84ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e0e0d;--fg:#f3f3ee;--mute:#9a9a93;--line:#2e2e2c;--card:#181817;--accent:#6c84ff;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.5 Inter,system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:34px 70px;transition:.3s}
+.w{max-width:1240px;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;gap:12px}.mono{font:500 12px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.04em}
+.tg{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--fg);background:transparent;color:var(--fg);padding:8px 14px;cursor:pointer;font:500 12px 'IBM Plex Mono',monospace;text-transform:uppercase}.tg:hover{background:var(--fg);color:var(--bg)}
+h1{font:600 clamp(40px,6.4vw,92px)/.9 Inter,sans-serif;letter-spacing:-.06em;margin:0 0 16px;text-wrap:balance}.lead{color:var(--mute);max-width:700px;font-size:18px;margin:0 0 36px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+.c{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--fg);text-decoration:none;color:inherit;transition:.2s}.c:hover{transform:translateY(-4px);border-color:var(--accent)}.c:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.c .im{aspect-ratio:16/10;background:#222 center/cover top;border-bottom:1px solid var(--fg)}.c .b{padding:18px 20px 20px;display:grid;gap:8px}.c h2{font:600 24px Inter,sans-serif;letter-spacing:-.04em;margin:0}.c p{margin:0;color:var(--mute);font-size:15px}.c .tags{display:flex;gap:6px;flex-wrap:wrap}.c .tags span{border:1px solid var(--line);padding:2px 8px;font:500 11px 'IBM Plex Mono',monospace;text-transform:uppercase;color:var(--mute)}.go{margin-top:4px;font-weight:600;color:var(--accent)}
+.note{margin-top:36px;color:var(--mute);font-size:14px;max-width:780px}
+</style>
+<div class="w"><div class="top"><span class="mono">WatchVibe · Index Plus meets Poster Wall</span><button type="button" class="tg" id="tg">Switch to dark</button></div>
+<h1>Tonight's poster wall, with the index behind it</h1>
+<p class="lead">Three ways to combine the clear structure of Index Plus (sections, the Top 10 chart, mood rows, tabs, counters) with the Poster Wall (a swipeable wall of big numbered posters). Each one has the light and dark switch, and the same working mood pages, film page, watchlist, search and daily game.</p>
+<div class="grid">
+<a class="c" href="h1.html"><div class="im" style="background-image:url(img/hy-1.jpg)"></div><div class="b"><span class="mono" style="color:var(--accent)">1 · Wall and Index</span><h2>The wall with a "now showing" panel</h2><p>A big wall of posters with the film in front shown in a panel beside it. Tap a mood chip and the whole wall re-sorts. Below: counters, mood rows with poster trios, Top 10 tabs.</p><div class="tags"><span>live mood sort</span><span>now showing</span><span>tabs</span><span>counters</span></div><span class="go">Open →</span></div></a>
+<a class="c" href="h2.html"><div class="im" style="background-image:url(img/hy-2.jpg)"></div><div class="b"><span class="mono" style="color:var(--accent)">2 · Tonight Tabs</span><h2>One huge wall, five shelves</h2><p>A giant headline and a full-width wall with oversized numerals. Tabs switch it between Tonight, Top 10, Indian cinema, Acclaimed and Hidden gems.</p><div class="tags"><span>tabs</span><span>full-width wall</span><span>hover preview</span></div><span class="go">Open →</span></div></a>
+<a class="c" href="h3.html"><div class="im" style="background-image:url(img/hy-3.jpg)"></div><div class="b"><span class="mono" style="color:var(--accent)">3 · Split Index</span><h2>A sticky index, a wall for every section</h2><p>A left column that stays put with moods, a jump list and your numbers, and on the right a poster wall for each section, with arrows and progress bars.</p><div class="tags"><span>sticky index</span><span>many walls</span><span>scroll spy</span></div><span class="go">Open →</span></div></a>
+</div>
+<p class="note">Films, posters and ratings are real catalogue data. Where-to-watch lists are samples. Nothing here is live on the WatchVibe site.</p></div>
+<script>
+(function(){var r=document.documentElement,b=document.getElementById('tg');function cur(){return r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}function lab(){b.textContent=cur()==='dark'?'Switch to light':'Switch to dark'}try{var s=localStorage.getItem('wvd_theme');if(s)r.dataset.theme=s}catch(e){}lab();b.addEventListener('click',function(){var t=cur()==='dark'?'light':'dark';r.dataset.theme=t;try{localStorage.setItem('wvd_theme',t)}catch(e){}lab()})})();
+</script>

@@ -1,0 +1,36 @@
+<title>WatchVibe · Tonight Tabs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+/*WALL*/
+.h2{border-bottom:1px solid var(--ink);padding-bottom:26px}.h2 .top{padding:36px var(--pad) 0;display:flex;justify-content:space-between;align-items:flex-end;gap:26px;flex-wrap:wrap}.h2 h1{font:600 clamp(48px,8.4vw,136px)/.86 var(--fb);letter-spacing:-.075em}.h2 h1 em{font-style:normal;color:var(--accent)}.h2 .side{max-width:320px;color:var(--mute);display:grid;gap:12px}.h2 .side b{color:var(--ink);font-weight:500}
+.h2 .tabrow{padding:26px var(--pad) 0}.h2 .tabrow .cap{display:flex;justify-content:space-between;color:var(--mute);margin-top:10px;gap:12px;flex-wrap:wrap}
+.h2 .wallw{padding:0 var(--pad)}.h2 .pc{width:min(300px,70vw)}.h2 .pc .nn{font-size:130px;top:-60px}.h2 .snap{padding-top:70px}
+.sec2 .hd .cnt{display:block;font:600 60px/1 var(--fb);letter-spacing:-.06em;margin-top:14px;color:var(--ink)}
+@media(max-width:900px){.h2 .pc .nn{font-size:90px;top:-40px}.h2 .snap{padding-top:50px}.h2 .top{padding-top:24px}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="wall-index.html">← All hybrids</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script><script src="wall-ui.js"></script>
+<script>
+const {films,moods,top10,indian,acclaimed,hero,esc}=WV;
+const tonight=[hero,...top10.filter(f=>f!==hero),...acclaimed].filter((f,i,a)=>a.indexOf(f)===i).slice(0,14);
+const gems=films.filter(f=>f.moods.includes('gem')).sort((a,b)=>b.rating-a.rating);
+const TABS={tonight:['Tonight',tonight,'Our pick for tonight, then the ten everyone is watching.'],top:['Top 10',top10,'Newer films with the biggest ratings and crowds.'],india:['Indian cinema',indian,'Hindi, Tamil, Malayalam, Telugu, Kannada.'],canon:['Acclaimed',acclaimed,'Rated 8 and above by thousands of people.'],gems:['Hidden gems',gems.slice(0,12),'Great films hardly anyone has seen.']};
+const bestOf=id=>films.filter(f=>f.moods.includes(id)).sort((a,b)=>b.rating-a.rating);
+const mq=moods.map(m=>`<span>${esc(m.label)}</span>`).join('')+['Daily challenge no. 21','New: Project Hail Mary'].map(t=>`<span>${t}</span>`).join('');
+const home=()=>`<div class="marq mo"><div>${mq}${mq}</div></div>
+<div class="h2"><div class="top"><div><div class="mo" style="color:var(--accent);margin-bottom:12px">Tonight</div><h1>Tonight's<br><em>poster wall.</em></h1></div><div class="side"><p>Pick a shelf with the tabs, then swipe. Every poster opens its film. <span class="kbd">/</span> searches anything.</p><div class="mo"><b>${films.length}</b> films · <b>${moods.length}</b> moods · <b>7</b> day streak</div></div></div>
+<div class="tabrow"><div class="tabs">${Object.entries(TABS).map(([k,v],i)=>`<button type="button" class="${i?'':'on'}" data-wt="${k}">${v[0]}</button>`).join('')}</div><div class="cap mo" id="cap"><span>${TABS.tonight[2]}</span><span>${TABS.tonight[1].length} posters</span></div></div>
+<div class="wallw" id="wallhost">${Wall.row('main',tonight)}</div></div>
+<div class="sec2"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">01 — Moods</span><h2>Or start with a feeling.</h2><span class="cnt" data-count="${moods.length}">0</span></div><div class="bd mlist2">${moods.map((m,i)=>`<a href="#mood-${m.id}" data-prev="${bestOf(m.id)[0].poster()}"><span class="mo">0${i+1}</span><b>${esc(m.label)}<span class="d">${esc(m.blurb)}</span></b><span class="mini">${bestOf(m.id).slice(0,3).map(f=>`<span style="background-image:url(${f.poster()})"></span>`).join('')}</span><span class="mo">→</span></a>`).join('')}</div></div></div>
+<div class="sec2 wide"><div class="grid"><div class="hd"><span class="mo" style="color:var(--accent)">02 — Canon</span><h2>Critically acclaimed.</h2><p>Wide frames from the films everyone quotes.</p></div><div class="bd">${SW.stripOf(acclaimed,{wide:true})}</div></div></div>
+<div class="dc2"><div class="grid"><h3>Guess the film.<br>Every day.</h3><div class="r"><div class="mo" style="margin-bottom:14px">Day streak 7</div><a class="btn" href="#games">Play today's round →</a></div></div></div>`;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-wt]');if(!b)return;document.querySelectorAll('[data-wt]').forEach(x=>x.classList.toggle('on',x===b));const t=TABS[b.dataset.wt];document.getElementById('wallhost').innerHTML=Wall.row('main',t[1],{label:t[0]});document.getElementById('cap').innerHTML=`<span>${t[2]}</span><span>${t[1].length} posters</span>`;Wall.bind()});
+WVHook=r=>{if(r.name==='home')Wall.bind()};
+WVApp.mount({name:'WatchVibe · Tonight Tabs',shell:(i,r)=>SW.shell(i,r,{home:'Tonight'}),home,card:SW.card});
+</script>

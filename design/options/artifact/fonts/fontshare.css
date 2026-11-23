@@ -1,0 +1,68 @@
+/* Gambetta */
+@font-face {
+  font-family: 'Gambetta';
+  src: url('//cdn.fontshare.com/wf/UZPXFLPCL3LPXEMLR5DTVJKV74OXXAV4/6OFIA3NPHGHWKE52SKZL7EQ4WH22JUMB/ODDSCHC7OZCRRQJDJV5LMJKTGF7URFO4.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/UZPXFLPCL3LPXEMLR5DTVJKV74OXXAV4/6OFIA3NPHGHWKE52SKZL7EQ4WH22JUMB/ODDSCHC7OZCRRQJDJV5LMJKTGF7URFO4.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/UZPXFLPCL3LPXEMLR5DTVJKV74OXXAV4/6OFIA3NPHGHWKE52SKZL7EQ4WH22JUMB/ODDSCHC7OZCRRQJDJV5LMJKTGF7URFO4.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Gambetta';
+  src: url('//cdn.fontshare.com/wf/ITJUM5VVHQ7UW5EENVHV4QTRJFMNJPQT/KI4FEPIIYE3LPFVXSBL2RIVU6YIZOCWI/Z2AWFZWVPYXOZJYIQOV77P3V5Z2O33AT.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/ITJUM5VVHQ7UW5EENVHV4QTRJFMNJPQT/KI4FEPIIYE3LPFVXSBL2RIVU6YIZOCWI/Z2AWFZWVPYXOZJYIQOV77P3V5Z2O33AT.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/ITJUM5VVHQ7UW5EENVHV4QTRJFMNJPQT/KI4FEPIIYE3LPFVXSBL2RIVU6YIZOCWI/Z2AWFZWVPYXOZJYIQOV77P3V5Z2O33AT.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Gambetta';
+  src: url('//cdn.fontshare.com/wf/LTP7L3IV35TGGKXISPM35MXAMA7PX7BF/JOULNGXDDVVIJYXX35DI2FQJG2H4EOGJ/UMQTMTAEPCAFNEJDVEURBIXJENGOHOWO.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/LTP7L3IV35TGGKXISPM35MXAMA7PX7BF/JOULNGXDDVVIJYXX35DI2FQJG2H4EOGJ/UMQTMTAEPCAFNEJDVEURBIXJENGOHOWO.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/LTP7L3IV35TGGKXISPM35MXAMA7PX7BF/JOULNGXDDVVIJYXX35DI2FQJG2H4EOGJ/UMQTMTAEPCAFNEJDVEURBIXJENGOHOWO.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Gambetta';
+  src: url('//cdn.fontshare.com/wf/65DOO47KPW62HT2XE74NDRJWHMMD66TW/5PVPZKX2K4M6LDOCQUGGRQ7DLAVNXB2D/6KRVTMHEY26GBVOWXYL6F3ZLGUXE5ZD5.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/65DOO47KPW62HT2XE74NDRJWHMMD66TW/5PVPZKX2K4M6LDOCQUGGRQ7DLAVNXB2D/6KRVTMHEY26GBVOWXYL6F3ZLGUXE5ZD5.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/65DOO47KPW62HT2XE74NDRJWHMMD66TW/5PVPZKX2K4M6LDOCQUGGRQ7DLAVNXB2D/6KRVTMHEY26GBVOWXYL6F3ZLGUXE5ZD5.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+  font-style: normal;
+}
+
+/* General Sans */
+@font-face {
+  font-family: 'General Sans';
+  src: url('//cdn.fontshare.com/wf/MFQT7HFGCR2L5ULQTW6YXYZXXHMPKLJ3/YWQ244D6TACUX5JBKATPOW5I5MGJ3G73/7YY3ZAAE3TRV2LANYOLXNHTPHLXVWTKH.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/MFQT7HFGCR2L5ULQTW6YXYZXXHMPKLJ3/YWQ244D6TACUX5JBKATPOW5I5MGJ3G73/7YY3ZAAE3TRV2LANYOLXNHTPHLXVWTKH.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/MFQT7HFGCR2L5ULQTW6YXYZXXHMPKLJ3/YWQ244D6TACUX5JBKATPOW5I5MGJ3G73/7YY3ZAAE3TRV2LANYOLXNHTPHLXVWTKH.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('//cdn.fontshare.com/wf/3RZHWSNONLLWJK3RLPEKUZOMM56GO4LJ/BPDRY7AHVI3MCDXXVXTQQ76H3UXA63S3/SB2OEB6IKZPRR6JT4GFJ2TFT6HBB6AZN.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/3RZHWSNONLLWJK3RLPEKUZOMM56GO4LJ/BPDRY7AHVI3MCDXXVXTQQ76H3UXA63S3/SB2OEB6IKZPRR6JT4GFJ2TFT6HBB6AZN.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/3RZHWSNONLLWJK3RLPEKUZOMM56GO4LJ/BPDRY7AHVI3MCDXXVXTQQ76H3UXA63S3/SB2OEB6IKZPRR6JT4GFJ2TFT6HBB6AZN.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('//cdn.fontshare.com/wf/K46YRH762FH3QJ25IQM3VAXAKCHEXXW4/ISLWQPUZHZF33LRIOTBMFOJL57GBGQ4B/3ZLMEXZEQPLTEPMHTQDAUXP5ZZXCZAEN.woff2') format('woff2'),
+       url('//cdn.fontshare.com/wf/K46YRH762FH3QJ25IQM3VAXAKCHEXXW4/ISLWQPUZHZF33LRIOTBMFOJL57GBGQ4B/3ZLMEXZEQPLTEPMHTQDAUXP5ZZXCZAEN.woff') format('woff'),
+       url('//cdn.fontshare.com/wf/K46YRH762FH3QJ25IQM3VAXAKCHEXXW4/ISLWQPUZHZF33LRIOTBMFOJL57GBGQ4B/3ZLMEXZEQPLTEPMHTQDAUXP5ZZXCZAEN.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+  font-style: normal;
+}
+
+

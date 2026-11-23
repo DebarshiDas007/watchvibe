@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WatchVibe · Option 3 · Paper Pop</title>
+<!-- Fonts: Cabinet Grotesk (Fontshare, free for commercial use) + Space Mono (Google Fonts, OFL). -->
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&f[]=satoshi@400,500,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{--bg:#fff3dc;--ink:#141414;--org:#ff6b2c;--lime:#b8f24a;--sky:#72c9ff;--pink:#ff9ec7;--yel:#ffd84a;--card:#fffaf0}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:500 16px/1.5 Satoshi,system-ui,sans-serif;background-image:radial-gradient(rgba(20,20,20,.09) 1.2px,transparent 1.2px);background-size:22px 22px}
+a{color:inherit;text-decoration:none}.g{font-family:'Cabinet Grotesk',sans-serif}.m{font-family:'Space Mono',monospace}
+.bx{border:2.5px solid var(--ink);box-shadow:5px 5px 0 var(--ink);border-radius:18px;background:var(--card);transition:.15s}
+header{display:flex;align-items:center;gap:18px;padding:18px 36px;border-bottom:2.5px solid var(--ink);background:var(--yel);position:sticky;top:0;z-index:10}
+.logo{font:800 32px 'Cabinet Grotesk';letter-spacing:-.03em}.logo span{background:var(--ink);color:var(--yel);padding:0 8px;border-radius:8px;margin-left:2px}
+nav{display:flex;gap:6px;margin-left:16px}nav a{padding:8px 16px;border:2.5px solid transparent;border-radius:99px;font:700 15px 'Cabinet Grotesk'}nav a:hover{border-color:var(--ink);background:#fff}nav a.on{border-color:var(--ink);background:var(--ink);color:var(--yel)}
+.sp{flex:1}.search{background:#fff;border:2.5px solid var(--ink);border-radius:99px;padding:9px 18px;min-width:240px;font:400 14px 'Space Mono';box-shadow:3px 3px 0 var(--ink)}.av{width:42px;height:42px;border-radius:50%;background:var(--pink);border:2.5px solid var(--ink)}
+main{padding:36px;max-width:1500px;margin:0 auto}
+.bento{display:grid;grid-template-columns:2.1fr 1fr;grid-template-rows:auto auto;gap:22px}
+.hero{position:relative;min-height:470px;overflow:hidden;display:flex;align-items:flex-end;padding:0}.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center 25%}.hero .sh{position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,20,20,.92),transparent 62%)}
+.hero .in{position:relative;padding:34px;color:#fff}.tag{display:inline-block;background:var(--lime);color:var(--ink);font:700 12px 'Space Mono';border:2px solid var(--ink);border-radius:8px;padding:4px 10px;transform:rotate(-2deg);box-shadow:3px 3px 0 var(--ink)}
+.hero h1{font:800 clamp(46px,6vw,88px)/.92 'Cabinet Grotesk';letter-spacing:-.03em;margin:14px 0 10px}.hero p{max-width:520px;color:#ece7da}.hero .row2{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;height:50px;padding:0 24px;border:2.5px solid var(--ink);border-radius:14px;font:800 16px 'Cabinet Grotesk';background:var(--org);color:var(--ink);box-shadow:4px 4px 0 var(--ink);transition:.12s;cursor:pointer}.btn:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}.btn.w{background:#fff}
+.side{display:grid;gap:22px}.mini{padding:22px}.mini h3{font:800 26px/1.05 'Cabinet Grotesk'}.mini p{font-size:14px;margin:8px 0 14px}.mini.c1{background:var(--sky)}.mini.c2{background:var(--pink)}
+.sec{margin-top:54px}.sh2{display:flex;align-items:center;gap:14px;margin-bottom:20px}.sh2 h2{font:800 clamp(28px,3.2vw,42px) 'Cabinet Grotesk';letter-spacing:-.02em;background:var(--lime);padding:0 10px;border:2.5px solid var(--ink);border-radius:10px;transform:rotate(-.8deg)}.sh2 a{margin-left:auto;font:700 13px 'Space Mono';border-bottom:2.5px solid var(--ink)}
+.moods{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}.mood{padding:20px 16px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}.mood:hover{transform:translate(-3px,-3px) rotate(-1deg);box-shadow:8px 8px 0 var(--ink)}.mood b{font:800 22px/1.05 'Cabinet Grotesk'}.mood .em{font:700 12px 'Space Mono'}
+.row{display:flex;gap:20px;overflow-x:auto;padding:4px 10px 22px 4px;scrollbar-width:none}.row::-webkit-scrollbar{display:none}
+.card{display:block;flex:0 0 auto;width:196px}.card .ph{aspect-ratio:2/3;background:#ddd center/cover;border-radius:14px;border:2.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);transition:.15s;position:relative}.card:hover .ph{transform:translate(-3px,-3px) rotate(-1.2deg);box-shadow:8px 8px 0 var(--ink)}
+.card .rt{position:absolute;right:-8px;top:-10px;background:var(--yel);border:2.5px solid var(--ink);border-radius:99px;font:700 12px 'Space Mono';padding:2px 9px;z-index:2;transform:rotate(6deg)}
+.card .t{font:800 18px/1.15 'Cabinet Grotesk';margin-top:14px}.card .s{font:400 12px 'Space Mono';opacity:.7;margin-top:2px}
+.t10 .card{width:230px;position:relative;padding-left:34px}.t10 .n{position:absolute;left:-4px;bottom:52px;font:800 120px/1 'Cabinet Grotesk';color:var(--org);-webkit-text-stroke:3px var(--ink);z-index:3;pointer-events:none}
+.wide .card{width:360px}.wide .ph{aspect-ratio:16/9}
+.daily{display:grid;grid-template-columns:1.4fr 1fr;gap:22px}.daily .a{padding:34px;background:var(--org)}.daily .a h3{font:800 clamp(30px,3.4vw,46px)/1 'Cabinet Grotesk';margin:14px 0}.daily .b{padding:34px;background:var(--lime);display:grid;place-items:center;text-align:center}.daily .big{font:800 96px/1 'Cabinet Grotesk'}
+footer{margin:80px 0 20px;padding:24px 36px;border-top:2.5px solid var(--ink);display:flex;justify-content:space-between;font:400 13px 'Space Mono';flex-wrap:wrap;gap:12px;background:var(--yel)}
+@media(max-width:900px){header{padding:12px 16px}nav,.search{display:none}main{padding:18px 16px}.bento{grid-template-columns:1fr}.hero{min-height:420px}.moods{grid-template-columns:repeat(2,1fr)}.daily{grid-template-columns:1fr}.card{width:150px}.t10 .card{width:190px}.t10 .n{font-size:84px}.wide .card{width:280px}footer{padding:20px 16px}}
+</style></head><body>
+<header><a class="logo" href="#">Watch<span>Vibe</span></a><nav><a class="on" href="#">Home</a><a href="#">Movies</a><a href="#">Series</a><a href="#">Games</a><a href="#">Watchlist</a></nav><span class="sp"></span><div class="search">search anything…</div><div class="av"></div></header>
+<main>
+<div class="bento"><div class="bx hero" id="hero"><div class="bg"></div><div class="sh"></div><div class="in"></div></div>
+<div class="side"><div class="bx mini c1"><h3>What are you feeling tonight?</h3><p>Pick a mood and get a whole page of films that match it.</p><a class="btn w" href="#">Pick a mood →</a></div><div class="bx mini c2"><span class="tag">DAILY #21</span><h3 style="margin-top:12px">Guess the film from one frame</h3><p>20 questions. Same for everyone.</p><a class="btn" href="#">Play →</a></div></div></div>
+<div class="sec"><div class="sh2"><h2>Pick your vibe</h2></div><div class="moods" id="moods"></div></div>
+<div class="sec t10"><div class="sh2"><h2>Top 10 right now</h2><a href="#">see all →</a></div><div class="row" id="top"></div></div>
+<div class="sec"><div class="sh2"><h2>Indian cinema</h2><a href="#">see all →</a></div><div class="row" id="ind"></div></div>
+<div class="sec wide"><div class="sh2"><h2>Critically acclaimed</h2><a href="#">see all →</a></div><div class="row" id="acc"></div></div>
+<div class="sec daily"><div class="bx a"><span class="tag" style="background:#fff">DAILY CHALLENGE</span><h3>Three levels. Twenty questions. Zero spoilers.</h3><a class="btn w" href="#">Start today's round</a></div><div class="bx b"><div><div class="m" style="font-size:13px">YOUR STREAK</div><div class="big">7</div><div class="m" style="font-size:13px">DAYS IN A ROW</div></div></div></div>
+</main>
+<footer><span class="g" style="font-weight:800;font-size:20px">WatchVibe</span><span>privacy · terms · film data from TMDB</span></footer>
+<script src="data.js"></script><script>
+const {moods,top10,indian,acclaimed,hero,esc}=WV;
+const h=document.getElementById('hero');h.querySelector('.bg').style.backgroundImage=`url(${hero.back(1280)})`;
+h.querySelector('.in').innerHTML=`<span class="tag">NEW · ★ ${hero.rating}</span><h1>${esc(hero.title)}</h1><p>${esc(hero.plot)}</p><div class="row2"><a class="btn" href="#">▶ Play trailer</a><a class="btn w" href="#">+ Watchlist</a></div>`;
+const cs=['var(--pink)','var(--sky)','var(--yel)','var(--lime)','var(--org)','#d9c2ff'],em=['☔','🌀','😂','🫖','⚡','💎'];
+document.getElementById('moods').innerHTML=moods.map((m,i)=>`<a class="bx mood" href="#" style="background:${cs[i]}"><span class="em">${em[i]} 0${i+1}</span><b>${esc(m.label)}</b></a>`).join('');
+const card=(f,w)=>`<a class="card" href="#"><div class="ph" style="background-image:url(${w?f.back(780):f.poster(342)})"><span class="rt">★ ${f.rating}</span></div><div class="t">${esc(f.title)}</div><div class="s">${f.year} · ${esc(f.genre.split(' · ')[0])}</div></a>`;
+document.getElementById('top').innerHTML=top10.map((f,i)=>`<div style="position:relative;flex:0 0 auto;width:240px;padding-left:34px"><span style="position:absolute;left:-4px;bottom:52px;font:800 110px/1 'Cabinet Grotesk';color:#ff6b2c;-webkit-text-stroke:3px #141414;z-index:3;pointer-events:none">${i+1}</span>${card(f).replace('class="card"','class="card" style="width:200px"')}</div>`).join('');
+document.getElementById('ind').innerHTML=indian.map(f=>card(f)).join('');
+document.getElementById('acc').innerHTML=acclaimed.map(f=>card(f,true)).join('');
+</script></body></html>

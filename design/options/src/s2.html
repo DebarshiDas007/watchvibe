@@ -1,0 +1,37 @@
+<title>WatchVibe · Bento Swiss</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script>try{var q=(location.search.match(/theme=(light|dark)/)||[])[1];var t=q||localStorage.getItem('wvd_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+/*FONTS*/
+/*BASE*/
+/*PAGES*/
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;padding:12px var(--pad) 0}
+.tl{border:1px solid var(--ink);background:var(--surface);padding:22px;position:relative;overflow:hidden;min-width:0;transition:.25s}.tl:hover{border-color:var(--accent)}
+.tl h3{font:600 26px/1.05 var(--fb);letter-spacing:-.04em;margin:8px 0 12px}.tl .lab{color:var(--accent)}
+.feat{grid-column:span 7;grid-row:span 2;min-height:560px;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;padding:0;background:#111 center/cover}.feat::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.92),rgba(0,0,0,.05) 70%)}.feat .in{position:relative;padding:30px}.feat h1{font:600 clamp(56px,8vw,120px)/.84 var(--fb);letter-spacing:-.07em;margin:12px 0 16px}.feat p{max-width:480px;color:#e6e6e0;margin-bottom:22px}.feat .btn{border-color:#fff;color:#fff}.feat .btn.solid{background:#fff;color:#0d0d0d}.feat .btn[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.t-moods{grid-column:span 5}.t-moods a{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-top:1px solid var(--line);font:600 19px var(--fb);letter-spacing:-.03em;transition:.2s}.t-moods a:hover{padding-left:10px;color:var(--accent)}.t-moods a span{font:400 12px var(--fm);color:var(--mute)}
+.t-daily{grid-column:span 5;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);display:flex;flex-direction:column;justify-content:space-between}.t-daily .lab{color:inherit;opacity:.8}.t-daily .big{font:600 110px/.9 var(--fb);letter-spacing:-.07em}.t-daily .btn{background:var(--accent-ink);color:var(--accent);border-color:var(--accent-ink);align-self:flex-start}
+.t-top{grid-column:span 4}.t-top a{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.t-top a:hover b{color:var(--accent)}.t-top b{font:600 17px var(--fb);letter-spacing:-.03em}.t-top .mo{color:var(--mute)}
+.t-gems{grid-column:span 4}.t-gems .tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}.t-gems .tri a{aspect-ratio:2/3;background:var(--line) center/cover;display:block;transition:.25s}.t-gems .tri a:hover{transform:translateY(-4px)}
+.t-wl{grid-column:span 4;display:flex;flex-direction:column;justify-content:space-between}.t-wl .big{font:600 80px/1 var(--fb);letter-spacing:-.06em}.t-wl p{color:var(--mute);font-size:14px}
+.t-strip{grid-column:span 12}.t-strip .strip{margin-top:12px}
+@media(max-width:900px){.bento{grid-template-columns:1fr;padding:12px var(--pad)}.feat,.t-moods,.t-daily,.t-top,.t-gems,.t-wl,.t-strip{grid-column:1/-1;grid-row:auto}.feat{min-height:440px}}
+</style>
+<div id="app"></div>
+<a class="back-all" href="index.html">← All variations</a>
+<script src="data.js"></script><script src="app.js"></script><script src="swiss-ui.js"></script>
+<script>
+const {films,moods,top10,indian,acclaimed,hero,esc}=WV;
+const gems=films.filter(f=>f.moods.includes('gem')).sort((a,b)=>b.rating-a.rating).slice(0,3);
+const home=()=>`<div class="bento">
+<div class="tl feat" style="background-image:url(${hero.back()})"><div class="in"><div class="mo">Featured · ${esc(hero.genre)} · ${hero.year}</div><h1>Project<br>Hail Mary</h1><p>${esc(hero.plot)}</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn solid" data-trailer="${hero.id}">▶ Play trailer</button><button type="button" class="btn" data-add="${hero.id}">+ Watchlist</button></div></div></div>
+<div class="tl t-moods"><span class="mo lab">Moods</span><h3>Start with a feeling.</h3>${moods.map((m,i)=>`<a href="#mood-${m.id}" data-prev="${films.filter(f=>f.moods.includes(m.id)).sort((a,b)=>b.rating-a.rating)[0].poster()}">${esc(m.label)}<span>0${i+1} →</span></a>`).join('')}</div>
+<div class="tl t-daily"><span class="mo lab">Daily challenge no. 21</span><div><div class="big" data-count="7">0</div><div class="mo">day streak</div></div><a class="btn" href="#games">Play today →</a></div>
+<div class="tl t-top"><span class="mo lab">Chart</span><h3>Top three now.</h3>${top10.slice(0,3).map((f,i)=>`<a href="#film-${f.id}" data-prev="${f.poster()}"><span class="mo">0${i+1}</span><b>${esc(f.title)}</b><span class="mo" style="color:var(--accent)">★ ${f.rating}</span></a>`).join('')}</div>
+<div class="tl t-gems"><span class="mo lab">Hidden gems</span><h3>Seen by few. Rated by many.</h3><div class="tri">${gems.map(f=>`<a href="#film-${f.id}" style="background-image:url(${f.poster()})" aria-label="${esc(f.title)}"></a>`).join('')}</div></div>
+<div class="tl t-wl"><span class="mo lab">Your watchlist</span><div><div class="big">${WVApp.wlCount()}</div><p>${WVApp.wlCount()?'saved for later.':'Nothing saved yet. Open a film and press the Watchlist button.'}</p></div><a class="btn" href="#watchlist" style="align-self:flex-start">Open watchlist</a></div>
+<div class="tl t-strip"><span class="mo lab">Regional</span><h3>Indian cinema.</h3>${SW.stripOf(indian)}</div>
+<div class="tl t-strip wide"><span class="mo lab">Canon</span><h3>Critically acclaimed.</h3>${SW.stripOf(acclaimed,{wide:true})}</div></div>`;
+WVApp.mount({name:'WatchVibe · Bento Swiss',shell:(i,r)=>SW.shell(i,r,{home:'Home'}),home,card:SW.card});
+</script>

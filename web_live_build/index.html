@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=28">
+  <link rel="stylesheet" href="/swiss.css?v=30">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -5779,6 +5779,21 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const r = b.getBoundingClientRect();
       window.__dmOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }, true);
+    // Warm a title while the pointer rests on its poster (or the moment a finger touches it), so its window opens with the pictures already
+    // loaded and "where to watch" and the logo already asked for. Cheap: each title is warmed once, and only TMDB pictures are fetched.
+    const WARMED = new Set();
+    function warmTitle(id) {
+      if (!id || WARMED.has(id)) return; WARMED.add(id);
+      const item = (typeof findItemById === 'function' && findItemById(id)) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]); if (!item) return;
+      [item.backdrop, ps(item.poster, 500)].forEach(u => { if (typeof u === 'string' && /^https:\/\/image\.tmdb\.org\//.test(u)) { const im = new Image(); im.decoding = 'async'; im.src = u; } });
+      try { if (tmdbRef(item)) { getWatchProviders(item); getTitleExtras(item); } } catch (e) {}
+    }
+    (function () {
+      let timer = 0;
+      const idOf = el => { const b = el.closest && el.closest('button[onclick^="openDetails("], .wvw-pc'); if (!b) return ''; if (b.dataset && b.dataset.id) return b.dataset.id; const m = /^openDetails\('([A-Za-z0-9_.:-]{1,100})'\)/.exec(b.getAttribute('onclick') || ''); return m ? m[1] : ''; };
+      document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const id = idOf(e.target); if (!id) return; clearTimeout(timer); timer = setTimeout(() => warmTitle(id), 90); }, { passive: true });
+      document.addEventListener('pointerdown', e => { const id = idOf(e.target); if (id) warmTitle(id); }, { passive: true });
+    })();
     function playDetailsEnter(modal) {
       const sc = document.getElementById('detailScroll');
       const o = window.__dmOrigin;
@@ -6439,7 +6454,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       setTimeout(hydrateStars, 0);
       return `
         <div class="space-y-8">
-          <div class="relative max-w-2xl">
+          <header class="pg-explore-head"><div class="dcl-eyebrow">Explore</div><h1 class="dcl-h dcl-h-sm">Find a film.</h1></header>
+          <div class="relative max-w-2xl wv-searchbox">
             <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-sm text-white/40"></i>
             <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="queueUniversalSearch(this.value)" placeholder="Search films, series, people" autocomplete="off"
               class="w-full rounded-full bg-white/[0.05] py-3.5 pl-12 pr-12 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
@@ -6447,7 +6463,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           </div>
 
           <div class="no-scrollbar flex gap-2 overflow-x-auto">
-            ${chips.map(([id, label]) => `<button type="button" onclick="handleExplorePill('${id}')" class="shrink-0 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">${label}</button>`).join('')}
+            ${chips.map(([id, label]) => `<button type="button" onclick="handleExplorePill('${id}')" class="wv-chip shrink-0">${label}</button>`).join('')}
           </div>
 
           <div id="searchResultsContainer"></div>
@@ -6455,8 +6471,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <div id="exploreDefaultSections" class="space-y-10">
             ${homeRowSection('Trending titles', 'What people are opening this week', trendingPicks(14), "setHomeRow('fresh')")}
             <section>
-              <h2 class="mb-4 font-display text-[22px] font-medium text-white lg:text-2xl">Browse by mood</h2>
-              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">${AI_MOODS.map(mo => { const col = (VIBES[MOOD_VIBE[mo.id]] || {}).color || '#8CB8E8'; return `<button type="button" onclick="toggleAiMood('${mo.id}')" class="group flex min-h-[52px] items-center gap-2.5 rounded-2xl bg-white/[0.04] px-4 py-3 text-left text-sm font-medium text-white/85 ring-1 ring-white/[0.07] transition hover:bg-white/[0.08] hover:text-white"><span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${col}"></span><span class="leading-tight">${esc(mo.label)}</span></button>`; }).join('')}</div>
+              <h2 class="pg-h2">Browse by mood</h2>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">${AI_MOODS.map(mo => { const col = (VIBES[MOOD_VIBE[mo.id]] || {}).color || '#8CB8E8'; return `<button type="button" onclick="toggleAiMood('${mo.id}')" class="group wv-mtile"><span class="wv-mtile-dot" style="background:${col}"></span><span class="wv-mtile-t">${esc(mo.label)}</span><i class="fa-solid fa-arrow-right wv-mtile-ar" aria-hidden="true"></i></button>`; }).join('')}</div>
             </section>
             <section id="starsRow" aria-label="Trending stars">${starsInner()}</section>
           </div>
@@ -6863,24 +6879,23 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const s = getProfileStats();
       const top = s.dist.slice(0, 3).map(d => `<span class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3 py-1 text-[13px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('');
       return `
-        <div class="max-w-5xl space-y-8">
-          <div>
-            <h1 class="font-display text-3xl font-medium text-white">Taste Match</h1>
-            <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-white/55">Find what you and your friends will both enjoy. Watch together live today; compare tastes is on the way.</p>
-          </div>
-          <div class="grid gap-5 md:grid-cols-2">
-            <div class="flex flex-col rounded-2xl bg-gradient-to-br from-purple-500/15 to-blue-500/10 p-6 ring-1 ring-white/10">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"><i class="fa-solid fa-people-group"></i></div>
-              <h2 class="mt-4 font-display text-xl font-medium text-white">Watch together</h2>
-              <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">Start a live room, share a link (no phone numbers), vote on a film everyone can watch, then press play at the same moment with reactions and chat.</p>
-              <button type="button" onclick="openPartyModal()" class="mt-5 self-start rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Start a watch party</button>
-            </div>
-            <div class="flex flex-col rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"><i class="fa-solid fa-heart-pulse"></i></div>
-              <h2 class="mt-4 flex items-center gap-2 font-display text-xl font-medium text-white">Taste duel <span class="rounded-full bg-white/10 px-2 py-0.5 font-sans text-[11px] font-medium text-white/60">Coming soon</span></h2>
-              <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">You and a friend swipe the same ten titles and get a compatibility score, plus three films you would both love.</p>
-              <div class="mt-5">${s.dist.length ? `<div class="mb-2 text-xs text-white/40">Your taste so far</div><div class="flex flex-wrap gap-2">${top}</div>` : '<div class="text-sm text-white/40">Vote on a few titles to start your taste profile.</div>'}</div>
-            </div>
+        <div class="pg">
+          <header class="dcl-head"><div class="dcl-intro"><div class="dcl-eyebrow">Taste match</div><h1 class="dcl-h dcl-h-sm">Find what you<br>both enjoy.</h1><p class="dcl-p">Watch together live today; compare tastes is on the way.</p></div></header>
+          <div class="pg-cards">
+            <article class="pg-card">
+              <span class="pg-no" aria-hidden="true">01</span>
+              <span class="pg-ic"><i class="fa-solid fa-people-group" aria-hidden="true"></i></span>
+              <h2 class="pg-name">Watch together</h2>
+              <p class="pg-desc">Start a live room, share a link (no phone numbers), vote on a film everyone can watch, then press play at the same moment with reactions and chat.</p>
+              <button type="button" onclick="openPartyModal()" class="pg-btn">Start a watch party <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+            </article>
+            <article class="pg-card">
+              <span class="pg-no" aria-hidden="true">02</span>
+              <span class="pg-ic"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></span>
+              <h2 class="pg-name">Taste duel <span class="pg-tag">Coming soon</span></h2>
+              <p class="pg-desc">You and a friend swipe the same ten titles and get a compatibility score, plus three films you would both love.</p>
+              <div class="pg-foot">${s.dist.length ? `<div class="dcl-eyebrow" style="margin-bottom:8px">Your taste so far</div><div class="flex flex-wrap gap-2">${top}</div>` : '<div class="pg-note">Vote on a few titles to start your taste profile.</div>'}</div>
+            </article>
           </div>
         </div>`;
     }
@@ -7518,34 +7533,30 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const sess = currentUserSession;
       const name = sess ? sess.name : 'Guest';
       const sub = sess ? sess.email : 'Not signed in';
-      const avatar = `<div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${sess ? userAvatarHtml(sess, 'font-display text-3xl') : esc((name[0] || 'G').toUpperCase())}</div>`;
+      const avatar = `<div class="pg-avatar flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${sess ? userAvatarHtml(sess, 'font-display text-3xl') : esc((name[0] || 'G').toUpperCase())}</div>`;
       const stat = (n, l) => `<div><div class="font-display text-2xl text-white">${n}</div><div class="text-xs text-white/45">${l}</div></div>`;
       const bar = s.dist.length
-        ? `<div class="flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${s.dist.map(d => `<div style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
+        ? `<div class="pg-bar flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${s.dist.map(d => `<div style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">${s.dist.map(d => `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('')}</div>`
         : `<p class="text-sm text-white/45">Vote on a few titles and your taste breakdown will appear here.</p>`;
       return `
-        <div class="grid max-w-5xl gap-8 lg:grid-cols-[340px_1fr] lg:items-start">
-         <div class="space-y-6">
-          <div class="flex items-center gap-5">
-            ${avatar}
-            <div class="min-w-0">
-              <h1 class="truncate font-display text-3xl font-medium text-white">${esc(name)}</h1>
-              <p class="truncate text-sm text-white/45">${esc(sub)}</p>
-              ${sess ? '<button type="button" onclick="userSignOut()" class="mt-2 text-sm text-white/50 transition hover:text-white">Sign out</button>' : '<button type="button" onclick="openAuthModal()" class="mt-3 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-white/90">Sign in to sync</button>'}
+        <div class="pg">
+          <header class="dcl-head">
+            <div class="pg-who">
+              ${avatar}
+              <div class="min-w-0">
+                <div class="dcl-eyebrow">Your profile</div>
+                <h1 class="dcl-h dcl-h-sm pg-name-big">${esc(name)}</h1>
+                <p class="pg-sub">${esc(sub)}</p>
+                ${sess ? '<button type="button" onclick="userSignOut()" class="pg-link">Sign out</button>' : '<button type="button" onclick="openAuthModal()" class="pg-btn pg-btn-sm">Sign in to sync <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>'}
+              </div>
             </div>
+            <div class="dcl-stats dcl-stats-sm" role="group" aria-label="Your numbers"><div><b>${s.movies}</b><span>Movies</span></div><div><b>${s.series}</b><span>Series</span></div><div><b>${s.wantCount}</b><span>Saved</span></div></div>
+          </header>
+          <div class="pg-split">
+            <section><h2 class="pg-h2">Your taste</h2><div class="pg-panel">${bar}</div></section>
+            ${sess ? `<section><h2 class="pg-h2">Your icon</h2><div id="profileAvatarPicker" class="pg-panel">${avatarPickerHtml()}</div></section>` : ''}
           </div>
-          <div class="grid grid-cols-3 gap-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]">
-            ${stat(s.movies, 'Movies')}${stat(s.series, 'Series')}${stat(s.wantCount, 'Saved')}
-          </div>
-         </div>
-         <div class="min-w-0 space-y-8">
-          <section>
-            <h2 class="font-display text-xl font-medium text-white">Your taste</h2>
-            <div class="mt-4 rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06]">${bar}</div>
-          </section>
-          ${sess ? `<div id="profileAvatarPicker" class="rounded-2xl bg-[#0F0F14] p-5 ring-1 ring-white/[0.06] sm:p-6">${avatarPickerHtml()}</div>` : ''}
-         </div>
         </div>`;
     }
 

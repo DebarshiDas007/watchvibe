@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WatchVibe · Option 2 · Neon Arcade</title>
+<!-- Fonts: Clash Display (Fontshare, free for commercial use) + JetBrains Mono (Google Fonts, OFL). -->
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{--bg:#07051a;--bg2:#120d33;--pink:#ff3d9a;--cyan:#22e6ff;--yel:#ffe45e;--lav:#a18bff;--ink:#f4f1ff;--mute:#9b94c9}
+*{box-sizing:border-box;margin:0}
+body{background:radial-gradient(1200px 600px at 85% -10%,#3a1170 0,transparent 60%),radial-gradient(900px 500px at -10% 30%,#06375c 0,transparent 60%),var(--bg);color:var(--ink);font:400 16px/1.5 Satoshi,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);z-index:60}
+a{color:inherit;text-decoration:none}.disp{font-family:'Clash Display',sans-serif}.mono{font-family:'JetBrains Mono',monospace}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:26px;padding:16px 40px;backdrop-filter:blur(14px);background:rgba(7,5,26,.7);border-bottom:1px solid rgba(161,139,255,.2)}
+.logo{font:700 28px 'Clash Display';letter-spacing:.01em}.logo b{background:linear-gradient(90deg,var(--pink),var(--yel));-webkit-background-clip:text;color:transparent}
+nav{display:flex;gap:8px;margin-left:12px}nav a{padding:9px 18px;border-radius:99px;font-weight:500;font-size:14px;color:var(--mute);transition:.2s}nav a:hover{color:var(--ink);background:rgba(255,255,255,.08)}nav a.on{background:var(--ink);color:#12082e}
+.sp{flex:1}.search{display:flex;gap:10px;align-items:center;padding:9px 18px;border-radius:99px;border:1px solid rgba(161,139,255,.35);color:var(--mute);font-size:14px;min-width:230px}.search kbd{margin-left:auto;font:700 11px 'JetBrains Mono';border:1px solid var(--lav);border-radius:6px;padding:1px 6px;color:var(--lav)}
+.av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--cyan));box-shadow:0 0 20px rgba(255,61,154,.5)}
+.ticker{overflow:hidden;white-space:nowrap;border-bottom:1px solid rgba(161,139,255,.2);background:#0d0828;padding:9px 0;font:700 12px 'JetBrains Mono';letter-spacing:.1em;color:var(--cyan)}
+.ticker div{display:inline-block;animation:tick 40s linear infinite}@keyframes tick{to{transform:translateX(-50%)}}
+.ticker span{margin:0 26px}.ticker span::before{content:"✦ ";color:var(--pink)}
+.hero{position:relative;margin:28px 40px 0;border-radius:32px;overflow:hidden;min-height:540px;display:flex;align-items:flex-end;border:1.5px solid rgba(34,230,255,.5);box-shadow:0 0 0 6px rgba(34,230,255,.07),0 30px 80px -20px rgba(255,61,154,.4)}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center 30%;transform:scale(1.04)}.hero .sh{position:absolute;inset:0;background:linear-gradient(0deg,#07051a 8%,rgba(7,5,26,.2) 60%),linear-gradient(90deg,rgba(7,5,26,.85),transparent 60%)}
+.hero .in{position:relative;padding:48px;max-width:760px}
+.stick{display:inline-block;transform:rotate(-3deg);background:var(--yel);color:#1a1100;font:700 12px 'JetBrains Mono';padding:6px 12px;border-radius:8px;letter-spacing:.08em;box-shadow:4px 4px 0 var(--pink)}
+.hero h1{font:700 clamp(54px,8vw,116px)/.9 'Clash Display';margin:20px 0 14px;text-transform:uppercase;background:linear-gradient(90deg,#fff,#d9ccff 60%,var(--cyan));-webkit-background-clip:text;color:transparent}
+.hero p{color:#d6d0f5;max-width:520px;font-size:17px}.chips{display:flex;gap:10px;margin:18px 0 26px}.chip{padding:5px 13px;border-radius:99px;border:1px solid var(--lav);font-size:13px;color:#e4defc}.chip.r{border-color:var(--yel);color:var(--yel);font:700 13px 'JetBrains Mono'}
+.btn{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 28px;border-radius:99px;font:600 16px 'Clash Display';transition:.2s;cursor:pointer}
+.btn.p{background:var(--pink);color:#fff;box-shadow:0 0 0 0 rgba(255,61,154,.6);animation:pulse 2.4s infinite}.btn.g{border:1.5px solid var(--cyan);color:var(--cyan);margin-left:10px}.btn:hover{transform:translateY(-3px) scale(1.02)}
+@keyframes pulse{70%{box-shadow:0 0 0 16px rgba(255,61,154,0)}100%{box-shadow:0 0 0 0 rgba(255,61,154,0)}}
+main{padding:0 40px}.sec{margin-top:64px}.sh2{display:flex;align-items:baseline;gap:16px;margin-bottom:22px}.sh2 h2{font:700 clamp(28px,3vw,40px) 'Clash Display'}.sh2 small{color:var(--mute)}.sh2 a{margin-left:auto;font:700 12px 'JetBrains Mono';color:var(--cyan);letter-spacing:.1em}
+.moods{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.mood{border-radius:24px;padding:22px 18px 20px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;border:1.5px solid transparent;background:linear-gradient(var(--bg2),var(--bg2)) padding-box,linear-gradient(135deg,var(--c1),var(--c2)) border-box;transition:.25s;cursor:pointer}
+.mood:hover{transform:translateY(-6px) rotate(-1deg);box-shadow:0 20px 40px -12px var(--c1)}.mood b{font:700 21px/1.1 'Clash Display'}.mood small{color:var(--mute);font-size:12px}.mood .e{font:700 11px 'JetBrains Mono';letter-spacing:.14em;color:var(--c1)}
+.row{display:flex;gap:18px;overflow-x:auto;padding:6px 4px 18px;scrollbar-width:none}.row::-webkit-scrollbar{display:none}
+.card{display:block;flex:0 0 auto;width:196px;position:relative;transition:.25s}.card .ph{aspect-ratio:2/3;border-radius:20px;background:#1a1440 center/cover;border:1.5px solid rgba(161,139,255,.3);transition:.25s}
+.card:hover .ph{transform:translateY(-8px) rotate(1.2deg);border-color:var(--pink);box-shadow:0 18px 40px -10px rgba(255,61,154,.55)}.card .rt{position:absolute;left:10px;top:10px;background:rgba(7,5,26,.85);border:1px solid var(--yel);color:var(--yel);font:700 12px 'JetBrains Mono';padding:3px 8px;border-radius:8px}
+.card .t{font:600 17px/1.2 'Clash Display';margin-top:12px}.card .s{font-size:13px;color:var(--mute)}
+.t10 .card{width:240px}.t10 .n{position:absolute;left:-6px;bottom:44px;font:700 110px/1 'Clash Display';color:transparent;-webkit-text-stroke:2px var(--cyan);z-index:2;filter:drop-shadow(0 0 12px rgba(34,230,255,.6));pointer-events:none}.t10 .ph{margin-left:40px}
+.wide .card{width:370px}.wide .ph{aspect-ratio:16/9}
+.daily{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}.box{border-radius:28px;padding:34px;border:1.5px solid rgba(161,139,255,.3);background:linear-gradient(135deg,#1a1050,#0d0828)}
+.box h3{font:700 34px/1.05 'Clash Display';margin:12px 0}.box p{color:var(--mute);max-width:420px;margin-bottom:22px}.score{display:grid;place-items:center;text-align:center;background:linear-gradient(135deg,var(--pink),#7b2cff)}.score .big{font:700 110px/1 'Clash Display'}.score small{font:700 12px 'JetBrains Mono';letter-spacing:.14em}
+footer{margin:90px 40px 40px;padding-top:28px;border-top:1px solid rgba(161,139,255,.2);display:flex;justify-content:space-between;color:var(--mute);font-size:14px;flex-wrap:wrap;gap:12px}
+@media(max-width:900px){header{padding:12px 16px}nav,.search{display:none}.hero{margin:16px 16px 0;min-height:480px;border-radius:24px}.hero .in{padding:24px}main{padding:0 16px}.moods{grid-template-columns:repeat(2,1fr)}.daily{grid-template-columns:1fr}.card{width:150px}.t10 .card{width:190px}.t10 .n{font-size:80px}.wide .card{width:280px}footer{margin:60px 16px 30px}.btn.g{margin:10px 0 0}}
+</style></head><body>
+<header><a class="logo" href="#">Watch<b>Vibe</b></a><nav><a class="on" href="#">Home</a><a href="#">Movies</a><a href="#">Series</a><a href="#">Games</a><a href="#">Watchlist</a></nav><span class="sp"></span><div class="search">⌕ Search titles, moods, people <kbd>/</kbd></div><div class="av"></div></header>
+<div class="ticker"><div id="tick"></div></div>
+<div class="hero" id="hero"><div class="bg"></div><div class="sh"></div><div class="in"></div></div>
+<main>
+<div class="sec"><div class="sh2"><h2>Pick your vibe</h2><small>One tap, a whole page of films</small></div><div class="moods" id="moods"></div></div>
+<div class="sec t10"><div class="sh2"><h2>Top 10 right now</h2><a href="#">SEE ALL ›</a></div><div class="row" id="top"></div></div>
+<div class="sec"><div class="sh2"><h2>Indian cinema</h2><small>Hindi, Tamil, Malayalam and more</small><a href="#">SEE ALL ›</a></div><div class="row" id="ind"></div></div>
+<div class="sec wide"><div class="sh2"><h2>Critically acclaimed</h2><a href="#">SEE ALL ›</a></div><div class="row" id="acc"></div></div>
+<div class="sec daily"><div class="box"><span class="stick">DAILY CHALLENGE #21</span><h3>Guess the film. Beat your friends.</h3><p>Three levels, twenty questions each. Same questions for everyone today.</p><a class="btn p" href="#">Play now</a></div><div class="box score"><div><small>YOUR STREAK</small><div class="big">7🔥</div><small>DAYS IN A ROW</small></div></div></div>
+</main>
+<footer><span class="logo">Watch<b>Vibe</b></span><span>Privacy · Terms · Film data from TMDB</span></footer>
+<script src="data.js"></script><script>
+const {moods,top10,indian,acclaimed,hero,esc}=WV;
+document.getElementById('tick').innerHTML=Array(2).fill(['NEED A GOOD CRY','BLOW MY MIND','MAKE ME LAUGH','COZY & COMFORTING','PURE ADRENALINE','HIDDEN GEMS','DAILY CHALLENGE #21','NEW TODAY: PROJECT HAIL MARY'].map(t=>`<span>${t}</span>`).join('')).join('');
+const h=document.getElementById('hero');h.querySelector('.bg').style.backgroundImage=`url(${hero.back(1280)})`;
+h.querySelector('.in').innerHTML=`<span class="stick">NEW THIS WEEK</span><h1>${esc(hero.title)}</h1><div class="chips"><span class="chip r">★ ${hero.rating}</span><span class="chip">${hero.year}</span><span class="chip">${esc(hero.genre)}</span><span class="chip">2h 36m</span></div><p>${esc(hero.plot)}</p><div style="margin-top:26px"><a class="btn p" href="#">▶ Play trailer</a><a class="btn g" href="#">+ Watchlist</a></div>`;
+const cols=[['#ff3d9a','#ffb36b'],['#22e6ff','#7b8cff'],['#ffe45e','#ff9d4d'],['#7dffb0','#22e6ff'],['#ff5a5a','#ff3d9a'],['#c09bff','#ff3d9a']];
+document.getElementById('moods').innerHTML=moods.map((m,i)=>`<a class="mood" href="#" style="--c1:${cols[i][0]};--c2:${cols[i][1]}"><span class="e">0${i+1}</span><div><b>${esc(m.label)}</b><br><small>${esc(m.blurb)}</small></div></a>`).join('');
+const card=(f,w)=>`<a class="card" href="#"><span class="rt">★ ${f.rating}</span><div class="ph" style="background-image:url(${w?f.back(780):f.poster(342)})"></div><div class="t">${esc(f.title)}</div><div class="s">${f.year} · ${esc(f.genre.split(' · ')[0])}</div></a>`;
+document.getElementById('top').innerHTML=top10.map((f,i)=>`<div style="position:relative;flex:0 0 auto;width:250px">${card(f).replace('<a class="card"','<a class="card" style="width:214px;margin-left:30px"').replace('<div class="ph"','<div class="ph"')}<span class="n" style="position:absolute;left:-6px;bottom:44px;font:700 100px/1 \'Clash Display\';color:transparent;-webkit-text-stroke:2px #22e6ff;filter:drop-shadow(0 0 12px rgba(34,230,255,.6))">${i+1}</span></div>`).join('');
+document.getElementById('ind').innerHTML=indian.map(f=>card(f)).join('');
+document.getElementById('acc').innerHTML=acclaimed.map(f=>card(f,true)).join('');
+</script></body></html>
