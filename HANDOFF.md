@@ -518,3 +518,7 @@ Open / next, in the order we discussed:
 - Filter bar overlap onto the mood chips now only at 1800 px and wider.
 - Known: at ~1300 px the top menu scrolls inside its own bar (labels collapse to icons); not fixed.
 - swiss.css v30, sw cache v125.
+
+## v126: trailer fills the film window
+- No black edges: the player is scaled 1.34x to cover the frame, cropped evenly; frame is full width (max height viewport-170px). swiss.css v31, cache v126.
+

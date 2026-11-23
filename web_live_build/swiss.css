@@ -369,7 +369,7 @@ html[data-theme="light"] .dcl-easy .dcl-tag { color: #047857; } html[data-theme=
 #detailScroll { max-width: min(1180px, 96vw) !important; border-radius: 0 !important; border: 1px solid var(--text); box-shadow: 0 40px 120px rgba(0,0,0,.55); --tw-ring-shadow: 0 0 #0000; }
 #detailScroll .rounded-full, #detailScroll .rounded-xl, #detailScroll .rounded-2xl, #detailScroll .rounded-lg { border-radius: 0; }
 .dmx-hero { position: relative; background: #090909; color: #fff; }
-.dmx-video { aspect-ratio: 16 / 9; width: min(100%, calc((100vh - 380px) * 16 / 9)); min-width: min(100%, 520px); margin: 0 auto; }   /* the whole trailer picture, never cut by the title; black side bars only on short windows */
+.dmx-video { aspect-ratio: 16 / 9; width: 100%; max-height: calc(100vh - 170px); margin: 0; }   /* the trailer fills the whole frame, no black edges: the player is scaled to cover and any crop is at the sides */   /* the whole trailer picture, never cut by the title; black side bars only on short windows */
 .dmx-head { padding: 22px clamp(22px, 3vw, 44px) 26px; border-top: 1px solid rgba(255,255,255,.14); }
 .dmx-title { font: 800 clamp(30px, 3.8vw, 58px)/.98 var(--wv-head) !important; letter-spacing: -.045em; color: #fff !important; text-wrap: balance; }
 .dmx-title img { max-height: clamp(56px, 7vw, 96px); }
