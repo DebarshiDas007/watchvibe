@@ -920,20 +920,23 @@ function gnRender(full) {
 }
 function gnLandingHtml() {
   const code = GN.joinCode || '';
-  const card = g => `<div class="flex items-start gap-3 rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08]"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-200"><i class="fa-solid ${GN_GAMES[g].icon}"></i></span><div><div class="font-medium text-white">${GN_GAMES[g].name}</div><div class="mt-0.5 text-sm leading-snug text-white/55">${GN_GAMES[g].desc}</div></div></div>`;
+  const card = (g, n) => `<article class="gnl-card"><span class="gnl-no" aria-hidden="true">0${n + 1}</span><span class="gnl-ic"><i class="fa-solid ${GN_GAMES[g].icon}" aria-hidden="true"></i></span><h2 class="gnl-name">${GN_GAMES[g].name}</h2><p class="gnl-desc">${GN_GAMES[g].desc}</p></article>`;
   return `
     <div class="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4"><div class="font-display text-xl">Game night</div><button type="button" onclick="closeGames()" class="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/80 hover:bg-white/10" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <div class="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:py-10">
-        <div><h1 class="font-display text-3xl sm:text-4xl">Play movie games with friends</h1><p class="mt-2 text-white/55">Start a room, send the link, and play together live on phones or computers. No sign-in needed. Use a call or WhatsApp to talk while you play.</p></div>
-        <div class="space-y-4 rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
-          <label class="block text-sm text-white/70">Your name<input id="gnNameInput" maxlength="16" value="${esc(gnSavedName())}" placeholder="e.g. Rahul" autocomplete="nickname" class="mt-1.5 w-full rounded-xl bg-white/[0.06] px-4 py-3 text-base text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30"></label>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <button type="button" onclick="gnCreate()" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition active:scale-[.98] sm:hover:bg-white/90"><i class="fa-solid fa-plus mr-2 text-xs"></i>Create a room</button>
-            <div class="flex gap-2"><input id="gnCodeInput" maxlength="8" value="${esc(code)}" placeholder="Room code" autocapitalize="characters" class="min-w-0 flex-1 rounded-full bg-white/[0.06] px-4 py-3 text-sm uppercase tracking-widest text-white ring-1 ring-white/10 placeholder:normal-case placeholder:tracking-normal placeholder:text-white/30 focus:outline-none focus:ring-white/30" onkeydown="if(event.key==='Enter')gnJoinTyped()"><button type="button" onclick="gnJoinTyped()" class="rounded-full px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/10">Join</button></div>
+      <div class="gnl">
+        <div class="gnl-left">
+          <div class="gnl-eyebrow">Game night · live with friends</div>
+          <h1 class="gnl-h">Movie games<br>for friends.</h1>
+          <p class="gnl-p">Start a room, send the link, and play together live on phones or computers. No sign-in needed. Use a call or WhatsApp to talk while you play.</p>
+          <div class="gnl-form">
+            <label class="gnl-label" for="gnNameInput">Your name</label>
+            <input id="gnNameInput" maxlength="16" value="${esc(gnSavedName())}" placeholder="e.g. Rahul" autocomplete="nickname" class="gnl-input">
+            <button type="button" onclick="gnCreate()" class="gnl-create"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create a room</button>
+            <div class="gnl-join"><input id="gnCodeInput" maxlength="8" value="${esc(code)}" placeholder="Room code" autocapitalize="characters" aria-label="Room code" class="gnl-input gnl-code" onkeydown="if(event.key==='Enter')gnJoinTyped()"><button type="button" onclick="gnJoinTyped()" class="gnl-joinbtn">Join</button></div>
           </div>
         </div>
-        <div class="space-y-3">${Object.keys(GN_GAMES).map(card).join('')}</div>
+        <div class="gnl-games">${Object.keys(GN_GAMES).map(card).join('')}</div>
       </div>
     </div>`;
 }

@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=13">
+  <link rel="stylesheet" href="/swiss.css?v=16">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -4267,6 +4267,7 @@ function posterCard(item, opts) {
         <button type="button" onclick="openDetails('${item.id}')" class="group self-start ${sizing} text-left focus:outline-none">
           <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-200 group-hover:-translate-y-1 group-hover:ring-white/25 group-focus-visible:ring-2 group-focus-visible:ring-purple-400">
             <img src="${esc(ps(item.poster))}" alt="${esc(item.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">
+            ${opts.rank ? `<span class="wv-rank" aria-hidden="true">${opts.rank}</span>` : ''}
             ${opts.badge ? `<span class="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">${esc(opts.badge)}</span>` : ''}
             ${rtHtml(item, 'wv-prate')}
           </div>
@@ -4304,7 +4305,7 @@ function posterCard(item, opts) {
     }
     function homeRowSection(title, subtitle, items, seeAll, fmt) {
       if (!items || !items.length) return '';
-      const cards = fmt === 'wide' ? items.map(i => wideCard(i)).join('') : fmt === 'top10' ? items.map((i, n) => top10Card(i, n + 1)).join('') : items.map(i => posterCard(i)).join('');
+      const cards = fmt === 'wide' ? items.map(i => wideCard(i)).join('') : fmt === 'top10' ? items.map((i, n) => posterCard(i, { rank: n + 1 })).join('') : items.map(i => posterCard(i)).join('');
       return `
         <section class="wv-shelf${fmt ? ' wv-shelf-' + fmt : ''}">
           <div class="wv-shelf-h">
@@ -4881,8 +4882,9 @@ function posterCard(item, opts) {
       if (left <= 0) dcTimeout();
     }
     function dcStatsBox(level) {
-      const st = dcStats();
-      return `<div class="flex w-full items-center justify-around gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 ring-1 ring-white/[0.07] sm:w-auto sm:justify-start sm:gap-5 sm:px-5"><div class="text-center"><div class="font-display text-2xl text-white">${dcStreakNow()}${dcStreakNow() ? ' 🔥' : ''}</div><div class="text-[11px] text-white/45">Day streak</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${level ? st.bestBy[level] || 0 : st.rounds}</div><div class="text-[11px] text-white/45">${level ? 'Best ' + DC_LEVEL[level].label : 'Rounds finished'}</div></div><div class="h-8 w-px bg-white/10"></div><div class="text-center"><div class="font-display text-2xl text-white">${st.played}</div><div class="text-[11px] text-white/45">Days played</div></div></div>`;
+      const st = dcStats(), streak = dcStreakNow();
+      const stat = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
+      return `<div class="dcl-stats dcl-stats-sm" role="group" aria-label="Your numbers">${stat(streak + (streak ? ' 🔥' : ''), 'Day streak')}${stat(level ? st.bestBy[level] || 0 : st.rounds, level ? 'Best ' + DC_LEVEL[level].label : 'Rounds finished')}${stat(st.played, 'Days played')}</div>`;
     }
     function dcRecentBox() {
       const st = dcStats(), mx = Math.max(60, ...st.recent.map(r => r.score));
@@ -4890,6 +4892,17 @@ function posterCard(item, opts) {
       return `<section><h2 class="mb-3 font-display text-xl font-medium text-white">Your recent rounds</h2><div class="space-y-1.5 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">${rows || '<div class="text-sm text-white/40">Finish a round to see your scores here.</div>'}</div></section>`;
     }
     function dcBoardSection() { const signedIn = !!currentAuthUser; return `<section><h2 class="mb-3 font-display text-xl font-medium text-white">Today's leaderboards</h2><div id="dcBoard"></div>${signedIn ? '' : '<button type="button" onclick="openAuthModal()" class="mt-3 text-sm text-purple-300 underline underline-offset-2 hover:text-white">Sign in to put your score on the board</button>'}</section>`; }
+    // numbers with data-count count up from 0 once (no motion for people who asked for less)
+    function wvCountUp() {
+      const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('[data-count]:not([data-counted])').forEach(el => {
+        el.dataset.counted = '1';
+        const n = Number(el.dataset.count) || 0; if (calm || n <= 0) { el.textContent = String(n); return; }
+        const t0 = performance.now(), dur = 900;
+        const tick = t => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1 && el.isConnected) requestAnimationFrame(tick); };
+        el.textContent = '0'; requestAnimationFrame(tick);
+      });
+    }
     function dcLevelStatus(level) {
       const s = dcStateOf(level);
       if (!s) return { line: 'Not started', button: 'Play ' + DC_LEVEL[level].label };
@@ -4898,24 +4911,35 @@ function posterCard(item, opts) {
     }
 
     function renderDailyLanding() {
-      const cards = DC_LEVELS.map(l => {
-        const c = DC_LEVEL[l], st = dcLevelStatus(l);
-        return `<div class="flex flex-col rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10 transition hover:bg-white/[0.06] sm:p-6">
-          <span class="self-start rounded-full px-3 py-1 text-xs font-semibold ring-1 ${c.cls}">${c.label}</span>
-          <div class="mt-4 font-display text-2xl text-white">${c.label} round</div>
-          <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">${c.desc}</p>
-          <div class="mt-4 space-y-1 text-xs text-white/45"><div>20 questions · ${c.sec} s each</div><div class="text-sm ${st.done ? 'text-emerald-300' : 'text-white/70'}">${st.line}</div></div>
-          <button type="button" onclick="dcChoose('${l}')" class="mt-5 rounded-full ${st.done ? 'px-6 py-2.5 text-sm text-white/85 ring-1 ring-white/15 hover:bg-white/10' : 'bg-white px-6 py-2.5 text-sm font-semibold text-black hover:bg-white/90'} transition">${st.button}</button>
-        </div>`;
+      // Swiss look: a huge headline, counters that count up, three numbered level cards with a progress line, boards underneath
+      const cards = DC_LEVELS.map((l, n) => {
+        const c = DC_LEVEL[l], st = dcLevelStatus(l), s = dcStateOf(l);
+        const pct = !s ? 0 : s.finished ? 100 : Math.round(s.cur / DC_ROUND * 100);
+        return `<article class="dcl-card dcl-${l}${st.done ? ' is-done' : ''}">
+          <span class="dcl-no" aria-hidden="true">0${n + 1}</span>
+          <div class="dcl-top"><span class="dcl-tag">${c.label}</span><span class="dcl-meta">20 questions · ${c.sec} s each</span></div>
+          <h2 class="dcl-name">${c.label} round</h2>
+          <p class="dcl-desc">${c.desc}</p>
+          <div class="dcl-prog" aria-hidden="true"><i style="width:${pct}%"></i></div>
+          <div class="dcl-line">${st.line}</div>
+          <button type="button" onclick="dcChoose('${l}')" class="dcl-btn${st.done ? ' is-ghost' : ''}">${st.button} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        </article>`;
       }).join('');
+      const stt = dcStats(), streak = dcStreakNow();
+      const stat = (n, l) => `<div><b data-count="${n}">${n}</b><span>${l}</span></div>`;
+      setTimeout(wvCountUp, 30);
       return `
-        <div class="mx-auto -mt-2 max-w-5xl space-y-5 sm:mt-0 sm:space-y-8">
-          <div class="flex flex-wrap items-end justify-between gap-4">
-            <div><div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1><p class="mt-1 max-w-xl text-sm text-white/50">Choose your level. Each level has its own 20 questions every day, Hollywood and Indian cinema mixed. Play one or all three. New questions in <span id="dcCountdown" class="tabular-nums text-white/80">--:--:--</span>.</p></div>
-            ${dcStatsBox(null)}
-          </div>
-          <div class="grid gap-4 sm:gap-5 md:grid-cols-3">${cards}</div>
-          <div class="grid gap-5 sm:gap-6 md:grid-cols-2">${dcBoardSection()}${dcRecentBox()}</div>
+        <div class="dcl">
+          <header class="dcl-head">
+            <div class="dcl-intro">
+              <div class="dcl-eyebrow">Daily challenge #${dcNumber()} · new questions in <span id="dcCountdown" class="tabular-nums">--:--:--</span></div>
+              <h1 class="dcl-h">Guess<br>the film.</h1>
+              <p class="dcl-p">Three levels, 20 questions each, every day. Hollywood and Indian cinema mixed. Play one or all three.</p>
+            </div>
+            <div class="dcl-stats" role="group" aria-label="Your numbers">${stat(streak, streak ? 'Day streak 🔥' : 'Day streak')}${stat(stt.rounds, 'Rounds finished')}${stat(stt.played, 'Days played')}</div>
+          </header>
+          <div class="dcl-levels">${cards}</div>
+          <div class="dcl-boards">${dcBoardSection()}${dcRecentBox()}</div>
         </div>`;
     }
     const DC_STEP_BACK = '<button type="button" onclick="dcLevels()" class="mb-1 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>All levels</button>';
@@ -4984,9 +5008,9 @@ function posterCard(item, opts) {
       const pct = Math.round(s.cur / DC_ROUND * 100);
       const enter = DC.enter; DC.enter = false;
       return `
-        <div class="mx-auto -mt-3 max-w-5xl space-y-3 sm:mt-0 sm:space-y-6">
+        <div class="dcl-wrap mx-auto -mt-3 space-y-3 sm:mt-0 sm:space-y-6">
           <div class="hidden flex-wrap items-end justify-between gap-4 sm:flex">
-            <div>${DC_STEP_BACK}<div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()} · ${cfg.label}</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">Guess the film</h1></div>
+            <div>${DC_STEP_BACK}<div class="dcl-eyebrow">Daily challenge #${dcNumber()} · ${cfg.label}</div><h1 class="dcl-h dcl-h-sm">Guess the film.</h1></div>
             ${dcStatsBox(s.level)}
           </div>
           <div class="sm:hidden">
@@ -5011,9 +5035,9 @@ function posterCard(item, opts) {
       const rows = s.specs.map((sp, i) => { const mm = dcFind(sp.id), rr = s.rounds[i]; return mm ? `<div class="flex items-center gap-3 px-4 py-2 text-sm"><span class="w-5 text-right text-white/35">${i + 1}</span><span class="w-6 text-center">${dcSquare(rr)}</span><span class="min-w-0 flex-1 truncate text-white/80">${esc(mm.title)}</span><span class="text-xs text-white/40">${esc(DC_KIND[sp.type])}</span></div>` : ''; }).join('');
       const others = DC_LEVELS.filter(l => l !== s.level).map(l => { const st = dcLevelStatus(l); return `<button type="button" onclick="dcChoose('${l}')" class="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 text-left ring-1 ring-white/10 transition hover:bg-white/[0.08]"><span><span class="block text-sm font-medium text-white">${DC_LEVEL[l].label} round</span><span class="block text-xs text-white/45">${st.line}</span></span><span class="text-sm ${st.done ? 'text-white/60' : 'text-white'}">${st.done ? 'See result' : 'Play'} <i class="fa-solid fa-arrow-right ml-1 text-xs"></i></span></button>`; }).join('');
       return `
-        <div class="mx-auto max-w-5xl space-y-6">
+        <div class="dcl-wrap mx-auto space-y-6">
           <div class="flex flex-wrap items-end justify-between gap-4">
-            <div>${DC_STEP_BACK}<div class="text-xs uppercase tracking-[0.18em] text-purple-300/80">Daily Challenge #${dcNumber()} · ${cfg.label} · finished</div><h1 class="font-display text-3xl font-medium text-white lg:text-4xl">${s.score} points · ${grade}</h1><p class="mt-1 text-sm text-white/50">You got ${solved} of ${DC_ROUND} right. New questions in <span id="dcCountdown" class="tabular-nums text-white/80">--:--:--</span>.</p></div>
+            <div>${DC_STEP_BACK}<div class="dcl-eyebrow">Daily challenge #${dcNumber()} · ${cfg.label} · finished</div><h1 class="dcl-h dcl-h-sm">${s.score} points · ${grade}</h1><p class="mt-1 text-sm text-white/50">You got ${solved} of ${DC_ROUND} right. New questions in <span id="dcCountdown" class="tabular-nums text-white/80">--:--:--</span>.</p></div>
             ${dcStatsBox(s.level)}
           </div>
           <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -7596,7 +7620,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     refreshViews();
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
-  <script src="games.js?v=4" defer></script>
+  <script src="games.js?v=5" defer></script>
   <script src="hover-card.js?v=3" defer></script>
 </body>
 </html>

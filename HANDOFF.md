@@ -456,3 +456,10 @@ Open / next, in the order we discussed:
 - Fonts: Cabinet Grotesk 700/800 (Fontshare, free licence) for headlines, poster names, wordmark; Switzer stays for body, Plex Mono for labels.
 - Motion (all off for prefers-reduced-motion): title and facts rise into place when the film in front changes; posters arrive one by one; mouse-only poster tilt with a light; chip colour sweep on hover; shelves fade up on scroll (scroll-driven, no JS). swiss.css?v=13, cache v112.
 - Checked: product sweep problems [] at 1864 and 375.
+
+## v113: Daily and Game night redesign, Top 10 in poster size, bigger wall heading
+- Daily challenge: full-width Swiss layout (huge headline, count-up stats, numbered level cards with progress line, boards below); in-round and result pages get the same header/stat style and wider column.
+- Game night lobby: two columns (headline + name/room form, three numbered game cards). games.js?v=5.
+- Posters now come in two formats: portrait 2:3 and wide 16:9. Top 10 uses the portrait size with the rank on the picture (top10Card kept but unused).
+- "Tonight's poster wall." heading is a large Cabinet Grotesk headline. swiss.css?v=16, cache v113.
+- Checked: product sweep problems [] at 1864, 1500, 768, 375.
