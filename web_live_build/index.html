@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=20">
+  <link rel="stylesheet" href="/swiss.css?v=23">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -2164,9 +2164,9 @@
       slot.style.opacity = '0';
       const params = `${Preview.fixedStart ? 'start=' + Preview.fixedStart + '&' : ''}autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1&loop=0&mute=${startMuted ? 1 : 0}&origin=${encodeURIComponent(location.origin)}`;
       // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
-      const box = slot.getBoundingClientRect();
+      const box = slot.dataset.fit ? { width: slot.offsetWidth, height: slot.offsetHeight } : slot.getBoundingClientRect();   // the film window grows in (scaled) when it opens: measure the real size
       // 1.6 and a shift up push YouTube's own title bar (top) and brand strip (bottom) outside the frame, so only the picture shows
-      const zoom = box.width < 768 ? 1.6 : 1.25;   // phones need the stronger zoom; desktop keeps its original framing
+      const zoom = slot.dataset.fit ? 1.07 : (box.width < 768 ? 1.6 : 1.25);   // the film window shows the whole picture (just enough zoom to hide YouTube's edge bars); phones' banners need the stronger zoom; desktop keeps its original framing
       const cw = Math.max(box.width, (box.height * 16) / 9) * zoom, ch = (cw * 9) / 16;
       const overflowY = ch - box.height, topCrop = Math.min(overflowY, Math.max(0.17 * ch, overflowY / 2));   // at least 17% of the player's height is cut at the top
       const fit = box.width > 0 && box.height > 0 ? `style="left:50%;top:${-Math.round(topCrop)}px;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translateX(-50%)"` : '';
@@ -6277,23 +6277,22 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       contentEl.dataset.itemId = item.id;
       const meta = [item.year, (item.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), item.duration].filter(Boolean).join('  ·  ');
       contentEl.innerHTML = `
-        <div class="dmx-hero relative flex min-h-[clamp(300px,44vw,520px)] w-full items-end overflow-hidden bg-[#14141A]">
-          <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
-          <div id="previewSlot" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
-          <div class="dmx-shade pointer-events-none absolute inset-0"></div>
-          <button type="button" onclick="closeDetails()" class="dmx-close absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-          <div class="relative z-[1] flex w-full flex-col gap-4 p-5 pt-20 sm:flex-row sm:items-end sm:justify-between sm:p-9 sm:pt-24">
-            <div class="min-w-0 flex-1">
-              <h2 id="detailTitle" class="dmx-title break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
-              <p id="detailMeta" class="dmx-meta mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
-            </div>
-            <div id="previewControls" class="flex shrink-0 flex-wrap items-center gap-2">
+        <div class="dmx-hero">
+          <div class="dmx-video relative overflow-hidden bg-[#14141A]">
+            <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
+            <div id="previewSlot" data-fit="1" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
+            <div id="previewControls" class="dmx-ctl absolute bottom-3 right-3 z-[1] flex flex-wrap items-center justify-end gap-2">
               <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25">
                 <button id="previewMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10" aria-label="Mute trailer"><i class="fa-solid fa-volume-high"></i></button>
                 <input id="previewVolume" type="range" min="0" max="100" step="1" value="70" oninput="setTrailerVolume(this.value)" class="h-1 w-24 cursor-pointer accent-white sm:w-32" aria-label="Trailer volume">
               </div>
               <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
             </div>
+          </div>
+          <button type="button" onclick="closeDetails()" class="dmx-close absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+          <div class="dmx-head">
+            <h2 id="detailTitle" class="dmx-title break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
+            <p id="detailMeta" class="dmx-meta mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
           </div>
         </div>
         <div id="detailBody">${detailBodyHtml(item)}</div>`;

@@ -480,3 +480,6 @@ Open / next, in the order we discussed:
 - Game night opens below the top bar (#gnRoot top 68px / 56px on phones) so the top tabs stay reachable. Using the top bar while it is open leaves the lobby; inside a live room it asks "Leave this game room?" first (gnGuard in goHome, setTopCategory, switchTab).
 - Film window (title details): wide two-column layout (actions, where to watch, synopsis, verdict and reviews | poster and facts), big Cabinet Grotesk title over the trailer, square buttons, "More like this" below. Same ids, so trailer, availability, verdicts and reviews code is unchanged. swiss.css?v=20, cache v116.
 - Checked: product sweep problems [] at 1864, 1500, 768, 375; navigation clicks from Watchlist, Daily and Game night.
+
+## v119: film window shows the whole trailer
+- The title no longer sits on top of the trailer: the trailer is a full 16:9 picture (width capped so it fits the window height), the title, logo and facts sit in a dark band below it. The player is only zoomed 7 percent (data-fit) instead of 25 percent plus a 17 percent top crop, so nothing important is cut. Applies to every title. swiss.css?v=23, cache v119.
