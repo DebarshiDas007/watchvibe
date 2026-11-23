@@ -11,6 +11,8 @@
 //   Wikipedia most-viewed articles     what people are reading about (matched by exact title)
 // Plus a freshness boost for new releases and a quality guard (no reality/talk shows, no low-rated titles).
 
+import { allow, tooMany } from '../_lib/limit.js';
+
 const TMDB_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';   // the same public key the site already ships to browsers
 const TMDB = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p/';
@@ -94,6 +96,7 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(`${url.origin}/api/featured?cc=${cc}&day=${day}`);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
+  if (!(await allow(context, 'featured', 12))) return tooMany();   // building the pool calls five upstream services
 
   const [tDay, tWeek, ott, jw, wiki] = await Promise.all([trending('day'), trending('week'), recentOtt(cc), justWatch(cc), wikipediaTop()]);
 

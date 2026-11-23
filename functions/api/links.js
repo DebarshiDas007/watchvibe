@@ -3,6 +3,8 @@
 // people to the title itself instead of a search page. Source: JustWatch's public GraphQL endpoint (the same
 // data Google's "Where to watch" uses). Server-side because browsers cannot call it (CORS). Results are cached at the edge.
 
+import { allow, tooMany } from '../_lib/limit.js';
+
 const JW = 'https://apis.justwatch.com/graphql';
 const TTL_OK = 6 * 3600;   // 6 hours
 const TTL_MISS = 600;      // 10 minutes for "not found" / upstream errors
@@ -30,6 +32,7 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(url.origin + '/api/links?tmdb=' + tmdb + '&type=' + type + '&cc=' + cc);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
+  if (!(await allow(context, 'links', 40))) return tooMany();   // only lookups that would call JustWatch count
 
   let res;
   try {

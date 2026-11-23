@@ -3,6 +3,8 @@
 // Server-side so the OMDb key stays out of every visitor's requests and so results are cached at the edge, which means
 // each title costs one OMDb request per week for ALL visitors together (the free key allows 1,000 a day).
 
+import { allow, tooMany } from '../_lib/limit.js';
+
 const TMDB_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';   // the same public key the site already ships to browsers
 // the OMDb key lives only in the OMDB_KEY secret of the Cloudflare Pages project (never in this file)
 const TTL_OK = 7 * 24 * 3600;
@@ -23,6 +25,7 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(url.origin + '/api/imdb?tmdb=' + tmdb + '&type=' + type);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
+  if (!(await allow(context, 'imdb', 120))) return tooMany();   // only lookups that would spend OMDb / TMDB quota count
 
   let res;
   try {
@@ -32,7 +35,7 @@ export async function onRequestGet(context) {
     if (!/^tt\d{5,10}$/.test(imdbId || '')) {
       res = json({ r: null }, TTL_MISS);
     } else {
-      const key = context.env && context.env.OMDB_KEY;
+      const key = String((context.env && context.env.OMDB_KEY) || '').trim();
       if (!key) return json({ r: null, error: 'not configured' }, 60);   // never cached: it starts working as soon as the secret exists
       const o = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${encodeURIComponent(key)}`);
       const d = await o.json();
