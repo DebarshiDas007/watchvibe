@@ -489,3 +489,6 @@ Open / next, in the order we discussed:
 - OMDb key moved out of the code into the Cloudflare Pages secret OMDB_KEY (functions/api/imdb.js has no fallback). The old key is still in Git history, so replace it with a new key: `wrangler pages secret put OMDB_KEY --project-name watchvibe`.
 - _headers: HSTS 2 years with subdomains, COOP same-origin-allow-popups, more Permissions-Policy items, X-Permitted-Cross-Domain-Policies.
 - DEPLOY_GUIDE.md moved from the public folder to docs/. Debug console.log calls removed (index.html, sw.js). Cache v120.
+
+## v121: API rate limit
+- functions/_middleware.js: every /api/* request is limited to 300 a minute per visitor IP (429 with Retry-After after that), non-GET methods get 405. Counter in the edge cache (per location, approximate). Real Cloudflare WAF rate-limit rules need a custom domain on your own zone.
