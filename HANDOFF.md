@@ -447,3 +447,7 @@ Open / next, in the order we discussed:
 - Poster wall: Clean look (small label, title + Play trailer + Watchlist, much bigger posters, moods under the wall, language select beside the chips on wide screens). Tighter gaps between shelves. `?wall=now|glow|stage|clean` shows the other looks with a demo switch (not linked anywhere).
 - Top menu keeps icons only between 1500 and 1799 px (mono caps were too wide). swiss.css?v=10, cache v110.
 - Checked: product sweep problems [] at 1900/1600/1440/768/375 (dark) and 375 (light).
+
+## v111: wall demo switch removed, posters sized to the screen
+- Removed the ?wall= demo switch and the Glow, Stage and old looks (JS and CSS). `<html data-wall="clean">` is fixed. swiss.css?v=12, cache v111.
+- Poster width = min(17vw, (100vh - 250px) / 1.5), 200-380 px: whole poster, title and chips fit on the first screen at any desktop size.

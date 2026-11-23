@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-wall="clean">
 <head>
   <meta charset="UTF-8">
   <title>WatchVibe: Find What to Watch by Vibe | IMDb Ratings &amp; Where to Stream</title>
@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=10">
+  <link rel="stylesheet" href="/swiss.css?v=12">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -5135,7 +5135,7 @@ function posterCard(item, opts) {
       WALL.base = base;
       WALL.cands = mediaDatabase.filter(m => m.poster && langOk(m) && (m.totalVotes || 0) >= 300 && Number(m.rating) >= 6.5);
       WALL.list = wallList(); WALL.i = 0;
-      setTimeout(() => { wallProg(); wallBackdrop(); wallSwitcher(); }, 60);
+      setTimeout(() => { wallProg(); }, 60);
       return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
     }
     function wallList() {
@@ -5173,31 +5173,9 @@ function posterCard(item, opts) {
         <div class="wvw-acts"><button type="button" class="wv-btn wv-btn-p" data-wall="trailer"><i class="fa-solid fa-play" aria-hidden="true"></i><span>Play trailer</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="open"><span>Open film</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="wl" aria-pressed="${on}"><i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i><span>${on ? 'In watchlist' : 'Watchlist'}</span></button></div>
         ${mo ? `<button type="button" class="wvw-all" data-wall="seeall">All ${esc(mo.label.toLowerCase())} films <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>` : ''}`;
     }
-    // the film in front lends its backdrop to the section (Glow and Stage looks); only TMDB pictures are accepted
-    function wallBackdrop() {
-      const el = document.getElementById('wvWall'), m = WALL.list[WALL.i]; if (!el) return;
-      const u = m && (m.backdrop || m.poster);
-      if (typeof u === 'string' && /^https:\/\/image\.tmdb\.org\/t\/p\/[\w\/.-]+$/.test(u)) el.style.setProperty('--bd', `url("${u.replace('/t/p/w1280/', '/t/p/w780/')}")`); else el.style.removeProperty('--bd');
-    }
-    // demo switch: ?wall=glow | stage | now  (kept on this device)
-    function wallLook(v) {
-      if (v === undefined) { let q = ''; try { q = new URLSearchParams(location.search).get('wall') || ''; } catch (e) {} v = q; }
-      if (!/^(now|glow|stage|clean)$/.test(v)) v = 'clean';
-      document.documentElement.dataset.wall = v;
-      document.querySelectorAll('[data-wlook]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wlook === v)));
-    }
-    function wallSwitcher() {
-      let q = ''; try { q = new URLSearchParams(location.search).get('wall') || ''; } catch (e) {}
-      if (!q || document.getElementById('wallSwitch')) return;
-      const d = document.createElement('div'); d.id = 'wallSwitch'; d.setAttribute('role', 'group'); d.setAttribute('aria-label', 'Wall look (demo)');
-      d.innerHTML = '<span>Wall look</span>' + [['now', 'Current'], ['glow', 'A · Glow'], ['stage', 'B · Stage'], ['clean', 'C · Clean']].map(([v, l]) => `<button type="button" data-wlook="${v}" aria-pressed="false">${l}</button>`).join('');
-      d.addEventListener('click', e => { const b = e.target.closest('[data-wlook]'); if (b) wallLook(b.dataset.wlook); });
-      document.body.appendChild(d); wallLook();
-    }
-    wallLook();
     function wallRefresh(full) {
       const now = document.getElementById('wvwNow'); if (!now) return;
-      now.innerHTML = wallNowHtml(); wallBackdrop();
+      now.innerHTML = wallNowHtml();
       if (full) { const ch = document.getElementById('wvwChips'), body = document.getElementById('wvwBody'); if (ch) ch.innerHTML = wallChipsHtml(); if (body) body.innerHTML = wallBodyHtml(); wallProg(); }
     }
     function wallShow(i) {

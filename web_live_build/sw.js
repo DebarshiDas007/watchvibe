@@ -1,11 +1,11 @@
-const CACHE_NAME = 'watchvibe-cache-v110';
+const CACHE_NAME = 'watchvibe-cache-v111';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './tailwind.css',
   './theme.css?v=25',
-  './swiss.css?v=10',
+  './swiss.css?v=12',
   './hover-card.css?v=1',
   './hover-card.js?v=3',
   './vendor/supabase/supabase.js',
