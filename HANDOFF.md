@@ -474,3 +474,9 @@ Open / next, in the order we discussed:
 ## v115: Watchlist tabs fix
 - Bug: with an empty watchlist the "Start with these" row stretched the page grid, pushing the Want to watch / Watched tabs off screen to the right on wide screens. Fixed with minmax(0,1fr) tracks (watchlist and Daily).
 - "My reviews" tab is now always visible; signed-out it shows a Sign in message. swiss.css?v=19, cache v115.
+
+## v116: top-bar navigation fixes + film window redesign
+- Movies / Series / Stand-Up now switch to the home page first (they only redrew the current page, so on Watchlist, Daily, Explore... nothing changed).
+- Game night opens below the top bar (#gnRoot top 68px / 56px on phones) so the top tabs stay reachable. Using the top bar while it is open leaves the lobby; inside a live room it asks "Leave this game room?" first (gnGuard in goHome, setTopCategory, switchTab).
+- Film window (title details): wide two-column layout (actions, where to watch, synopsis, verdict and reviews | poster and facts), big Cabinet Grotesk title over the trailer, square buttons, "More like this" below. Same ids, so trailer, availability, verdicts and reviews code is unchanged. swiss.css?v=20, cache v116.
+- Checked: product sweep problems [] at 1864, 1500, 768, 375; navigation clicks from Watchlist, Daily and Game night.
