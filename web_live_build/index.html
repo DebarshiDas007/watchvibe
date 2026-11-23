@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=33">
+  <link rel="stylesheet" href="/swiss.css?v=34">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -109,10 +109,11 @@
     /* Verdict and feeling buttons: tactile press and a pop when chosen */
     .vs-opt { cursor: pointer; transition: transform .18s cubic-bezier(.22,1,.36,1), background-color .25s ease, box-shadow .25s ease; -webkit-tap-highlight-color: transparent; }
     .vs-opt:active { transform: scale(.95); }
-    @keyframes vs-pop { 0% { transform: scale(.93); outline: 2px solid var(--c); outline-offset: 0; } 40% { transform: scale(1.07); } 100% { transform: scale(1); outline: 2px solid transparent; outline-offset: 10px; } }
-    @keyframes vs-check { from { transform: scale(0) rotate(-40deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
-    .vs-pop { animation: vs-pop .55s cubic-bezier(.22,1,.36,1); }
-    .vs-check { animation: vs-check .4s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes vs-pop { 0% { transform: scale(.97); } 100% { transform: none; } }
+    @keyframes vs-check { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+    .vs-pop { animation: vs-pop .18s ease-out; }
+    .vs-check { animation: vs-check .16s ease-out both; }
+    .vs-still .vs-check { animation: none; }
     @media (prefers-reduced-motion: reduce) { .vs-pop, .vs-check { animation: none; } .vs-opt { transition: none; } }
     /* "How was it?" sheet */
     .rs-overlay { animation: av-fade .25s cubic-bezier(.22,1,.36,1) both; }
@@ -7070,7 +7071,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         if (RS.open && RS.key === key && !RS.touched) {
           if (v.data) { RS.tier = v.data.tier; RS.feeling = (v.data.feelings || [])[0] || ''; }
           if (r.data) { RS.headline = r.data.headline || ''; RS.body = r.data.body || ''; RS.spoiler = !!r.data.spoiler; RS.showBody = !!RS.body; }
-          rateSheetBuild();
+          const hl = document.getElementById('rsHeadline'); if (hl) hl.value = RS.headline;
+          rateSheetOptions(); rateSheetMore();
         }
       } catch (e) {}
     }
@@ -7107,9 +7109,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const tiers = document.getElementById('rsTiers'), feel = document.getElementById('rsFeel'); if (!tiers || !feel) return;
       const check = '<i class="fa-solid fa-check vs-check ml-auto text-[11px]"></i>';
       tiers.innerHTML = TIERS.map(tr => { const sel = RS.tier === tr.n;
-        return `<button type="button" onclick="rateSheetTier(${tr.n})" aria-pressed="${sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 't' + tr.n ? 'vs-pop' : ''}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; }).join('');
+        return `<button type="button" onclick="rateSheetTier(${tr.n})" aria-pressed="${sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 't' + tr.n ? 'vs-pop' : 'vs-still'}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; }).join('');
       feel.innerHTML = FEELINGS.map(f => { const sel = RS.feeling === f.id;
-        return `<button type="button" onclick="rateSheetFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'f' + f.id ? 'vs-pop' : ''}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; }).join('');
+        return `<button type="button" onclick="rateSheetFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'f' + f.id ? 'vs-pop' : 'vs-still'}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; }).join('');
     }
     function rateSheetMore() {
       const box = document.getElementById('rsMore'); if (!box) return;

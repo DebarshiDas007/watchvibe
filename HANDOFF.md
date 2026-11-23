@@ -531,3 +531,7 @@ Open / next, in the order we discussed:
 - swiss.css v33, sw cache v128.
 - Films added: Hindi 1,270 to 2,170; Bengali 291 to 367 (TMDB has few more with full data); English 3,400 to 4,600. 0 duplicate ids or title+year. CAT.v 3, sw cache v129.
 
+
+## v130: rating sheet flicker
+- Cause 1: the whole sheet was rebuilt (card opening animation replayed) when the saved answers arrived from the server; now filled in place. Cause 2: every pick redrew all options and replayed the tick animation on the selected ones, with a big outline pop; now only the picked option animates (0.18 s, tiny). Cause 3 (mine, v125): the dialog style boxed every inner block of the sheet; removed. swiss.css v34, cache v130.
+

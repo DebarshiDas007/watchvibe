@@ -525,8 +525,8 @@ html[data-theme="light"] [class~="text-purple-100"], html[data-theme="light"] [c
 /* leftovers from the older look: square every button, pill and dialog */
 button.bg-white.text-black, button[class*="rounded-full"]:not(.pg-avatar), a[class*="rounded-full"] { border-radius: 0 !important; }
 #toast, .toast, [id*="toast" i] > div { border-radius: 0 !important; border: 1px solid var(--text); }
-[class*="rounded-[28px]"], [class*="rounded-3xl"], [class*="rounded-2xl"].ring-1, .rs-card, [role="dialog"] > div { border-radius: 0 !important; }
-[role="dialog"] > div, .rs-card { border: 1px solid var(--text); box-shadow: none; }
+[class*="rounded-[28px]"], [class*="rounded-3xl"], [class*="rounded-2xl"].ring-1, .rs-card { border-radius: 0 !important; }
+.rs-card { border: 1px solid var(--text); box-shadow: none; }
 
 /* ---- layout E: the trailer plays big, then shrinks to a corner player while the details take over ---- */
 #previewSlot { container-type: size; }
