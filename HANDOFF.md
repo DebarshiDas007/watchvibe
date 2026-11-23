@@ -436,3 +436,9 @@ Open / next, in the order we discussed:
   - The title window sheet leaves the page header faintly visible above it.
   - Top 10 numerals are partly covered by the poster on a 360 px screen.
 - theme.css?v=25, sw.js CACHE_NAME watchvibe-cache-v108.
+
+## v109: "Wall and Index" redesign, light/dark
+- New `swiss.css?v=2` (after theme.css): Switzer + IBM Plex Mono, square hairline look, blue accent, tokens for dark and light (`html[data-theme]`, stored as `wv_theme`, header sun/moon button, default dark).
+- Home top: Tonight's poster wall (numbered snap posters, arrows, progress bar) with a Now showing panel (Play trailer opens the title window, which starts the trailer; Open film; Watchlist). Mood chips re-sort the wall live; "All ... films" opens that mood's full page. Under 2h filters the wall. Featured daily picks still lead the wall. Old hero carousel code kept but not mounted.
+- Everything else unchanged: shelves, Top 10, mood pages (#mood=), language filter, watchlist, daily, games, stars, account menu. theme.css hard-coded dark colours now follow variables.
+- Checked: product sweep problems [] at 375/768/1440 (dark) and 375 (light). sw.js cache v109, swiss.css precached.

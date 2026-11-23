@@ -35,6 +35,8 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
+  <link rel="stylesheet" href="/swiss.css?v=2">
+  <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -703,6 +705,7 @@
       <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden h-10 items-center justify-center gap-2.5 rounded-full bg-white/[0.05] text-sm text-white/55 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white md:flex md:w-10 min-[1100px]:w-72 min-[1100px]:justify-start min-[1100px]:px-4" aria-label="Search" title="Search (press /)">
         <i class="fa-solid fa-magnifying-glass text-[13px]"></i><span class="hidden text-white/45 min-[1100px]:inline">Search titles, moods, people</span><kbd class="wv-kbd ml-auto hidden min-[1100px]:inline" aria-hidden="true">/</kbd>
       </button>
+      <button id="themeToggle" type="button" onclick="toggleTheme()" class="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 transition hover:bg-white/10" aria-label="Switch to light mode" title="Light or dark"><i class="fa-solid fa-sun" aria-hidden="true"></i></button>
       <button id="headerGamesBtn" type="button" onclick="openGames()" class="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 transition hover:bg-white/10 md:hidden" title="Game night" aria-label="Game night"><i class="fa-solid fa-gamepad text-[15px]"></i></button>
       <button id="cloudAuthBtn" type="button" onclick="toggleAccountMenu(event)" aria-haspopup="menu" aria-expanded="false" aria-label="Account" class="flex items-center gap-2.5 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-4 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10" title="Account">
         <span id="userProfileAvatar" class="flex h-7 w-7 items-center overflow-hidden justify-center rounded-full bg-purple-500/30 text-[11px] font-semibold text-white"><i class="fa-solid fa-user text-xs"></i></span>
@@ -3333,6 +3336,16 @@
       Object.entries(lit).forEach(([id, on]) => { const b = document.getElementById(id); if (!b) return; if (b.dataset.vis == null) b.dataset.vis = (b.className.match(/(^|\s)(hidden|(sm|md|lg|xl):(hidden|inline-flex))(?=\s|$)/g) || []).map(s => s.trim()).join(' '); b.className = (on ? NAV_ON : NAV_OFF) + (b.dataset.vis ? ' ' + b.dataset.vis : ''); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     }
 
+    // ---- light / dark: stored per device ("wv_theme"); dark is the default ----
+    function applyTheme(t) {
+      const light = t === 'light';
+      document.documentElement.dataset.theme = light ? 'light' : 'dark';
+      const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = light ? '#f4f4f0' : '#0e0e0d';
+      const b = document.getElementById('themeToggle');
+      if (b) { b.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode'); b.innerHTML = '<i class="fa-solid ' + (light ? 'fa-moon' : 'fa-sun') + '" aria-hidden="true"></i>'; }
+    }
+    function toggleTheme() { const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('wv_theme', t); } catch (e) {} applyTheme(t); }
+    applyTheme(document.documentElement.dataset.theme || 'dark');
     function goHome() {
       window.homeRow = null;
       selectedTopCategory = 'all'; selectedTopVibe = 'all'; selectedTopLanguage = ''; activeMood = null;
@@ -4530,7 +4543,8 @@ function posterCard(item, opts) {
       if (!(HERO.pool.length === heroPool.length && HERO.pool.every((m, i) => m.id === heroPool[i].id)) || HERO.idx >= heroPool.length) HERO.idx = 0;
       const heroHtml = heroPool.length ? heroCarouselHtml(heroPool)
         : (FEAT.state === 'loading' ? '<section id="heroSkeleton" class="-mx-4 min-h-[320px] animate-pulse bg-white/[0.03] sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" aria-hidden="true"></section>' : '');
-      if (heroPool.length) setTimeout(() => heroMount(heroPool), 0);
+      heroDestroy();
+      const wallSection = wallSetup(heroPool, ottAll, langOk);
 
       const starsHtml = `<section id="starsRow" aria-label="Trending stars">${starsInner()}</section>`;
       setTimeout(hydrateStars, 0);
@@ -4538,7 +4552,7 @@ function posterCard(item, opts) {
       setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 0);
       return `
         <div class="space-y-14">
-          <div class="wv-top space-y-5">${mobileTabs}<div class="wv-moodrow wv-moodphone no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>${heroHtml}<div class="wv-moodrow wv-mooddesk" role="group" aria-label="Mood">${moodRowChips}</div><div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
+          <div class="wv-top space-y-5">${mobileTabs}${wallSection}<div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
           ${homeShelvesHtml(ottAll)}
           ${starsHtml}
           <div class="text-center"><button type="button" onclick="setHomeRow('all')" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">Browse the full catalogue</button></div>
@@ -5109,6 +5123,94 @@ function posterCard(item, opts) {
           <div class="absolute inset-x-6 bottom-0 z-10 flex gap-1.5 sm:inset-x-10 lg:inset-x-16">${segs}</div>
         </section>`;
     }
+    // ================= Tonight's poster wall (the top of the home page) =================
+    // A swipe-and-snap wall of big numbered posters with a "Now showing" panel beside it. The first films are the day's featured picks (same
+    // source as before), then the best recent titles. A mood chip re-sorts the wall at once; "All ... films" opens that mood's full page.
+    // Nothing from other devices reaches this markup: every text goes through esc(), clicks use data-* attributes and one delegated handler.
+    const WALL = { base: [], cands: [], mood: '', under: false, list: [], i: 0 };
+    const wallPad = n => String(n).padStart(2, '0');
+    function wallSetup(heroPool, ottAll, langOk) {
+      const seen = new Set(), base = [];
+      [].concat(heroPool || [], ottAll.filter(m => m.poster && (m.totalVotes || 0) > 200).sort((a, b) => imdbSortVal(b) - imdbSortVal(a))).forEach(m => { if (m && m.poster && m.title && !seen.has(m.id) && base.length < 30) { seen.add(m.id); base.push(m); } });
+      WALL.base = base;
+      WALL.cands = mediaDatabase.filter(m => m.poster && langOk(m) && (m.totalVotes || 0) >= 300 && Number(m.rating) >= 6.5);
+      WALL.list = wallList(); WALL.i = 0;
+      setTimeout(wallProg, 60);
+      return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
+    }
+    function wallList() {
+      let list;
+      if (WALL.mood) {
+        const mo = AI_MOODS.find(x => x.id === WALL.mood);
+        list = mo ? WALL.cands.map(m => { const g = genresFromNames(m.genres || []), v = m.totalVotes || 0, pop = clamp01(Math.log10(v + 10) / 6.5); return { m, s: aiMoodFit(mo, m, g, pop, v) * (0.6 + 0.4 * clamp01((Number(m.rating) - 5.5) / 3.5)) }; }).filter(x => x.s >= 0.12).sort((a, b) => b.s - a.s).map(x => x.m) : WALL.base.slice();
+      } else list = WALL.base.slice();
+      if (WALL.under) list = list.filter(m => { const r = parseRuntimeMinutes(m.duration); return r > 0 && r <= 120; });
+      return list.slice(0, 14);
+    }
+    function wallChipsHtml() {
+      const chip = (label, on, attr) => `<button type="button" ${attr} aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}</button>`;
+      return AI_MOODS.map(mo => chip(mo.label, WALL.mood === mo.id, `data-wmood="${esc(mo.id)}"`)).join('') + chip('Under 2h', WALL.under, 'data-wunder="1"');
+    }
+    function wallBodyHtml() {
+      const list = WALL.list;
+      if (!list.length) return `<div class="wvw-empty">Nothing fits that tonight.<button type="button" class="wv-btn wv-btn-g" data-wall="reset"><span>Clear the mood</span></button></div>`;
+      const cards = list.map((m, i) => {
+        const gen = ((m.genres || []).find(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g))) || '';
+        return `<button type="button" class="wvw-pc${i === WALL.i ? ' on' : ''}" data-wi="${i}" data-id="${esc(m.id)}" aria-label="${esc(m.title)}, number ${i + 1}"><span class="wvw-nn" aria-hidden="true">${wallPad(i + 1)}</span><span class="wvw-ph"><img src="${esc(ps(m.poster))}" alt="" ${i < 3 ? '' : 'loading="lazy"'} decoding="async" onerror="handleMediaPosterError(this)"></span><span class="wvw-t">${esc(m.title)}</span><span class="wvw-s">${esc([m.year, gen].filter(Boolean).join(' · '))}</span></button>`;
+      }).join('');
+      return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
+    }
+    function wallNowHtml() {
+      const m = WALL.list[WALL.i];
+      if (!m) return '<span class="wvw-mo">Now showing</span><h2 class="wvw-title">Nothing yet</h2>';
+      const mo = AI_MOODS.find(x => x.id === WALL.mood);
+      const gens = (m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ');
+      const on = wlHas(m.id);
+      return `<span class="wvw-mo">Now showing <b class="wvw-roll">${wallPad(WALL.i + 1)} / ${wallPad(WALL.list.length)}</b>${m.__badge ? ` · ${esc(m.__badge)}` : ''}</span>
+        <h2 class="wvw-title">${esc(m.title)}</h2>
+        <p class="wvw-meta">${rtHtml(m, 'wvw-rt')}<span>${esc([m.year, gens, m.duration].filter(Boolean).join('  ·  '))}</span></p>
+        ${m.synopsis ? `<p class="wvw-syn">${esc(m.synopsis)}</p>` : ''}
+        <div class="wvw-acts"><button type="button" class="wv-btn wv-btn-p" data-wall="trailer"><i class="fa-solid fa-play" aria-hidden="true"></i><span>Play trailer</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="open"><span>Open film</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="wl" aria-pressed="${on}"><i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i><span>${on ? 'In watchlist' : 'Watchlist'}</span></button></div>
+        ${mo ? `<button type="button" class="wvw-all" data-wall="seeall">All ${esc(mo.label.toLowerCase())} films <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>` : ''}`;
+    }
+    function wallRefresh(full) {
+      const now = document.getElementById('wvwNow'); if (!now) return;
+      now.innerHTML = wallNowHtml();
+      if (full) { const ch = document.getElementById('wvwChips'), body = document.getElementById('wvwBody'); if (ch) ch.innerHTML = wallChipsHtml(); if (body) body.innerHTML = wallBodyHtml(); wallProg(); }
+    }
+    function wallShow(i) {
+      if (i === WALL.i || i < 0 || i >= WALL.list.length) return;
+      WALL.i = i;
+      document.querySelectorAll('#wvwSnap .wvw-pc').forEach((c, k) => c.classList.toggle('on', k === i));
+      wallRefresh(false);
+    }
+    function wallProg() {
+      const s = document.getElementById('wvwSnap'), p = document.getElementById('wvwProg'); if (!s || !p) return;
+      p.style.width = Math.max(8, Math.min(100, (s.scrollLeft + s.clientWidth) / Math.max(1, s.scrollWidth) * 100)) + '%';
+    }
+    function wallStep(dir) {
+      const s = document.getElementById('wvwSnap'), c = s && s.querySelector('.wvw-pc'); if (!s || !c) return;
+      s.scrollBy({ left: dir * (c.offsetWidth + 18) * (s.clientWidth > 700 ? 2 : 1), behavior: 'smooth' });
+    }
+    document.addEventListener('click', e => {
+      const t = e.target.closest && e.target.closest('[data-wmood],[data-wunder],[data-wall],.wvw-pc'); if (!t || !document.getElementById('wvWall')) return;
+      if (t.dataset.wmood) { WALL.mood = WALL.mood === t.dataset.wmood ? '' : t.dataset.wmood; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
+      if (t.dataset.wunder) { WALL.under = !WALL.under; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
+      if (t.classList.contains('wvw-pc')) { openDetails(t.dataset.id); return; }
+      const m = WALL.list[WALL.i], a = t.dataset.wall;
+      if (a === 'prev') wallStep(-1); else if (a === 'next') wallStep(1);
+      else if (a === 'reset') { WALL.mood = ''; WALL.under = false; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); }
+      else if (a === 'seeall' && WALL.mood) toggleAiMood(WALL.mood);
+      else if ((a === 'open' || a === 'trailer') && m) openDetails(m.id);   // the title window starts the trailer on its own
+      else if (a === 'wl' && m) { toggleWatchlist(m.id); wallRefresh(false); }
+    });
+    document.addEventListener('pointerover', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
+    document.addEventListener('focusin', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
+    document.addEventListener('scroll', e => {
+      const s = e.target; if (!s || s.id !== 'wvwSnap') return;
+      wallProg();
+      if (s._t) return; s._t = requestAnimationFrame(() => { s._t = 0; const cs = s.querySelectorAll('.wvw-pc'); let k = 0, best = 1e9; cs.forEach((c, n) => { const d = Math.abs(c.offsetLeft - s.offsetLeft - s.scrollLeft); if (d < best) { best = d; k = n; } }); wallShow(k); });
+    }, true);
     function heroEls(i) { return HERO.el ? { slide: HERO.el.querySelector(`[data-slide="${i}"]`), seg: HERO.el.querySelectorAll('.hero-seg')[i] } : {}; }
     function heroSettleTitle(item, i) {
       const ex = EXTRAS.cache.get(extrasKeyOf(item));
