@@ -177,6 +177,37 @@ html[data-wall="clean"] .wvw-arrows button { width: 38px; height: 38px; }
 }
 @media (max-width: 900px) { html[data-wall="clean"] .wvw-chips { margin-bottom: 22px; } html[data-wall="clean"] .wvw-snap { padding-top: 22px; } html[data-wall="clean"] .wvw-pc { width: min(230px, 62vw); } html[data-wall="clean"] .wvw-prog { display: block; } }
 
+/* ================= headline font + motion (v27) ================= */
+@font-face { font-family: 'Cabinet Grotesk'; font-weight: 700; font-style: normal; font-display: swap; src: url(/vendor/fonts/cabinet-grotesk-700.woff2) format('woff2'); }
+@font-face { font-family: 'Cabinet Grotesk'; font-weight: 800; font-style: normal; font-display: swap; src: url(/vendor/fonts/cabinet-grotesk-800.woff2) format('woff2'); }
+html:root { --wv-head: 'Cabinet Grotesk', 'Switzer', Inter, system-ui, sans-serif; }
+.font-display, .wvw-title, .wvw-h, .wv-shelf-h h2, header button[aria-label="WatchVibe home"], .wvw-t, .wv-pt, button.group .wv-pt, button.group > div:last-child > div:first-child { font-family: var(--wv-head); }
+.wvw-title, .wvw-h, .wv-shelf-h h2 { font-weight: 800; letter-spacing: -.04em; }
+.font-display, .wvw-t, .wv-pt { font-weight: 700; letter-spacing: -.02em; }
+html[data-wall="clean"] .wvw-title { letter-spacing: -.045em; line-height: .98; }
+
+/* chip fill: colour sweeps in from the left on hover (selected chips are already solid) */
+.wv-chip { background-image: linear-gradient(var(--text), var(--text)); background-repeat: no-repeat; background-size: 0% 100%; transition: background-size .32s cubic-bezier(.2,.7,.2,1), color .32s, border-color .2s; }
+.wv-chip:hover { background-color: transparent; background-size: 100% 100%; color: var(--bg); }
+html .wv-chip.is-on { background-size: 100% 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* the title and the facts rise into place each time the film in front changes; the posters arrive one after another */
+  @keyframes wvRise { from { opacity: 0; transform: translateY(.45em); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: none; clip-path: inset(0 0 -20% 0); } }
+  @keyframes wvIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+  .wvw-now > * { animation: wvRise .5s cubic-bezier(.2,.7,.2,1) both; }
+  .wvw-now > :nth-child(2) { animation-delay: .04s; } .wvw-now > :nth-child(3) { animation-delay: .1s; } .wvw-now > :nth-child(4) { animation-delay: .16s; } .wvw-now > :nth-child(5) { animation-delay: .22s; }
+  .wvw-pc { animation: wvIn .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 55ms + 80ms); }
+  .wvw-ph { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .28s ease-out, outline-color .2s; position: relative; }
+  .wvw-ph::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.22), transparent 55%); }
+  .wvw-pc:hover .wvw-ph::after { opacity: 1; }
+  /* shelves fade up as they come into view (browsers without scroll-driven animations just show them) */
+  @supports (animation-timeline: view()) {
+    @keyframes wvShelf { from { opacity: .0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+    .wv-shelf { animation: wvShelf linear both; animation-timeline: view(); animation-range: entry 0% entry 28%; }
+  }
+}
+
 /* ================= everything theme.css hard-coded for dark now follows the variables ================= */
 #headerSearchBtn { background: var(--surface); border: 1px solid var(--line-strong); }
 .wv-kbd { border-color: var(--line-strong); color: var(--muted); }

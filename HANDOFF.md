@@ -451,3 +451,8 @@ Open / next, in the order we discussed:
 ## v111: wall demo switch removed, posters sized to the screen
 - Removed the ?wall= demo switch and the Glow, Stage and old looks (JS and CSS). `<html data-wall="clean">` is fixed. swiss.css?v=12, cache v111.
 - Poster width = min(17vw, (100vh - 250px) / 1.5), 200-380 px: whole poster, title and chips fit on the first screen at any desktop size.
+
+## v112: Cabinet Grotesk headlines + motion
+- Fonts: Cabinet Grotesk 700/800 (Fontshare, free licence) for headlines, poster names, wordmark; Switzer stays for body, Plex Mono for labels.
+- Motion (all off for prefers-reduced-motion): title and facts rise into place when the film in front changes; posters arrive one by one; mouse-only poster tilt with a light; chip colour sweep on hover; shelves fade up on scroll (scroll-driven, no JS). swiss.css?v=13, cache v112.
+- Checked: product sweep problems [] at 1864 and 375.

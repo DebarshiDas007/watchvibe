@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=12">
+  <link rel="stylesheet" href="/swiss.css?v=13">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -5156,7 +5156,7 @@ function posterCard(item, opts) {
       if (!list.length) return `<div class="wvw-empty">Nothing fits that tonight.<button type="button" class="wv-btn wv-btn-g" data-wall="reset"><span>Clear the mood</span></button></div>`;
       const cards = list.map((m, i) => {
         const gen = ((m.genres || []).find(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g))) || '';
-        return `<button type="button" class="wvw-pc${i === WALL.i ? ' on' : ''}" data-wi="${i}" data-id="${esc(m.id)}" aria-label="${esc(m.title)}, number ${i + 1}"><span class="wvw-nn" aria-hidden="true">${wallPad(i + 1)}</span><span class="wvw-ph"><img src="${esc(ps(m.poster))}" alt="" ${i < 3 ? '' : 'loading="lazy"'} decoding="async" onerror="handleMediaPosterError(this)"></span><span class="wvw-t">${esc(m.title)}</span><span class="wvw-s">${esc([m.year, gen].filter(Boolean).join(' · '))}</span></button>`;
+        return `<button type="button" class="wvw-pc${i === WALL.i ? ' on' : ''}" style="--i:${Math.min(i, 9)}" data-wi="${i}" data-id="${esc(m.id)}" aria-label="${esc(m.title)}, number ${i + 1}"><span class="wvw-nn" aria-hidden="true">${wallPad(i + 1)}</span><span class="wvw-ph"><img src="${esc(ps(m.poster))}" alt="" ${i < 3 ? '' : 'loading="lazy"'} decoding="async" onerror="handleMediaPosterError(this)"></span><span class="wvw-t">${esc(m.title)}</span><span class="wvw-s">${esc([m.year, gen].filter(Boolean).join(' · '))}</span></button>`;
       }).join('');
       return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
     }
@@ -5205,6 +5205,18 @@ function posterCard(item, opts) {
       else if (a === 'wl' && m) { toggleWatchlist(m.id); wallRefresh(false); }
     });
     document.addEventListener('pointerover', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
+    // poster tilt: the picture leans a few degrees toward the pointer and catches a light (mouse only, off for reduced motion)
+    (function () {
+      const fine = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)'), calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)');
+      document.addEventListener('pointermove', e => {
+        if (!fine || !fine.matches || (calm && calm.matches) || e.pointerType !== 'mouse') return;
+        const c = e.target.closest && e.target.closest('.wvw-pc'); if (!c) return;
+        const ph = c.querySelector('.wvw-ph'), r = ph.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+        ph.style.setProperty('--rx', ((0.5 - y) * 8).toFixed(2) + 'deg'); ph.style.setProperty('--ry', ((x - 0.5) * 10).toFixed(2) + 'deg');
+        ph.style.setProperty('--mx', (x * 100).toFixed(1) + '%'); ph.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+      }, { passive: true });
+      document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (!c || c.contains(e.relatedTarget)) return; const ph = c.querySelector('.wvw-ph'); ['--rx', '--ry'].forEach(p => ph.style.removeProperty(p)); });
+    })();
     document.addEventListener('focusin', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
     document.addEventListener('scroll', e => {
       const s = e.target; if (!s || s.id !== 'wvwSnap') return;
