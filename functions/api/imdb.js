@@ -7,7 +7,7 @@ import { allow, tooMany } from '../_lib/limit.js';
 
 const TMDB_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';   // the same public key the site already ships to browsers
 // the OMDb key lives only in the OMDB_KEY secret of the Cloudflare Pages project (never in this file)
-const TTL_OK = 7 * 24 * 3600;
+const TTL_OK = 24 * 3600;      // ratings refresh daily (was 7 days)
 const TTL_MISS = 6 * 3600;
 
 function json(body, ttl) {

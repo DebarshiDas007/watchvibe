@@ -535,3 +535,11 @@ Open / next, in the order we discussed:
 ## v130: rating sheet flicker
 - Cause 1: the whole sheet was rebuilt (card opening animation replayed) when the saved answers arrived from the server; now filled in place. Cause 2: every pick redrew all options and replayed the tick animation on the selected ones, with a big outline pop; now only the picked option animates (0.18 s, tiny). Cause 3 (mine, v125): the dialog style boxed every inner block of the sheet; removed. swiss.css v34, cache v130.
 
+
+## v131 - launch-readiness pass (24 Nov 2026)
+- Delete my account: Supabase function `delete_my_account()` (authenticated only; every user table cascades from auth.users) + "Delete my account" button on Profile (`userDeleteAccount`, confirm dialog).
+- New /terms page; /privacy rewritten in the Swiss look and updated (abuse-protection hash, OMDb/JustWatch/YouTube, in-app deletion). Shared `legal.css`. Footer links Privacy + Terms; sitemap lists terms.
+- IMDb ratings now refresh daily: edge cache 7 days -> 1 day (`functions/api/imdb.js`), browser cache 14 days -> 1 day.
+- Audit notes: DB functions were already guarded (`api_rate_hit` needs a server secret, list functions clamp their inputs); OMDb key already lives only in the Cloudflare secret (old key remains in git history); TMDB limits per IP, so no proxy built.
+- Still manual: catalogue (ratings/votes/new films) is rebuilt by scripts, no scheduler. Domain switch needs canonical/og/sitemap/robots/ld+json URLs changed.
+- Not verified: real signed-in delete (sign-in is the owner's); leaked-password protection is a Supabase dashboard toggle.

@@ -573,6 +573,19 @@
       closeAuthModal();
       showToast('👋 Signed out of WatchVibe Profile.');
     }
+    // Deletes the signed-in user's account and everything tied to it (votes, reviews, watchlist, scores) on the server; see delete_my_account() in Supabase.
+    async function userDeleteAccount() {
+      if (!window.supabaseClient || !currentUserSession) return;
+      if (!confirm('Delete your WatchVibe account?\n\nThis permanently removes your profile, watchlist, votes and reviews from our servers. It cannot be undone.')) return;
+      try {
+        const { error } = await window.supabaseClient.rpc('delete_my_account');
+        if (error) throw error;
+        try { await window.supabaseClient.auth.signOut(); } catch (e) {}
+        setLoggedOutUser();
+        closeAuthModal();
+        showToast('Your account and its data were deleted.');
+      } catch (e) { showToast('Could not delete the account. Please try again or email us.'); }
+    }
 
 
     // --- ADMIN ENTRY ---
@@ -2335,7 +2348,7 @@
     const IMDB = { ens: new Set(), map: new Map(), q: [], queued: new Set(), active: 0, pausedUntil: 0, KEY: 'watchvibe_imdb_v1', io: null, saveT: 0 };
     try {
       const o = JSON.parse(localStorage.getItem(IMDB.KEY) || '{}'), now = Date.now();
-      Object.entries(o).forEach(([k, v]) => { if (v && now - v.t < (v.r ? 14 : 2) * 864e5) IMDB.map.set(k, v); });
+      Object.entries(o).forEach(([k, v]) => { if (v && now - v.t < (v.r ? 1 : 0.25) * 864e5) IMDB.map.set(k, v); });
     } catch (e) {}
     const TMAP = { m: new Map(), inflight: new Map(), KEY: 'watchvibe_tmap_v1' };
     try { Object.entries(JSON.parse(localStorage.getItem(TMAP.KEY) || '{}')).forEach(([k, v]) => TMAP.m.set(k, v)); } catch (e) {}
@@ -5543,7 +5556,7 @@ function posterCard(item, opts) {
 
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a></div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a><a href="/terms" class="hover:text-white/70">Terms</a></div>
         <p class="mt-2 max-w-2xl">Film and TV data and images are provided by TMDB. WatchVibe uses the TMDB API but is not endorsed or certified by TMDB.</p>
       </footer>`;
     }
@@ -7601,7 +7614,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
                 <div class="dcl-eyebrow">Your profile</div>
                 <h1 class="dcl-h dcl-h-sm pg-name-big">${esc(name)}</h1>
                 <p class="pg-sub">${esc(sub)}</p>
-                ${sess ? '<button type="button" onclick="userSignOut()" class="pg-link">Sign out</button>' : '<button type="button" onclick="openAuthModal()" class="pg-btn pg-btn-sm">Sign in to sync <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>'}
+                ${sess ? '<button type="button" onclick="userSignOut()" class="pg-link">Sign out</button> <button type="button" onclick="userDeleteAccount()" class="pg-link" style="margin-left:16px;opacity:.7">Delete my account</button>' : '<button type="button" onclick="openAuthModal()" class="pg-btn pg-btn-sm">Sign in to sync <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>'}
               </div>
             </div>
             <div class="dcl-stats dcl-stats-sm" role="group" aria-label="Your numbers"><div><b>${s.movies}</b><span>Movies</span></div><div><b>${s.series}</b><span>Series</span></div><div><b>${s.wantCount}</b><span>Saved</span></div></div>
