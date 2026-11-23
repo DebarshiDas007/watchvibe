@@ -463,3 +463,10 @@ Open / next, in the order we discussed:
 - Posters now come in two formats: portrait 2:3 and wide 16:9. Top 10 uses the portrait size with the rank on the picture (top10Card kept but unused).
 - "Tonight's poster wall." heading is a large Cabinet Grotesk headline. swiss.css?v=16, cache v113.
 - Checked: product sweep problems [] at 1864, 1500, 768, 375.
+
+## v114: Vibe Deck removed, Watchlist redesign, bolder Home/Movies/Series/Stand-Up
+- Removed the Vibe Deck (swipe cards) completely: header button, phone bottom-bar Swipe button, "More" menu item, modal, functions, the S shortcut. (Taste Match keeps its own swipe flow.)
+- Watchlist page (Want to watch, Watched, My reviews): new header with a huge title and the three sections as big counter tabs, hairline controls, posters in an auto-fill grid with 01, 02... numbers, bigger titles, square buttons, Swiss rows for list view and reviews, new taste panel and empty states.
+- Home / Movies / Series / Stand-Up: 14px bold in the top bar (from 1100 px), 46px high bold segmented control on phones.
+- Light mode: body text colour fix (unclassed text stayed light), level tag colours. swiss.css?v=18, cache v114.
+- Checked: product sweep problems [] at 1864, 1500, 768, 375; a full Daily round played to the result page.

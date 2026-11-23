@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=16">
+  <link rel="stylesheet" href="/swiss.css?v=18">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -692,7 +692,6 @@
       <button type="button" onclick="setTopCategory('Series')" id="top-cat-series" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Series</span></button>
       <button type="button" onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Stand-Up</span></button>
       <span class="mx-2 hidden h-5 w-px shrink-0 bg-white/15 lg:block" aria-hidden="true"></span>
-      <button type="button" onclick="openSwipeDeck()" id="top-deck" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Vibe Deck" aria-label="Vibe Deck"><i class="fa-solid fa-layer-group text-[13px]"></i><span class="hidden min-[1500px]:inline">Vibe Deck</span></button>
       <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watch together" aria-label="Watch together"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden min-[1500px]:inline">Watch together</span></button>
       <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Taste Match" aria-label="Taste Match"><i class="fa-solid fa-heart-pulse text-[13px]"></i><span class="hidden min-[1500px]:inline">Taste Match</span></button>
       <button type="button" onclick="switchTab('watchlist')" id="desk-tab-watchlist" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watchlist" aria-label="Watchlist"><i class="fa-solid fa-bookmark text-[13px]"></i><span class="hidden lg:inline">Watchlist</span></button>
@@ -735,12 +734,6 @@
       <i class="fa-solid fa-magnifying-glass text-base"></i>
       <span>Search</span>
     </button>
-    <button onclick="openSwipeDeck()" class="flex flex-col items-center gap-1 text-purple-400 text-xs font-bold py-1 px-2">
-      <div class="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-[#16161E]">
-        <i class="fa-solid fa-layer-group text-sm"></i>
-      </div>
-      <span class="text-[10px]">Swipe</span>
-    </button>
     <button onclick="switchTab('watchlist')" id="mob-tab-watchlist" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white text-xs font-semibold py-1 px-2">
       <i class="fa-solid fa-bookmark text-base"></i>
       <span>Watchlist</span>
@@ -762,37 +755,6 @@
   <div id="detailModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 p-3 sm:p-6" onclick="if(event.target === this) closeDetails();" role="dialog" aria-modal="true" aria-label="Title details">
     <div id="detailScroll" class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto overflow-x-hidden rounded-3xl bg-[#0F0F14] shadow-2xl ring-1 ring-white/10">
       <div id="modalContent"></div>
-    </div>
-  </div>
-
-  <!-- SWIPE TO VIBE DECK MODAL -->
-  <div id="swipeModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/85 p-3 sm:p-5" onclick="if(event.target === this) closeSwipeDeck();" role="dialog" aria-modal="true" aria-label="Vibe Deck">
-    <div class="relative w-full max-w-md rounded-3xl bg-[#0F0F14] p-5 shadow-2xl ring-1 ring-white/10">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h3 class="font-display text-xl font-medium text-white">Vibe Deck</h3>
-          <p class="mt-0.5 text-sm text-white/45">Tell us how a title looks to you. Every tap teaches us your taste.</p>
-        </div>
-        <button type="button" onclick="closeSwipeDeck()" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div id="swipeCardContainer" class="relative mt-4 flex h-[360px] flex-col justify-end overflow-hidden rounded-2xl bg-[#14141A] p-4 ring-1 ring-white/10 sm:h-[420px]">
-        <img id="swipePoster" class="absolute inset-0 h-full w-full object-cover" alt="Poster">
-        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-        <div id="swipeFeedbackStamp" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 rounded-xl px-4 py-2 font-black text-lg tracking-wider uppercase hidden rotate-[-12deg] z-20"></div>
-        <div class="relative z-10">
-          <div id="swipeBadge" class="mb-1.5 inline-block rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white"></div>
-          <h4 id="swipeTitle" class="font-display text-2xl leading-tight text-white"></h4>
-          <p id="swipeSubtitle" class="mt-0.5 text-sm text-white/65"></p>
-        </div>
-      </div>
-
-      <div class="mt-4 grid grid-cols-2 gap-2.5 text-sm font-medium">
-        <button type="button" onclick="handleSwipe('skip_it')" class="flex items-center justify-center gap-2 rounded-full bg-rose-500/15 px-4 py-3 text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/25 active:scale-95"><i class="fa-solid fa-xmark text-xs"></i>Skip it</button>
-        <button type="button" onclick="handleSwipe('must_watch')" class="flex items-center justify-center gap-2 rounded-full bg-emerald-500/15 px-4 py-3 text-emerald-200 ring-1 ring-emerald-400/30 transition hover:bg-emerald-500/25 active:scale-95"><i class="fa-solid fa-check text-xs"></i>Must watch</button>
-        <button type="button" onclick="handleSwipe('mind_blown')" class="flex items-center justify-center gap-2 rounded-full bg-purple-500/15 px-4 py-3 text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/25 active:scale-95"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i>Mind blown</button>
-        <button type="button" onclick="handleSwipe('want_to_watch')" class="flex items-center justify-center gap-2 rounded-full bg-cyan-500/15 px-4 py-3 text-cyan-200 ring-1 ring-cyan-400/30 transition hover:bg-cyan-500/25 active:scale-95"><i class="fa-solid fa-bookmark text-xs"></i>Want to watch</button>
-      </div>
     </div>
   </div>
 
@@ -1095,7 +1057,6 @@
     let selectedOttFilter = null;
     let currentActorSort = 'boxOffice';
     let currentActorVibeFilter = null;
-    let swipeDeckIndex = 0;
     let selectedIndianLang = null;
     let selectedTopCategory = "all"; // "all", "Movie", "Series", "Stand-Up"
     let selectedTopVibe = "all";     // "all", "mind_blown", "must_watch", etc.
@@ -5447,7 +5408,7 @@ function posterCard(item, opts) {
       m.className = 'fixed z-[55] w-56 overflow-hidden rounded-2xl bg-[#14141A] p-1.5 shadow-2xl ring-1 ring-white/10';
       m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(innerWidth - 232, r.left)) + 'px';
       const item = (icon, label, fn) => `<button type="button" role="menuitem" onclick="closeNavMore(); ${fn}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"><i class="fa-solid ${icon} w-4 text-center text-[13px] text-white/50"></i>${label}</button>`;
-      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-gamepad', 'Game night', 'openGames()') + item('fa-layer-group', 'Vibe Deck', 'openSwipeDeck()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
+      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-gamepad', 'Game night', 'openGames()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
       document.body.appendChild(m);
       setTimeout(() => document.addEventListener('click', closeNavMore, { once: true }), 0);
     }
@@ -6342,49 +6303,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (c) { delete c.dataset.itemId; }
     }
 
-    // --- SWIPE DECK SIMULATOR ---
-    function openSwipeDeck() {
-      swipeDeckIndex = 0;
-      updateSwipeCard();
-      document.getElementById('swipeModal').classList.remove('hidden');
-    }
-    function closeSwipeDeck() {
-      document.getElementById('swipeModal').classList.add('hidden');
-    }
-
-    function updateSwipeCard() {
-      const item = mediaDatabase[swipeDeckIndex % mediaDatabase.length];
-      document.getElementById('swipePoster').src = item.poster;
-      document.getElementById('swipeTitle').innerText = item.title;
-      document.getElementById('swipeSubtitle').innerText = `${item.year} • ${item.type}${imdbText(imdbKey(item), ' • ')}`;
-      document.getElementById('swipeBadge').innerText = item.dominantVibe ? VIBES[item.dominantVibe].label : 'Must Watch';
-      document.getElementById('swipeFeedbackStamp').classList.add('hidden');
-    }
-
-    function handleSwipe(action) {
-      const stamp = document.getElementById('swipeFeedbackStamp');
-      stamp.classList.remove('hidden');
-
-      if (action === 'must_watch') {
-        stamp.innerText = 'MUST WATCH!';
-        stamp.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-emerald-400 text-emerald-400 bg-black/85 rounded-2xl px-5 py-2.5 font-black text-xl tracking-wider uppercase rotate-[-12deg] z-20 shadow-2xl';
-      } else if (action === 'skip_it') {
-        stamp.innerText = 'SKIP IT!';
-        stamp.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-red-500 text-red-500 bg-black/85 rounded-2xl px-5 py-2.5 font-black text-xl tracking-wider uppercase rotate-[12deg] z-20 shadow-2xl';
-      } else if (action === 'mind_blown') {
-        stamp.innerText = 'MIND BLOWN!';
-        stamp.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-purple-400 text-purple-400 bg-black/85 rounded-2xl px-5 py-2.5 font-black text-xl tracking-wider uppercase rotate-[-6deg] z-20 shadow-2xl';
-      } else if (action === 'want_to_watch') {
-        stamp.innerText = 'SAVED TO WATCHLIST!';
-        stamp.className = 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-cyan-400 text-cyan-400 bg-black/85 rounded-2xl px-5 py-2.5 font-black text-xl tracking-wider uppercase rotate-[6deg] z-20 shadow-2xl';
-      }
-
-      setTimeout(() => {
-        swipeDeckIndex++;
-        updateSwipeCard();
-      }, 550);
-    }
-
     // --- OTHER TABS ---
     
     // --- EXPLORE & SEARCH SCREEN ---
@@ -6833,7 +6751,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"><i class="fa-solid fa-heart-pulse"></i></div>
               <h2 class="mt-4 flex items-center gap-2 font-display text-xl font-medium text-white">Taste duel <span class="rounded-full bg-white/10 px-2 py-0.5 font-sans text-[11px] font-medium text-white/60">Coming soon</span></h2>
               <p class="mt-1.5 flex-1 text-sm leading-relaxed text-white/55">You and a friend swipe the same ten titles and get a compatibility score, plus three films you would both love.</p>
-              <div class="mt-5">${s.dist.length ? `<div class="mb-2 text-xs text-white/40">Your taste so far</div><div class="flex flex-wrap gap-2">${top}</div>` : '<div class="text-sm text-white/40">Vote on a few titles in the Vibe Deck to start your taste profile.</div>'}</div>
+              <div class="mt-5">${s.dist.length ? `<div class="mb-2 text-xs text-white/40">Your taste so far</div><div class="flex flex-wrap gap-2">${top}</div>` : '<div class="text-sm text-white/40">Vote on a few titles to start your taste profile.</div>'}</div>
             </div>
           </div>
         </div>`;
@@ -6917,17 +6835,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             <button type="button" onclick="toggleWatched('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watched">Remove</button>`;
       }
       return `
-        <div class="group flex h-full flex-col">
+        <div class="group wll-card flex h-full flex-col">
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="block w-full text-left focus:outline-none">
             <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#14141A] ring-1 ring-white/[0.07] transition duration-200 group-hover:-translate-y-1 group-hover:ring-white/25">
               ${poster}
               ${badge}
             </div>
-            <div class="mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
-            <div class="px-0.5 text-xs text-white/45">${sub}</div>
+            <div class="wll-t mt-2.5 min-h-[2.25rem] break-words px-0.5 text-[13px] font-medium leading-snug text-white/90">${esc(m.title)}</div>
+            <div class="wll-s px-0.5 text-xs text-white/45">${sub}</div>
           </button>
           ${extra}
-          <div class="mt-auto flex flex-wrap items-center gap-1 px-0.5 pt-2">${actions}</div>
+          <div class="wll-act mt-auto flex flex-wrap items-center gap-1 px-0.5 pt-2">${actions}</div>
         </div>`;
     }
 
@@ -7097,17 +7015,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         // guests keep the older vibe bar
         const counts = {}; watched.forEach(w => { const v = w.myVibe || w.dominantVibe || 'must_watch'; counts[v] = (counts[v] || 0) + 1; });
         const total = watched.length || 1;
-        return `<div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]"><div class="text-sm text-white/55">Sign in to rate what you watch and build your taste profile.</div>
+        return `<div class="wll-taste wll-taste-guest rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]"><div class="text-sm text-white/55">Sign in to rate what you watch and build your taste profile.</div>
           <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${Object.entries(VIBES).map(([id, v]) => { const pct = Math.round(((counts[id] || 0) / total) * 100); return pct ? `<div style="width:${pct}%;background:${v.color}" title="${esc(v.label)} ${pct}%"></div>` : ''; }).join('')}</div></div>`;
       }
       if (!LIB.loaded) return '<div class="h-36 animate-pulse rounded-2xl bg-white/[0.04]"></div>';
       const s = wlTaste(watched), reviews = LIB.reviews.size;
-      const stat = (label, value, sub) => `<div class="rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06]"><div class="text-[11px] uppercase tracking-wider text-white/40">${esc(label)}</div><div class="mt-1 break-words text-lg font-medium leading-tight text-white">${value}</div>${sub ? `<div class="mt-0.5 text-xs text-white/40">${esc(sub)}</div>` : ''}</div>`;
-      if (!s.rated) return `<div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]"><h2 class="font-display text-xl font-medium text-white">Your taste</h2><p class="mt-2 text-sm text-white/50">Rate a few of the titles below and your taste profile will appear here. Tap <span class="text-white/80">Add verdict</span> on any card.</p></div>`;
+      const stat = (label, value, sub) => `<div class="wll-stat rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06]"><div class="text-[11px] uppercase tracking-wider text-white/40">${esc(label)}</div><div class="mt-1 break-words text-lg font-medium leading-tight text-white">${value}</div>${sub ? `<div class="mt-0.5 text-xs text-white/40">${esc(sub)}</div>` : ''}</div>`;
+      if (!s.rated) return `<div class="wll-taste rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]"><h2 class="font-display text-xl font-medium text-white">Your taste</h2><p class="mt-2 text-sm text-white/50">Rate a few of the titles below and your taste profile will appear here. Tap <span class="text-white/80">Add verdict</span> on any card.</p></div>`;
       const mix = s.tiers.map((c, i) => c ? `<div style="width:${c / s.rated * 100}%;background:${TIERS[i].color}" title="${esc(TIERS[i].label)}: ${c}"></div>` : '').join('');
       const legend = s.tiers.map((c, i) => c ? `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${TIERS[i].color}"></span>${esc(TIERS[i].label)} <span class="text-white/40">${c}</span></span>` : '').join('');
       const line = [s.topGenres.length ? `You gravitate to ${s.topGenres.length > 1 ? s.topGenres.slice(0, -1).join(', ') + ' and ' + s.topGenres.slice(-1) : s.topGenres[0]}.` : '', `Your usual verdict is ${TIERS[s.avg - 1].label}.`, s.topFeel ? `${s.topFeel.label} is the feeling you pick most.` : ''].filter(Boolean).join(' ');
-      return `<div class="rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] sm:p-6">
+      return `<div class="wll-taste rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] sm:p-6">
           <h2 class="font-display text-xl font-medium text-white">Your taste</h2>
           <p class="mt-1.5 text-sm leading-relaxed text-white/60">${esc(line)}</p>
           <div class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${mix}</div>
@@ -7123,7 +7041,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     function libraryRow(m) {
       const key = libKeyOf(m), vote = LIB.votes.get(key), rev = LIB.reviews.get(key), tr = vote ? TIERS[vote.tier - 1] : null, f = vote && feelingOf((vote.feelings || [])[0]);
       const poster = m.poster ? `<img src="${esc(ps(m.poster))}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : '';
-      return `<article class="flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
+      return `<article class="wll-row flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
           <button type="button" onclick="openDetails('${esc(m.id)}')" class="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-[#14141A] ring-1 ring-white/10 focus:outline-none" aria-label="Open ${esc(m.title)}">${poster}</button>
           <div class="min-w-0 flex-1">
             <button type="button" onclick="openDetails('${esc(m.id)}')" class="block max-w-full break-words text-left text-[15px] font-medium leading-snug text-white hover:underline focus:outline-none">${esc(m.title)}</button>
@@ -7155,7 +7073,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
       const long = (r.body || '').length > 320;
       const poster = it.poster ? `<img src="${esc(ps(it.poster))}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="handleMediaPosterError(this)">` : `<div class="flex h-full w-full items-center justify-center p-1 text-center text-[10px] text-white/35">${esc(r.title_name)}</div>`;
-      return `<article class="flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
+      return `<article class="wll-row flex gap-4 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] sm:p-4">
           <button type="button" onclick="openDetails('${esc(it.id)}')" class="h-[108px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-[#14141A] ring-1 ring-white/10 focus:outline-none" aria-label="Open ${esc(r.title_name)}">${poster}</button>
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-baseline gap-x-3"><button type="button" onclick="openDetails('${esc(it.id)}')" class="break-words text-left text-[15px] font-medium text-white hover:underline focus:outline-none">${esc(r.title_name)}</button><span class="text-xs text-white/40">${esc(date)}</span></div>
@@ -7313,7 +7231,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const step = (icon, title, text) => `<div class="flex gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sm text-white/70 ring-1 ring-white/10"><i class="fa-solid ${icon}"></i></span><div><div class="text-sm font-medium text-white">${title}</div><div class="mt-0.5 text-sm text-white/45">${text}</div></div></div>`;
       return `
         <div class="space-y-10">
-          <div class="rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06] sm:p-8">
+          <div class="wll-empty wll-empty-big rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.06] sm:p-8">
             <div class="font-display text-2xl text-white">Your watchlist is empty</div>
             <p class="mt-1.5 max-w-xl text-[15px] text-white/50">Save what you want to see and WatchVibe keeps it for you, shows where it streams and picks one for tonight.</p>
             <div class="mt-6 grid gap-5 sm:grid-cols-3">
@@ -7332,14 +7250,14 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (currentAuthUser && !LIB.loaded && !LIB.loading) libLoad();
       setTimeout(resolveWatchlistMeta, 0);
       if (currentWatchlistSubTab === 'reviews' && !currentAuthUser) currentWatchlistSubTab = 'watched';
-      const tab = (id, label, n) => `<button type="button" onclick="switchWatchlistSubTab('${id}')" class="rounded-full px-4 py-1.5 text-sm font-medium transition ${currentWatchlistSubTab === id ? 'bg-white text-black' : 'text-white/60 hover:text-white'}">${label}${n === '' ? '' : ` <span class="${currentWatchlistSubTab === id ? 'text-black/50' : 'text-white/35'}">${n}</span>`}</button>`;
+      const tab = (id, label, n) => `<button type="button" role="tab" aria-selected="${currentWatchlistSubTab === id}" onclick="switchWatchlistSubTab('${id}')" class="wll-tab${currentWatchlistSubTab === id ? ' on' : ''}"><b>${n === '' ? '·' : n}</b><span>${label}</span></button>`;
       const empty = (title, text, cta) => `
-        <div class="rounded-2xl bg-white/[0.03] px-6 py-16 text-center ring-1 ring-white/[0.06]">
+        <div class="wll-empty rounded-2xl bg-white/[0.03] px-6 py-16 text-center ring-1 ring-white/[0.06]">
           <div class="font-display text-xl text-white">${title}</div>
           <p class="mx-auto mt-2 max-w-sm text-sm text-white/45">${text}</p>
           ${cta ? `<button type="button" onclick="goHome()" class="mt-5 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">${cta}</button>` : ''}
         </div>`;
-      const grid = 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9';
+      const grid = 'wll-grid';
       let body = '';
       if (currentWatchlistSubTab === 'want') {
         if (wantList.length === 0) body = watchlistEmptyHtml();
@@ -7353,7 +7271,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           else rows.sort((a, b) => b.idx - a.idx);                                  // recently added first
           const checking = wantList.some(m => wantAvail(m).state === 'loading');
           const cname = regionName(selectedCountry);
-          const controls = `<div class="flex flex-wrap items-center gap-2">
+          const controls = `<div class="wll-controls flex flex-wrap items-center gap-2">
               ${wlSelect('avail', 'Filter by availability', WL.avail, [['all', 'All titles'], ['stream', 'Streaming now'], ['rent', 'Rent or buy only'], ['none', 'Not available']])}
               ${wlSelect('wsort', 'Sort', WL.wsort, [['added', 'Recently added'], ['rating', 'Highest rated'], ['year', 'Newest release'], ['title', 'Title A to Z']])}
               <button type="button" onclick="openTonight()" class="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-[13px] font-semibold text-black transition hover:bg-white/90"><i class="fa-solid fa-shuffle text-xs"></i>Pick one for tonight</button>
@@ -7381,7 +7299,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         else if (WL.sort === 'year') rows.sort((a, b) => (Number(b.h.year) || 0) - (Number(a.h.year) || 0) || a.idx - b.idx);
         else if (WL.sort === 'title') rows.sort((a, b) => String(a.h.title).localeCompare(String(b.h.title)));
         const filtered = rows.length !== watchedList.length;
-        const controls = `<div class="flex flex-wrap items-center gap-2">
+        const controls = `<div class="wll-controls flex flex-wrap items-center gap-2">
             ${signedIn ? wlSelect('verdict', 'Filter by verdict', WL.verdict, [['all', 'All verdicts'], ...TIERS.map(tr => [String(tr.n), tr.label]), ['none', 'Not rated yet']]) : ''}
             ${signedIn ? wlSelect('feeling', 'Filter by feeling', WL.feeling, [['all', 'Any feeling'], ...FEELINGS.map(f => [f.id, f.label])]) : ''}
             ${wlSelect('type', 'Filter by type', WL.type, [['all', 'Movies and series'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-up']])}
@@ -7397,12 +7315,12 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         body = `${wlTasteHtml(watchedList)}${controls}${rows.length === 0 ? empty('Nothing matches', 'Try a different filter.', null) : (WL.view === 'list' ? `<div class="space-y-3">${rows.map(x => libraryRow(x.h)).join('')}</div>` : `<div class="${grid}">${rows.map(x => libraryCard(x.h, 'watched')).join('')}</div>`)}`;
       }
       return `
-        <div class="space-y-8">
-          <div class="flex flex-wrap items-end justify-between gap-4">
-            <h1 class="font-display text-3xl font-medium text-white">Watchlist</h1>
-            <div class="flex max-w-full overflow-x-auto rounded-full bg-white/[0.05] p-1 ring-1 ring-white/10">${tab('want', 'Want to watch', wantList.length)}${tab('watched', 'Watched', watchedList.length)}${currentAuthUser ? tab('reviews', 'My reviews', LIB.loaded ? LIB.reviews.size : '') : ''}</div>
-          </div>
-          ${body}
+        <div class="wll">
+          <header class="wll-head">
+            <div class="wll-intro"><div class="dcl-eyebrow">Your library</div><h1 class="dcl-h wll-h">Watchlist.</h1></div>
+            <div class="wll-tabs" role="tablist" aria-label="Watchlist sections">${tab('want', 'Want to watch', wantList.length)}${tab('watched', 'Watched', watchedList.length)}${currentAuthUser ? tab('reviews', 'My reviews', LIB.loaded ? LIB.reviews.size : '') : ''}</div>
+          </header>
+          <div class="wll-body space-y-8">${body}</div>
         </div>`;
     }
 
@@ -7589,22 +7507,17 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (e.key === 'Escape') {
         closeDetails();
         closeActorProfile();
-        closeSwipeDeck();
         closeApiSettings();
         closeTrailer();
         closeAuthModal();
-      } else if (e.key === '/' || e.key === 's' || e.key === 'S') {
-        if (e.key === '/') {
+      } else if (e.key === '/') {
           e.preventDefault();
           switchTab('explore');
           setTimeout(() => {
             const input = document.getElementById('universalSearchInput');
             if (input) input.focus();
           }, 100);
-        } else if (e.key.toLowerCase() === 's') {
-          openSwipeDeck();
-        }
-      } else if (e.key === 'r' || e.key === 'R') {
+        } else if (e.key === 'r' || e.key === 'R') {
         triggerLiveRefresh();
       }
     });
