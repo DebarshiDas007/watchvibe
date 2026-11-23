@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=27">
+  <link rel="stylesheet" href="/swiss.css?v=28">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -3972,7 +3972,8 @@
     // (a Bengali drama from the 1950s and 60s, a top-rated action film, a cry-worthy romance under two hours...).
     const FLT = { genre: '', era: '' };
     const GENRE_OPTS = [['action', 'Action', '28', '10759'], ['adventure', 'Adventure', '12', '10759'], ['animation', 'Animation', '16', '16'], ['comedy', 'Comedy', '35', '35'], ['crime', 'Crime', '80', '80'], ['documentary', 'Documentary', '99', '99'], ['drama', 'Drama', '18', '18'], ['family', 'Family', '10751', '10751'], ['fantasy', 'Fantasy', '14', '10765'], ['history', 'History', '36', ''], ['horror', 'Horror', '27', ''], ['music', 'Music', '10402', ''], ['mystery', 'Mystery', '9648', '9648'], ['romance', 'Romance', '10749', ''], ['scifi', 'Sci-Fi', '878', '10765'], ['thriller', 'Thriller', '53', ''], ['war', 'War', '10752', '10768'], ['western', 'Western', '37', '37']];   // [key, label, movie genre id, series genre id ('' = series have none)]
-    const ERA_OPTS = [['2020s', '2020s', '2020-01-01', ''], ['2010s', '2010s', '2010-01-01', '2019-12-31'], ['2000s', '2000s', '2000-01-01', '2009-12-31'], ['1990s', '1990s', '1990-01-01', '1999-12-31'], ['1980s', '1980s', '1980-01-01', '1989-12-31'], ['1970s', '1970s', '1970-01-01', '1979-12-31'], ['1960s', '1960s', '1960-01-01', '1969-12-31'], ['1950s', '1950s', '1950-01-01', '1959-12-31'], ['pre1950', 'Before 1950', '', '1949-12-31'], ['c5060', '1950s and 1960s', '1950-01-01', '1969-12-31'], ['c7080', '1970s and 1980s', '1970-01-01', '1989-12-31'], ['pre1980', 'Before 1980', '', '1979-12-31']];   // [key, label, from, to]
+    const ERA_OPTS = [['2020s', '2020s', '2020-01-01', ''], ['2010s', '2010s', '2010-01-01', '2019-12-31'], ['2000s', '2000s', '2000-01-01', '2009-12-31'], ['c8090', '80s and 90s', '1980-01-01', '1999-12-31'], ['pre1980', 'Before 1980', '', '1979-12-31']];   // [key, label, from, to]: short on purpose
+    const eraKey = k => { const legacy = { '1950s': 'pre1980', '1960s': 'pre1980', '1970s': 'pre1980', pre1950: 'pre1980', c5060: 'pre1980', '1980s': 'c8090', '1990s': 'c8090', c7080: 'c8090' }; k = legacy[k] || k; return ERA_OPTS.some(x => x[0] === k) ? k : ''; };
     const genreOpt = () => GENRE_OPTS.find(x => x[0] === FLT.genre) || null;
     const eraOpt = () => ERA_OPTS.find(x => x[0] === FLT.era) || null;
     const genreIdNow = () => { const g = genreOpt(); return g ? (MPF.kind === 'tv' ? g[3] : g[2]) : ''; };
@@ -4050,9 +4051,9 @@
         aiMoods = AI_MOODS.some(x => x.id === id) ? [id] : [];
         aiMaxRuntime = p.get('rt') ? 120 : 0;
         FLT.genre = GENRE_OPTS.some(x => x[0] === p.get('genre')) ? p.get('genre') : '';
-        FLT.era = ERA_OPTS.some(x => x[0] === p.get('era')) ? p.get('era') : '';
+        FLT.era = eraKey(p.get('era'));
         MPF.kind = p.get('type') === 'series' ? 'tv' : 'movie';
-        MPF.sort = ['new', 'pop'].includes(p.get('sort')) ? p.get('sort') : 'top';
+        MPF.sort = p.get('sort') === 'pop' ? 'pop' : 'top';
         const lg = p.get('lang'); selectedTopLanguage = /^[a-z]{2}$/.test(lg || '') ? lg : '';
         if (MPF.kind === 'tv') aiMaxRuntime = 0;
         if (moodPageActive()) { openMoodPage(true); return; }
@@ -4068,7 +4069,7 @@
       const today = new Date().toISOString().slice(0, 10);
       const sorts = { top: 'vote_average.desc', pop: 'popularity.desc', new: (tv ? 'first_air_date.desc' : 'primary_release_date.desc') };
       const era = eraOpt(), dateKey = tv ? 'first_air_date' : 'primary_release_date';
-      const old = !!(era && era[3] && era[3] < '1990-01-01'), nonEn = !!(selectedTopLanguage && selectedTopLanguage !== 'en');
+      const old = !!(era && era[3] && era[3] < '2000-01-01'), nonEn = !!(selectedTopLanguage && selectedTopLanguage !== 'en');
       // older films and films in smaller languages have far fewer votes on TMDB: ask for fewer so the list is not empty, and never trust a handful of votes
       let minVotes = src.v || 500; if (old) minVotes = Math.max(20, Math.round(minVotes / 12)); if (nonEn) minVotes = Math.max(12, Math.round(minVotes / 8));
       const p = new URLSearchParams({ api_key: key, include_adult: 'false', language: 'en-US', sort_by: sorts[MPF.sort] || sorts.top, page: String(page), 'vote_count.gte': String(minVotes) });
@@ -4178,12 +4179,61 @@
       window.scrollTo({ top: 0 });
       if (!hit) mpLoad(MP.gen);
     }
+    // ---- only offer filters that lead somewhere ----
+    // For the filters in use, every other choice (each genre, era, language and mood) is checked against the movie database with a quick count;
+    // choices that would give no films are hidden, so no click ends on an empty page. Results are remembered for the visit.
+    const LANG_CODES = ['en', 'hi', 'te', 'ta', 'ml', 'kn', 'bn', 'mr', 'pa', 'ko', 'ja', 'fr', 'es', 'de', 'it', 'pt', 'zh', 'ar', 'tr'];
+    const AV = { cache: new Map(), sets: null, sig: '', busy: '' };
+    function mpProbeUrl(o) {
+      const sv = { m: aiMoods, g: FLT.genre, e: FLT.era, l: selectedTopLanguage };
+      try {
+        if ('mood' in o) aiMoods = o.mood ? [o.mood] : [];
+        if ('genre' in o) FLT.genre = o.genre;
+        if ('era' in o) FLT.era = o.era;
+        if ('lang' in o) selectedTopLanguage = o.lang;
+        const tbl = MPF.kind === 'tv' ? MOOD_TV : MOOD_SRC;
+        const mw = aiMoods[0] ? ((((tbl[aiMoods[0]] || [])[0]) || {}).w || '') : '';
+        return mpUrl({ w: mw, a: 5.4, v: 15 }, 1);   // the widest tier the page itself would use for this mix
+      } finally { aiMoods = sv.m; FLT.genre = sv.g; FLT.era = sv.e; selectedTopLanguage = sv.l; }
+    }
+    async function avTotal(url) {
+      if (AV.cache.has(url)) return AV.cache.get(url);
+      let n = -1; try { const r = await fetch(url); if (r.ok) n = ((await r.json()) || {}).total_results || 0; } catch (e) {}
+      if (n >= 0) AV.cache.set(url, n);
+      return n;
+    }
+    function mpApplyAvail() {
+      const A = AV.sets; if (!A || AV.sig !== mpAvSig()) return;
+      const fix = (sel, set, cur) => { if (!sel) return; [...sel.options].forEach(o => { const ok = !o.value || set.has(o.value) || o.value === cur; o.hidden = !ok; o.disabled = !ok; }); };
+      const q = l => document.querySelector('.wv-moodtools select[aria-label="' + l + '"]');
+      fix(q('Genre'), A.genre, FLT.genre); fix(q('Era'), A.era, FLT.era); fix(document.querySelector('.wv-moodtools #topLanguageSelect'), A.lang, selectedTopLanguage);
+      document.querySelectorAll('.wv-moodpage .wv-chip[data-mood]').forEach(b => { b.hidden = !(A.mood.has(b.dataset.mood) || aiMoods[0] === b.dataset.mood); });
+    }
+    const mpAvSig = () => [MPF.kind, aiMoods[0] || '', FLT.genre, FLT.era, selectedTopLanguage, aiMaxRuntime].join('|');
+    async function mpAvailRun() {
+      if (!moodPageActive()) return;
+      const sig = mpAvSig();
+      if (AV.sig === sig && AV.sets) { mpApplyAvail(); return; }
+      if (AV.busy === sig) return;
+      AV.busy = sig;
+      const tv = MPF.kind === 'tv', jobs = [], add = (dim, val, o) => jobs.push({ dim, val, url: mpProbeUrl(o) });
+      GENRE_OPTS.filter(g => !tv || g[3]).forEach(g => add('genre', g[0], { genre: g[0] }));
+      ERA_OPTS.forEach(e => add('era', e[0], { era: e[0] }));
+      LANG_CODES.forEach(l => add('lang', l, { lang: l }));
+      AI_MOODS.forEach(m => add('mood', m.id, { mood: m.id }));
+      const sets = { genre: new Set(), era: new Set(), lang: new Set(), mood: new Set() }; let failed = 0, i = 0;
+      await Promise.all(Array.from({ length: 8 }, async () => { while (i < jobs.length) { const j = jobs[i++]; const n = await avTotal(j.url); if (n < 0) failed++; else if (n > 0) sets[j.dim].add(j.val); } }));
+      if (AV.busy !== sig) return;
+      AV.busy = '';
+      if (failed > jobs.length / 3) return;   // the movie database was out of reach: show every option rather than hide good ones
+      AV.sets = sets; AV.sig = sig; mpApplyAvail();
+    }
     function mpMore() { if (!MP.loading && !MP.exhausted) { mpLoad(MP.gen); refreshViews(); } }
     function setMoodKind(k) { if (MPF.kind === k) return; MPF.kind = k; if (k === 'tv') { aiMaxRuntime = 0; if (FLT.genre && !genreIdNow()) FLT.genre = ''; } if (!moodPageActive()) { refreshViews(); return; } openMoodPage(); }
     function setFilterGenre(v) { FLT.genre = GENRE_OPTS.some(x => x[0] === v) ? v : ''; if (FLT.genre && MPF.kind === 'tv' && !genreIdNow()) MPF.kind = 'movie'; if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; } openMoodPage(); }
     function setFilterEra(v) { FLT.era = ERA_OPTS.some(x => x[0] === v) ? v : ''; if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; } openMoodPage(); }
     function clearAllFilters() { selectedTopLanguage = ''; mpReset(); window.homeRow = null; goHome(); }
-    function setMoodSort(v) { MPF.sort = ['new', 'pop'].includes(v) ? v : 'top'; openMoodPage(); }
+    function setMoodSort(v) { MPF.sort = v === 'pop' ? 'pop' : 'top'; openMoodPage(); }
     // films keep arriving as the visitor nears the bottom
     function mpObserve() {
       if (MP.obs) { MP.obs.disconnect(); MP.obs = null; }
@@ -4200,12 +4250,12 @@
       const desc = (mood ? MOOD_DESC[mood.id] + ' ' : '') + mpSummary() + '.';
       const sub = MP.fallback ? 'Matches from the WatchVibe catalogue (the movie database could not be reached just now).' : 'Ranked by the TMDB community, not by WatchVibe votes.';
       const seg = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-seg-b${on ? ' is-on' : ''}">${label}</button>`;
-      const sortSel = `<select onchange="setMoodSort(this.value)" aria-label="Sort" class="wv-sel">${[['top', 'Top rated'], ['new', 'Newest'], ['pop', 'Most popular']].map(([v, l]) => `<option value="${v}" ${MPF.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+      const sortSel = `<select onchange="setMoodSort(this.value)" aria-label="Sort" class="wv-sel">${[['top', 'Top rated'], ['pop', 'Most popular']].map(([v, l]) => `<option value="${v}" ${MPF.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
       const genreSel = `<select onchange="setFilterGenre(this.value)" aria-label="Genre" class="wv-sel"><option value="">All genres</option>${GENRE_OPTS.filter(g => !tv || g[3]).map(g => `<option value="${g[0]}" ${FLT.genre === g[0] ? 'selected' : ''}>${g[1]}</option>`).join('')}</select>`;
       const eraSel = `<select onchange="setFilterEra(this.value)" aria-label="Era" class="wv-sel"><option value="">Any time</option>${ERA_OPTS.map(e => `<option value="${e[0]}" ${FLT.era === e[0] ? 'selected' : ''}>${e[1]}</option>`).join('')}</select>`;
       const anyFilter = aiMoods.length + (aiMaxRuntime ? 1 : 0) + (FLT.genre ? 1 : 0) + (FLT.era ? 1 : 0) + (selectedTopLanguage ? 1 : 0);
       const clearAll = anyFilter ? `<button type="button" onclick="clearAllFilters()" class="wv-clearall">Clear all</button>` : '';
-      setTimeout(mpObserve, 0);
+      setTimeout(mpObserve, 0); setTimeout(mpAvailRun, 30);
       return `
         <div class="space-y-6">
           <div class="wv-moodsticky">
@@ -4519,8 +4569,8 @@ function posterCard(item, opts) {
           ${(hasTopFilter || window.homeRow) ? `<button type="button" onclick="goHome()" class="rounded-full px-3 py-2 text-sm text-white/55 transition hover:text-white">Reset</button>` : ''}
         </div>`;
 
-      const moodPill = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}${on ? ' <i class="fa-solid fa-xmark" aria-hidden="true"></i>' : ''}</button>`;
-      const moodChips = AI_MOODS.map(mo => moodPill(mo.label, aiMoods[0] === mo.id, `toggleAiMood('${mo.id}')`)).join('');
+      const moodPill = (label, on, fn, mid) => `<button type="button" onclick="${fn}"${mid ? ` data-mood="${mid}"` : ''} aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}${on ? ' <i class="fa-solid fa-xmark" aria-hidden="true"></i>' : ''}</button>`;
+      const moodChips = AI_MOODS.map(mo => moodPill(mo.label, aiMoods[0] === mo.id, `toggleAiMood('${mo.id}')`, mo.id)).join('');
       const underChip = moodPill('Under 2h', aiMaxRuntime === 120, 'setAiRuntime(120)');
       const moodRowChips = moodChips + underChip;
       if (moodPageActive()) {
