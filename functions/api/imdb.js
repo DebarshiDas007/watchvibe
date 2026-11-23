@@ -4,7 +4,7 @@
 // each title costs one OMDb request per week for ALL visitors together (the free key allows 1,000 a day).
 
 const TMDB_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';   // the same public key the site already ships to browsers
-const OMDB_KEY_FALLBACK = 'a2434d40';                    // overridden by the OMDB_KEY environment variable when set
+// the OMDb key lives only in the OMDB_KEY secret of the Cloudflare Pages project (never in this file)
 const TTL_OK = 7 * 24 * 3600;
 const TTL_MISS = 6 * 3600;
 
@@ -32,8 +32,9 @@ export async function onRequestGet(context) {
     if (!/^tt\d{5,10}$/.test(imdbId || '')) {
       res = json({ r: null }, TTL_MISS);
     } else {
-      const key = (context.env && context.env.OMDB_KEY) || OMDB_KEY_FALLBACK;
-      const o = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${key}`);
+      const key = context.env && context.env.OMDB_KEY;
+      if (!key) return json({ r: null, error: 'not configured' }, 60);   // never cached: it starts working as soon as the secret exists
+      const o = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${encodeURIComponent(key)}`);
       const d = await o.json();
       if (d && d.Response === 'False' && /limit/i.test(d.Error || '')) return json({ r: null, limit: true }, 60);   // daily quota hit: do not cache
       const r = parseFloat(d && d.imdbRating);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watchvibe-cache-v119';
+const CACHE_NAME = 'watchvibe-cache-v120';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Pre-caching static app shell');
+      void('[ServiceWorker] Pre-caching static app shell');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
         console.warn('[ServiceWorker] Some pre-cache assets failed:', err);
       });
@@ -31,7 +31,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keyList.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[ServiceWorker] Removing old cache:', key);
+            void('[ServiceWorker] Removing old cache:', key);
             return caches.delete(key);
           }
         })

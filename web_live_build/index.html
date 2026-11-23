@@ -1349,7 +1349,7 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then((reg) => {
-          console.log('[WATCHVIBE PWA] Service Worker active with scope:', reg.scope);
+          void('[WATCHVIBE PWA] Service Worker active with scope:', reg.scope);
         }).catch((err) => {
           console.warn('[WATCHVIBE PWA] Service Worker registration failed:', err);
         });
@@ -1661,7 +1661,7 @@
         supabaseClient
           .channel('public:battle_votes')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'battle_votes' }, payload => {
-            console.log('Live battle vote received:', payload);
+            void('Live battle vote received:', payload);
             showToast('🔥 New community battle vote cast!');
           })
           .subscribe();
@@ -1864,7 +1864,7 @@
         if (!isSilent) {
           showToast(`✨ Live Daily Refresh: Synced ${syncedMovies} movies, ${syncedTv} series & ${syncedActors} actors from TMDB!`);
         } else {
-          console.log(`[WatchVibe] Silent daily sync complete: Synced ${syncedMovies} movies, ${syncedTv} series & ${syncedActors} actors.`);
+          void(`[WatchVibe] Silent daily sync complete: Synced ${syncedMovies} movies, ${syncedTv} series & ${syncedActors} actors.`);
         }
 
       } catch (err) {
@@ -1897,9 +1897,9 @@
       nextMidnightIst.setHours(24, 0, 2, 0); // 12:00:02 AM IST
       const msUntilMidnight = Math.max(1000, nextMidnightIst.getTime() - istNow.getTime());
 
-      console.log('[WatchVibe] Scheduled next silent daily sync in ' + Math.round(msUntilMidnight / 60000) + ' minutes (12:00 AM IST).');
+      void('[WatchVibe] Scheduled next silent daily sync in ' + Math.round(msUntilMidnight / 60000) + ' minutes (12:00 AM IST).');
       setTimeout(async () => {
-        console.log('[WatchVibe] 12:00 AM IST reached. Executing silent daily catalog sync.');
+        void('[WatchVibe] 12:00 AM IST reached. Executing silent daily catalog sync.');
         await triggerLiveRefresh(true);
         localStorage.setItem('watchvibe_last_sync_ist', getIstDateString());
         scheduleMidnightIstRefresh();
@@ -1921,7 +1921,7 @@
       const lastSyncIst = localStorage.getItem('watchvibe_last_sync_ist');
 
       if (lastSyncIst !== todayIst) {
-        console.log('[WatchVibe] Performing silent daily sync for IST date: ' + todayIst);
+        void('[WatchVibe] Performing silent daily sync for IST date: ' + todayIst);
         triggerLiveRefresh(true);
         localStorage.setItem('watchvibe_last_sync_ist', todayIst);
       }
@@ -3066,7 +3066,7 @@
               updated_at: new Date().toISOString()
             });
           if (error) { console.warn('[WatchVibe] Cloud save failed:', error.message); window.__wlRetries = (window.__wlRetries || 0) + 1; if (window.__wlRetries <= 3) setTimeout(syncUserDataToSupabaseCloud, 5000); }
-          else { window.__wlRetries = 0; console.log('[WatchVibe] User data synced to Cloud Vault.'); }
+          else { window.__wlRetries = 0; void('[WatchVibe] User data synced to Cloud Vault.'); }
         } catch(e) {
           console.warn('[WatchVibe] Cloud sync notice:', e);
         }

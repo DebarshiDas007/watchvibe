@@ -483,3 +483,9 @@ Open / next, in the order we discussed:
 
 ## v119: film window shows the whole trailer
 - The title no longer sits on top of the trailer: the trailer is a full 16:9 picture (width capped so it fits the window height), the title, logo and facts sit in a dark band below it. The player is only zoomed 7 percent (data-fit) instead of 25 percent plus a 17 percent top crop, so nothing important is cut. Applies to every title. swiss.css?v=23, cache v119.
+
+## v120: security hardening
+- Database (Supabase, applied as migrations security_admin_check_server_side and security_events_limit_grants_search_path): is_admin() now checks the signed-in user's confirmed email in auth.users against public.admins (no longer trusts user_metadata); profiles admin policy uses is_admin(); events table: per-session limit of 120 inserts a minute and 2,000 a minute overall (trigger events_rate_limit); trigger helper functions and admin tools no longer callable by anonymous visitors; daily_submit signed-in only; search_path pinned. Tested: admin true, ordinary user false even with forged user_metadata, forged token false, limiter stops at 120, review link guard still runs.
+- OMDb key moved out of the code into the Cloudflare Pages secret OMDB_KEY (functions/api/imdb.js has no fallback). The old key is still in Git history, so replace it with a new key: `wrangler pages secret put OMDB_KEY --project-name watchvibe`.
+- _headers: HSTS 2 years with subdomains, COOP same-origin-allow-popups, more Permissions-Policy items, X-Permitted-Cross-Domain-Policies.
+- DEPLOY_GUIDE.md moved from the public folder to docs/. Debug console.log calls removed (index.html, sw.js). Cache v120.
