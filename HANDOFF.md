@@ -470,3 +470,7 @@ Open / next, in the order we discussed:
 - Home / Movies / Series / Stand-Up: 14px bold in the top bar (from 1100 px), 46px high bold segmented control on phones.
 - Light mode: body text colour fix (unclassed text stayed light), level tag colours. swiss.css?v=18, cache v114.
 - Checked: product sweep problems [] at 1864, 1500, 768, 375; a full Daily round played to the result page.
+
+## v115: Watchlist tabs fix
+- Bug: with an empty watchlist the "Start with these" row stretched the page grid, pushing the Want to watch / Watched tabs off screen to the right on wide screens. Fixed with minmax(0,1fr) tracks (watchlist and Daily).
+- "My reviews" tab is now always visible; signed-out it shows a Sign in message. swiss.css?v=19, cache v115.

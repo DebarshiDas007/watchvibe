@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=18">
+  <link rel="stylesheet" href="/swiss.css?v=19">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -7249,7 +7249,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const watchedList = userWatchedHistory || [];
       if (currentAuthUser && !LIB.loaded && !LIB.loading) libLoad();
       setTimeout(resolveWatchlistMeta, 0);
-      if (currentWatchlistSubTab === 'reviews' && !currentAuthUser) currentWatchlistSubTab = 'watched';
       const tab = (id, label, n) => `<button type="button" role="tab" aria-selected="${currentWatchlistSubTab === id}" onclick="switchWatchlistSubTab('${id}')" class="wll-tab${currentWatchlistSubTab === id ? ' on' : ''}"><b>${n === '' ? '·' : n}</b><span>${label}</span></button>`;
       const empty = (title, text, cta) => `
         <div class="wll-empty rounded-2xl bg-white/[0.03] px-6 py-16 text-center ring-1 ring-white/[0.06]">
@@ -7281,7 +7280,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         }
       } else if (currentWatchlistSubTab === 'reviews') {
         const revs = [...LIB.reviews.values()].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-        body = !LIB.loaded ? '<div class="space-y-3"><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div></div>'
+        body = !currentAuthUser ? `<div class="wll-empty rounded-2xl bg-white/[0.03] px-6 py-16 text-center ring-1 ring-white/[0.06]"><div class="font-display text-xl text-white">Sign in to see your reviews</div><p class="mx-auto mt-2 max-w-sm text-sm text-white/45">Your verdicts and reviews are saved to your account, so they follow you to any phone or computer.</p><button type="button" onclick="openAuthModal()" class="mt-5 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90">Sign in</button></div>` : !LIB.loaded ? '<div class="space-y-3"><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div><div class="h-28 animate-pulse rounded-2xl bg-white/[0.04]"></div></div>'
           : revs.length === 0 ? empty('No reviews yet', 'After you watch something, tell people how it made you feel. Your reviews will collect here.', null)
           : `<div class="space-y-3">${revs.map(myReviewHtml).join('')}</div>`;
       } else if (watchedList.length === 0) {
@@ -7318,7 +7317,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         <div class="wll">
           <header class="wll-head">
             <div class="wll-intro"><div class="dcl-eyebrow">Your library</div><h1 class="dcl-h wll-h">Watchlist.</h1></div>
-            <div class="wll-tabs" role="tablist" aria-label="Watchlist sections">${tab('want', 'Want to watch', wantList.length)}${tab('watched', 'Watched', watchedList.length)}${currentAuthUser ? tab('reviews', 'My reviews', LIB.loaded ? LIB.reviews.size : '') : ''}</div>
+            <div class="wll-tabs" role="tablist" aria-label="Watchlist sections">${tab('want', 'Want to watch', wantList.length)}${tab('watched', 'Watched', watchedList.length)}${tab('reviews', 'My reviews', currentAuthUser && LIB.loaded ? LIB.reviews.size : (currentAuthUser ? '' : 0))}</div>
           </header>
           <div class="wll-body space-y-8">${body}</div>
         </div>`;

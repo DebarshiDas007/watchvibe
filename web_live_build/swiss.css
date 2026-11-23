@@ -220,7 +220,7 @@ html[data-wall="clean"] .wvw-pc { width: clamp(200px, min(17vw, calc((100vh - 32
 .wv-shelf-top10 .wv-pm { display: none; }
 
 /* ---- Daily challenge ---- */
-.dcl { max-width: 1560px; margin: 0 auto; display: grid; gap: clamp(28px, 4vw, 56px); }
+.dcl { max-width: 1560px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); }
 .dcl-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px 48px; border-bottom: 1px solid var(--text); padding-bottom: 28px; }
 .dcl-eyebrow, .gnl-eyebrow { font: 500 12px/1.4 var(--wv-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); }
 .dcl-eyebrow #dcCountdown { color: var(--accent); }
@@ -272,7 +272,8 @@ html[data-theme="light"] .dcl-easy .dcl-tag { color: #047857; } html[data-theme=
 .dcl-wrap > div:first-child { border-bottom: 1px solid var(--text); padding-bottom: 18px; }
 
 /* ---- Watchlist: Want to watch, Watched, My reviews ---- */
-.wll { max-width: 1760px; margin: 0 auto; display: grid; gap: clamp(24px, 3vw, 44px); }
+.wll { max-width: 1760px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(24px, 3vw, 44px); }
+.wll > *, .dcl > * { min-width: 0; }   /* a wide scrolling row must not stretch the page (it pushed the tabs off screen when the list was empty) */
 .wll-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 48px; border-bottom: 1px solid var(--text); padding-bottom: 26px; }
 .wll-h { font-size: clamp(48px, 7vw, 112px); margin: 12px 0 0; }
 .wll-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); border: 1px solid var(--text); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
