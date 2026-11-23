@@ -11,7 +11,8 @@ async function sha(text) {
 }
 
 // true = go ahead, false = this visitor has used up their allowance for the minute
-export async function allow(context, scope, limit) {
+export async function allow(context, scope, limit, windowMinutes) {
+  const win = windowMinutes || 1;
   const secret = String((context.env && context.env.RATE_SECRET) || '').trim();   // a stray newline from how the secret was typed must not break the match
   if (!secret) return true;
   try {
@@ -22,7 +23,7 @@ export async function allow(context, scope, limit) {
     const r = await fetch(SUPABASE + '/rest/v1/rpc/api_rate_hit', {
       method: 'POST', signal: ctl.signal,
       headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_secret: secret, p_key: key, p_bucket: Math.floor(Date.now() / 60000), p_limit: limit })
+      body: JSON.stringify({ p_secret: secret, p_key: key, p_bucket: Math.floor(Date.now() / (win * 60000)), p_limit: limit, p_ttl_minutes: win * 2 })
     });
     clearTimeout(timer);
     if (!r.ok) return true;

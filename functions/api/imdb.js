@@ -25,7 +25,8 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(url.origin + '/api/imdb?tmdb=' + tmdb + '&type=' + type);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
-  if (!(await allow(context, 'imdb', 120))) return tooMany();   // only lookups that would spend OMDb / TMDB quota count
+  if (!(await allow(context, 'imdb', 300))) return tooMany();            // 300 uncached lookups a minute per visitor
+  if (!(await allow(context, 'imdbday', 700, 1440))) return tooMany();   // and 700 a day, so one visitor cannot use up the shared OMDb allowance (1,000 a day)   // only lookups that would spend OMDb / TMDB quota count
 
   let res;
   try {
