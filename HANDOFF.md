@@ -494,3 +494,5 @@ Open / next, in the order we discussed:
 - Each /api function now asks api_rate_hit() in Supabase (atomic, shared) before it spends upstream quota: imdb 120 lookups a minute per visitor, links 40, featured 12; cache hits are free. Over the limit gives 429 with Retry-After. The visitor's IP is only stored as a salted hash (salt = Pages secret RATE_SECRET; same value in table app_secrets, which nobody can read through the API). If the counter is down the request is allowed.
 - functions/_middleware.js now only refuses non-GET methods (405).
 - Tables api_hits and app_secrets have row-level security with no policies; old rows are cleaned up by the function itself.
+## OMDb key replaced
+- The OMDb key in the OMDB_KEY secret is a new one (requested from a new mailbox and activated). The old key is no longer used by the site; it is still in Git history and OMDb cannot revoke keys, so it stays usable by anyone who finds it.
