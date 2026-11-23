@@ -194,19 +194,14 @@ html .wv-chip.is-on { background-size: 100% 100%; }
 
 @media (prefers-reduced-motion: no-preference) {
   /* the title and the facts rise into place each time the film in front changes; the posters arrive one after another */
-  @keyframes wvRise { from { opacity: 0; transform: translateY(.45em); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: none; clip-path: inset(0 0 -20% 0); } }
-  @keyframes wvIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes wvRise { from { opacity: 0; transform: translateY(.4em); } to { opacity: 1; transform: none; } }
+  @keyframes wvIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
   .wvw-now > * { animation: wvRise .5s cubic-bezier(.2,.7,.2,1) both; }
   .wvw-now > :nth-child(2) { animation-delay: .04s; } .wvw-now > :nth-child(3) { animation-delay: .1s; } .wvw-now > :nth-child(4) { animation-delay: .16s; } .wvw-now > :nth-child(5) { animation-delay: .22s; }
-  .wvw-pc { animation: wvIn .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 55ms + 80ms); }
+  .wvw-pc { animation: wvIn .4s cubic-bezier(.2,.7,.2,1) both; animation-delay: min(calc(var(--i, 0) * 32ms + 40ms), 260ms); }
   .wvw-ph { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .28s ease-out, outline-color .2s; position: relative; }
   .wvw-ph::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.22), transparent 55%); }
   .wvw-pc:hover .wvw-ph::after { opacity: 1; }
-  /* shelves fade up as they come into view (browsers without scroll-driven animations just show them) */
-  @supports (animation-timeline: view()) {
-    @keyframes wvShelf { from { opacity: .0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
-    .wv-shelf { animation: wvShelf linear both; animation-timeline: view(); animation-range: entry 0% entry 28%; }
-  }
 }
 
 /* ================= v28: bigger wall heading, Top 10 in the poster size, Daily and Game night redesign ================= */
@@ -353,9 +348,9 @@ html[data-theme="light"] .dcl-easy .dcl-tag { color: #047857; } html[data-theme=
 /* ---- Film window: opens fast. Short, springy pop from the poster that was tapped, then the title, buttons and poster arrive in a quick stagger
    (the "split text reveal" and "stagger in" ideas from the animation library the owner shared) ---- */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes dmPop { from { opacity: 0; transform: translateY(14px) scale(.965); } to { opacity: 1; transform: none; } }
+  @keyframes dmPop { from { opacity: 0; transform: translate3d(0, 16px, 0); } to { opacity: 1; transform: none; } }
   #detailModal.dm-enter { animation: dmBackdrop .12s ease-out both; }
-  #detailModal.dm-enter #detailScroll { animation: dmPop .22s cubic-bezier(.16, 1, .3, 1) both; }
+  #detailModal.dm-enter #detailScroll { animation: dmPop .2s cubic-bezier(.16, 1, .3, 1) both; will-change: transform, opacity; }
   #detailModal.dm-enter .dmx-head > * { animation: wvRise .3s cubic-bezier(.16, 1, .3, 1) .06s both; }
   #detailModal.dm-enter .dmx-head > :nth-child(2) { animation-delay: .1s; }
   #detailModal.dm-enter .dmx-actions > * { animation: wvIn .28s cubic-bezier(.16, 1, .3, 1) both; }
@@ -365,11 +360,12 @@ html[data-theme="light"] .dcl-easy .dcl-tag { color: #047857; } html[data-theme=
 #previewSlot { transition-duration: .25s !important; }
 
 /* ---- Film window (title details) ---- */
-#detailModal { backdrop-filter: blur(6px); }
-#detailScroll { max-width: min(1180px, 96vw) !important; border-radius: 0 !important; border: 1px solid var(--text); box-shadow: 0 40px 120px rgba(0,0,0,.55); --tw-ring-shadow: 0 0 #0000; }
+#detailModal { background: rgba(4,4,4,.82) !important; }
+#detailScroll { max-width: min(1180px, 96vw) !important; border-radius: 0 !important; border: 1px solid var(--text); box-shadow: 0 24px 60px rgba(0,0,0,.5); --tw-ring-shadow: 0 0 #0000; }
 #detailScroll .rounded-full, #detailScroll .rounded-xl, #detailScroll .rounded-2xl, #detailScroll .rounded-lg { border-radius: 0; }
 .dmx-hero { position: relative; background: #090909; color: #fff; }
-.dmx-video { aspect-ratio: 16 / 9; width: 100%; max-height: calc(100vh - 170px); margin: 0; }   /* the trailer fills the whole frame, no black edges: the player is scaled to cover and any crop is at the sides */   /* the whole trailer picture, never cut by the title; black side bars only on short windows */
+.dmx-video { aspect-ratio: 16 / 9; width: 100%; max-height: calc(100vh - 170px); margin: 0; }
+@media (min-width: 768px) { .dmx-video { max-height: max(260px, 58vh); } }   /* layout F: the trailer leaves room for the title and the provider tiles on the first screen */   /* the trailer fills the whole frame, no black edges: the player is scaled to cover and any crop is at the sides */   /* the whole trailer picture, never cut by the title; black side bars only on short windows */
 .dmx-head { padding: 22px clamp(22px, 3vw, 44px) 26px; border-top: 1px solid rgba(255,255,255,.14); }
 .dmx-title { font: 800 clamp(30px, 3.8vw, 58px)/.98 var(--wv-head) !important; letter-spacing: -.045em; color: #fff !important; text-wrap: balance; }
 .dmx-title img { max-height: clamp(56px, 7vw, 96px); }
@@ -531,3 +527,52 @@ button.bg-white.text-black, button[class*="rounded-full"]:not(.pg-avatar), a[cla
 #toast, .toast, [id*="toast" i] > div { border-radius: 0 !important; border: 1px solid var(--text); }
 [class*="rounded-[28px]"], [class*="rounded-3xl"], [class*="rounded-2xl"].ring-1, .rs-card, [role="dialog"] > div { border-radius: 0 !important; }
 [role="dialog"] > div, .rs-card { border: 1px solid var(--text); box-shadow: none; }
+
+/* ---- layout E: the trailer plays big, then shrinks to a corner player while the details take over ---- */
+#previewSlot { container-type: size; }
+.dmx-video { position: relative; overflow: hidden; z-index: 5; }
+.dmx-hero { display: flow-root; }
+.dmx-expand { position: absolute; inset: 0; z-index: 0; display: none; background: transparent; border: 0; color: #fff; cursor: pointer; align-items: flex-start; justify-content: flex-start; padding: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; }
+.dmx-expand:hover, .dmx-expand:focus-visible { opacity: 1; }
+.dmx-close-head { display: none; }
+@media (min-width: 1024px) {
+  #modalContent.dm-mini .dmx-video { float: right; position: sticky; top: 14px; width: 320px; max-height: none; margin: 14px 14px 0 0; border: 1px solid #fff; box-shadow: 0 18px 40px rgba(0,0,0,.55); }
+  #modalContent.dm-mini .dmx-expand { display: flex; }
+  #modalContent.dm-mini .dmx-close-big { display: none; }
+  #modalContent.dm-mini .dmx-close-head { display: flex; right: 12px; top: 12px; }
+  #modalContent.dm-mini #previewVolume { display: none; }
+  #modalContent.dm-mini .dmx-head { padding-top: 44px; padding-right: 64px; border-top: 0; }
+  #modalContent.dm-mini .dmx-title { font-size: clamp(40px, 5.2vw, 76px) !important; }
+  #modalContent.dm-mini #detailBody { display: flow-root; }
+  #modalContent.dm-mini .dmx { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "side" "sim"; }
+  #modalContent.dm-mini .dmx-poster { display: none; }
+  #modalContent.dm-mini .dmx { padding-right: 372px; }
+  #modalContent.dm-mini #previewSlot iframe { width: max(168cqw, calc(1.68 * 100cqh * 16 / 9)) !important; }   /* the small player is cropped harder so YouTube's own title and "More videos" strips stay outside */
+}
+@media (max-width: 1023px) { .dmx-expand { display: none !important; } }
+
+/* ---- layout F: title row and one big tile per service directly under the trailer ---- */
+.dmx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-top: 16px; padding-bottom: 18px; }
+.dmx-headtxt { min-width: 0; flex: 1 1 320px; }
+.dmx-head .dmx-title { font-size: clamp(26px, 3vw, 42px) !important; margin: 0 !important; }
+.dmx-head .dmx-meta { margin-top: 6px !important; }
+.dmx-hero .dmx-actions .dmx-btn { border-color: #fff; color: #fff; }
+.dmx-hero .dmx-actions .dmx-btn:hover, .dmx-hero .dmx-actions .dmx-btn.is-on { background: #fff; color: #000; }
+.dmx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); border-top: 1px solid rgba(255,255,255,.55); border-bottom: 1px solid rgba(255,255,255,.14); }
+.dmx-tile { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 14px 44px 16px 22px; color: #fff; text-decoration: none; border-left: 1px solid rgba(255,255,255,.22); min-height: 78px; justify-content: center; min-width: 0; transition: background .2s, color .2s; }
+.dmx-tile:first-child { border-left: 0; }
+.dmx-tile small { font: 500 11px var(--wv-mono); text-transform: uppercase; letter-spacing: .05em; color: rgba(255,255,255,.6); }
+.dmx-tile b { font: 800 clamp(17px, 1.6vw, 22px)/1.1 var(--wv-head); letter-spacing: -.03em; overflow-wrap: anywhere; }
+.dmx-go { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: .55; transition: opacity .2s, transform .2s; }
+a.dmx-tile:hover { background: #fff; color: #000; }
+a.dmx-tile:hover small { color: rgba(0,0,0,.6); }
+a.dmx-tile:hover .dmx-go { opacity: 1; transform: translateY(-50%) translateX(2px); }
+a.dmx-tile.is-first { background: var(--accent); color: #0b0b0b; }
+a.dmx-tile.is-first small { color: rgba(0,0,0,.65); }
+a.dmx-tile.is-first:hover { background: #fff; }
+.dmx-tile-skel small, .dmx-tile-none small { color: rgba(255,255,255,.5); }
+.dmx-tile-none b { font-size: 15px; font-weight: 500; letter-spacing: 0; }
+@media (max-width: 640px) { .dmx-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dmx-tile:nth-child(odd) { border-left: 0; } .dmx-tile { border-top: 1px solid rgba(255,255,255,.14); min-height: 68px; } .dmx-tile:nth-child(-n+2) { border-top: 0; } }
+@media (prefers-reduced-motion: no-preference) { #detailModal.dm-enter .dmx-tile { animation: wvIn .3s cubic-bezier(.16, 1, .3, 1) .12s both; } }
+
+.dmx-tile:only-child { grid-column: 1 / -1; }

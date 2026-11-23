@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Film window: three layouts</title>
+<style>
+:root{--bg:#0e0e0d;--s:#181817;--line:#2e2e2c;--ls:#4a4a46;--t:#f4f4f0;--t2:#9a9a92;--ac:#6c84ff}
+*{box-sizing:border-box}
+body{margin:0;background:#050505;color:var(--t);font:15px/1.5 "Helvetica Neue",Arial,sans-serif}
+.mono{font:500 11px/1.4 ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em}
+.intro{max-width:1180px;margin:0 auto;padding:36px 20px 8px}
+.intro h1{font:800 40px/1 Arial Black,Arial,sans-serif;letter-spacing:-.04em;margin:8px 0}
+.intro p{color:var(--t2);max-width:70ch;margin:6px 0}
+.demo{max-width:1180px;margin:26px auto 60px;padding:0 20px}
+.tag{display:flex;gap:12px;align-items:baseline;border-bottom:1px solid var(--t);padding-bottom:8px;margin-bottom:14px}
+.tag b{font:800 28px Arial Black,Arial;letter-spacing:-.04em}
+.tag span{color:var(--t2)}
+.win{background:var(--bg);border:1px solid var(--t);position:relative;overflow:hidden}
+.x{position:absolute;top:12px;right:12px;width:38px;height:38px;border:1px solid #fff;display:flex;align-items:center;justify-content:center;background:rgba(8,8,8,.7);z-index:3}
+.vid{position:relative;background:#22313c;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.vid::before{content:"";position:absolute;inset:0;background:
+ radial-gradient(60% 80% at 30% 40%,#3d5a6e 0,transparent 70%),
+ radial-gradient(40% 60% at 80% 70%,#5a2f2f 0,transparent 70%)}
+.play{position:relative;width:64px;height:64px;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.vol{position:absolute;right:12px;bottom:12px;border:1px solid var(--ls);background:rgba(8,8,8,.6);padding:6px 12px;font-size:12px}
+.title{font:800 clamp(28px,3.4vw,46px)/.98 Arial Black,Arial,sans-serif;letter-spacing:-.045em;margin:6px 0 4px}
+.meta{color:#ddd}
+.star{color:#ffd166}
+.lbl{font:500 11px ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);margin:18px 0 8px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border:1px solid var(--t);font:500 12px ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.03em;margin:0 8px 8px 0;background:transparent;color:var(--t)}
+.btn.p{background:var(--ac);border-color:var(--ac);color:#0e0e0d}
+.btn.w{background:var(--t);color:var(--bg)}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ls);padding:8px 12px;margin:0 8px 8px 0;font-size:13px}
+.chip i{width:18px;height:18px;display:inline-block;background:var(--ac)}
+.chip.n i{background:#e50914}.chip.h i{background:#1ce783}.chip.z i{background:#ff6d00}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:34px;padding:24px 28px 30px}
+.syn{color:#d6d6d0;max-width:62ch}
+.facts div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:9px 0;font-size:14px}
+.facts span:first-child{color:var(--t2)}
+.row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:0 28px 30px}
+.row .p{aspect-ratio:2/3;background:#2a2a28;border:1px solid var(--line);font-size:11px;color:var(--t2);padding:6px}
+.fold{position:absolute;left:0;right:0;height:0;border-top:2px dashed #ff5a5a;z-index:4}
+.fold em{position:absolute;right:8px;top:-20px;background:#ff5a5a;color:#000;font:500 10px ui-monospace,monospace;padding:2px 6px;text-transform:uppercase;font-style:normal}
+/* A */
+.A .top{display:grid;grid-template-columns:1.75fr 1fr}
+.A .vid{aspect-ratio:16/9;min-height:300px}
+.A .side{padding:26px 24px;border-left:1px solid var(--ls);display:flex;flex-direction:column}
+/* B */
+.B .vid{height:min(46vh,400px);min-height:240px}
+.B .strip{display:flex;flex-wrap:wrap;gap:12px 30px;justify-content:space-between;align-items:center;padding:16px 28px;border-top:1px solid var(--ls)}
+.B .strip .l{min-width:260px}
+/* C */
+.C .vid{aspect-ratio:16/9;min-height:360px}
+.C .bar{position:absolute;left:0;right:0;bottom:0;background:rgba(8,8,8,.84);padding:16px 28px;display:flex;flex-wrap:wrap;gap:12px 30px;justify-content:space-between;align-items:center;z-index:2}
+.sub{position:absolute;left:50%;bottom:112px;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:3px 10px;font-size:20px;z-index:1}
+.phones{display:flex;gap:26px;flex-wrap:wrap;margin-top:18px}
+.ph{width:300px;border:1px solid var(--t);background:var(--bg);position:relative;overflow:hidden}
+.ph .vid{aspect-ratio:16/9}
+.ph .in{padding:14px}
+.ph .title{font-size:26px}
+.ph .tiny{font-size:12px;color:var(--t2)}
+@media(max-width:820px){.A .top{grid-template-columns:1fr}.A .side{border-left:0;border-top:1px solid var(--ls)}.cols{grid-template-columns:1fr}.row{grid-template-columns:repeat(3,1fr)}}
+</style></head><body>
+
+<div class="intro">
+  <div class="mono" style="color:var(--t2)">WatchVibe · film window</div>
+  <h1>Three layouts, full pages</h1>
+  <p>Each one is the whole film window for Kahaani 2, scrolled to the top. The red dashed line marks where a 1440 × 800 screen ends: everything above it is visible without scrolling. Phone versions are at the end of each section. This is a mockup with placeholder trailer art.</p>
+</div>
+
+<!-- ================= A ================= -->
+<section class="demo A">
+  <div class="tag"><b>A</b><span>Trailer left, info right. Recommended for desktop.</span></div>
+  <div class="win">
+    <div class="x">✕</div>
+    <div class="top">
+      <div class="vid"><div class="play">▶</div><div class="vol">🔈 ━━●━━━</div></div>
+      <div class="side">
+        <div class="mono" style="color:var(--t2)">UA · 2016 · Thriller · Mystery <span class="star">★ 6.5</span></div>
+        <div class="title">Kahaani 2<br><span style="font-size:.5em;letter-spacing:0;font-weight:500">Durga Rani Singh</span></div>
+        <div class="lbl">Where to watch · India</div>
+        <div><span class="chip"><i></i>Prime Video · Rent</span><span class="chip n"><i></i>Netflix</span><span class="chip z"><i></i>Zee5</span></div>
+        <div class="lbl">Your list</div>
+        <div><span class="btn w">▶ Watch trailer full</span><span class="btn">＋ Watchlist</span><span class="btn">◉ Watched</span></div>
+        <div class="lbl" style="margin-top:auto">Verdict</div>
+        <div class="meta">Tense, grown-up thriller. 82% of viewers rated it worth watching.</div>
+      </div>
+    </div>
+    <div class="fold" style="top:560px"><em>fold at 1440 × 800</em></div>
+    <div class="cols">
+      <div><div class="lbl">Plot</div><p class="syn">A schoolgirl with a disability is kidnapped. The investigating officer, a woman with her own past, follows a trail through a small hill town to find who took her.</p><div class="lbl">Cast</div><div class="meta">Vidya Balan · Arjun Rampal · Jugal Hansraj</div></div>
+      <div class="facts"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div><div><span>Rated</span><span>UA</span></div></div>
+    </div>
+    <div class="lbl" style="padding:0 28px">More like this</div>
+    <div class="row"><div class="p">Kahaani</div><div class="p">Talaash</div><div class="p">Drishyam</div><div class="p">Badla</div><div class="p">Raazi</div><div class="p">Andhadhun</div></div>
+  </div>
+  <div class="phones">
+    <div><div class="lbl">A on a phone (375 wide)</div>
+    <div class="ph"><div class="vid"><div class="play" style="width:46px;height:46px">▶</div></div><div class="in"><div class="mono tiny">2016 · Thriller <span class="star">★ 6.5</span></div><div class="title">Kahaani 2</div><div class="lbl" style="margin-top:8px">Where to watch</div><span class="chip"><i></i>Prime</span><span class="chip n"><i></i>Netflix</span><div><span class="btn p">＋ Watchlist</span><span class="btn">Watched</span></div></div></div></div>
+  </div>
+</section>
+
+<!-- ================= B ================= -->
+<section class="demo B">
+  <div class="tag"><b>B</b><span>Shorter trailer, info strip underneath. Best on phones and short windows.</span></div>
+  <div class="win">
+    <div class="x">✕</div>
+    <div class="vid"><div class="play">▶</div><div class="vol">🔈 ━━●━━━</div></div>
+    <div class="strip">
+      <div class="l"><div class="mono" style="color:var(--t2)">UA · 2016 · Thriller · Mystery <span class="star">★ 6.5</span></div><div class="title" style="margin:4px 0 0">Kahaani 2</div></div>
+      <div><div class="lbl" style="margin-top:0">Where to watch · India</div><span class="chip"><i></i>Prime Video · Rent</span><span class="chip n"><i></i>Netflix</span><span class="chip z"><i></i>Zee5</span></div>
+      <div><span class="btn p">＋ Watchlist</span><span class="btn">◉ Watched</span></div>
+    </div>
+    <div class="fold" style="top:520px"><em>fold at 1440 × 800</em></div>
+    <div class="cols">
+      <div><div class="lbl">Plot</div><p class="syn">A schoolgirl with a disability is kidnapped. The investigating officer follows a trail through a small hill town to find who took her.</p><div class="lbl">Cast</div><div class="meta">Vidya Balan · Arjun Rampal · Jugal Hansraj</div></div>
+      <div class="facts"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div></div>
+    </div>
+    <div class="lbl" style="padding:0 28px">More like this</div>
+    <div class="row"><div class="p">Kahaani</div><div class="p">Talaash</div><div class="p">Drishyam</div><div class="p">Badla</div><div class="p">Raazi</div><div class="p">Andhadhun</div></div>
+  </div>
+  <div class="phones">
+    <div><div class="lbl">B on a phone (375 wide)</div>
+    <div class="ph"><div class="vid" style="aspect-ratio:auto;height:150px"><div class="play" style="width:46px;height:46px">▶</div></div><div class="in"><div class="title" style="margin:0">Kahaani 2</div><div class="mono tiny">2016 · Thriller <span class="star">★ 6.5</span></div><div style="margin-top:8px"><span class="chip"><i></i>Prime</span><span class="chip n"><i></i>Netflix</span></div><div><span class="btn p">＋ Watchlist</span><span class="btn">Watched</span></div><div class="tiny">Plot, cast, reviews below ↓</div></div></div></div>
+  </div>
+</section>
+
+<!-- ================= C ================= -->
+<section class="demo C">
+  <div class="tag"><b>C</b><span>Info on top of the trailer. Biggest picture, but covers its bottom edge.</span></div>
+  <div class="win">
+    <div class="x">✕</div>
+    <div class="vid"><div class="play">▶</div><div class="sub">My dad is coming home.</div>
+      <div class="bar">
+        <div><div class="mono" style="color:#ccc">UA · 2016 · Thriller <span class="star">★ 6.5</span></div><div class="title" style="margin:2px 0 0;font-size:34px">Kahaani 2</div></div>
+        <div><span class="chip"><i></i>Prime Video · Rent</span><span class="chip n"><i></i>Netflix</span></div>
+        <div><span class="btn p">＋ Watchlist</span><span class="btn">◉ Watched</span></div>
+      </div>
+    </div>
+    <div class="fold" style="top:640px"><em>fold at 1440 × 800</em></div>
+    <div class="cols">
+      <div><div class="lbl">Plot</div><p class="syn">A schoolgirl with a disability is kidnapped. The investigating officer follows a trail through a small hill town to find who took her.</p></div>
+      <div class="facts"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div></div>
+    </div>
+  </div>
+  <p style="color:var(--t2);max-width:70ch;margin-top:10px">Look at the subtitle line "My dad is coming home." The info bar sits right under it. On a trailer with lower subtitles, the bar hides them.</p>
+</section>
+<style>
+.D .vid{aspect-ratio:16/9;max-height:62vh;min-height:300px;width:100%}
+.D .sticky{position:relative;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between;padding:12px 28px;background:#141413;border-top:1px solid var(--t);border-bottom:1px solid var(--ls)}
+.D .sticky .title{font-size:26px;margin:0}
+.E .vid{aspect-ratio:16/9;min-height:300px}
+.E .mini{position:absolute;right:18px;top:18px;width:300px;border:1px solid var(--t);box-shadow:0 20px 40px rgba(0,0,0,.6);background:#22313c;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;z-index:3;font-size:11px;color:#9ab}
+.E .stage{padding:26px 28px;display:grid;grid-template-columns:1fr 340px;gap:30px;min-height:420px;border-top:0}
+.F .vid{aspect-ratio:16/9;max-height:54vh;min-height:280px;width:100%}
+.F .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));border-top:1px solid var(--t)}
+.F .tile{padding:16px 18px;border-left:1px solid var(--ls);display:flex;flex-direction:column;gap:4px}
+.F .tile:first-child{border-left:0;background:var(--ac);color:#0e0e0d}
+.F .tile b{font:800 20px Arial Black,Arial;letter-spacing:-.03em}
+.F .tile small{font:500 11px ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.04em}
+.F .tile:first-child small{color:#0e0e0d}
+</style>
+
+<section class="demo D">
+  <div class="tag"><b>D</b><span>Big trailer, with a bar that stays pinned while you scroll.</span></div>
+  <div class="win">
+    <div class="x">✕</div>
+    <div class="vid"><div class="play">▶</div><div class="vol">🔈 ━━●━━━</div></div>
+    <div class="sticky">
+      <div><div class="title">Kahaani 2</div><div class="mono" style="color:var(--t2)">2016 · Thriller <span class="star">★ 6.5</span></div></div>
+      <div><span class="chip"><i></i>Prime Video · Rent</span><span class="chip n"><i></i>Netflix</span><span class="chip z"><i></i>Zee5</span></div>
+      <div><span class="btn p">＋ Watchlist</span><span class="btn">◉ Watched</span></div>
+    </div>
+    <div class="fold" style="top:515px"><em>fold at 1440 × 800</em></div>
+    <div class="cols"><div><div class="lbl">Plot</div><p class="syn">A schoolgirl with a disability is kidnapped. The investigating officer follows a trail through a small hill town to find who took her.</p><div class="lbl">Cast</div><div class="meta">Vidya Balan · Arjun Rampal · Jugal Hansraj</div></div><div class="facts"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div></div></div>
+  </div>
+  <p style="color:var(--t2);max-width:70ch;margin-top:10px">Like B, but the trailer stays large. The grey bar is pinned to the top of the window when you scroll down, so title, streaming and buttons never leave.</p>
+</section>
+
+<section class="demo E">
+  <div class="tag"><b>E</b><span>Trailer plays big, then shrinks to a corner while info takes over.</span></div>
+  <div class="win">
+    <div class="x" style="right:auto;left:12px">✕</div>
+    <div class="stage">
+      <div>
+        <div class="mono" style="color:var(--t2)">After the trailer shrinks (about 8 seconds, or on scroll)</div>
+        <div class="mono" style="color:var(--t2);margin-top:4px">UA · 2016 · Thriller · Mystery <span class="star">★ 6.5</span></div>
+        <div class="title" style="font-size:clamp(40px,5vw,72px)">Kahaani 2</div>
+        <div class="lbl">Where to watch · India</div>
+        <div><span class="chip"><i></i>Prime Video · Rent</span><span class="chip n"><i></i>Netflix</span><span class="chip z"><i></i>Zee5</span></div>
+        <div style="margin-top:6px"><span class="btn p">＋ Watchlist</span><span class="btn">◉ Watched</span><span class="btn">⤢ Expand trailer</span></div>
+        <p class="syn" style="margin-top:14px">A schoolgirl with a disability is kidnapped. The investigating officer follows a trail through a small hill town to find who took her.</p>
+      </div>
+      <div class="facts" style="align-self:end"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div><div><span>Cast</span><span>V. Balan, A. Rampal</span></div></div>
+    </div>
+    <div class="mini">trailer keeps playing here</div>
+  </div>
+  <p style="color:var(--t2);max-width:70ch;margin-top:10px">It opens as the full trailer (like your current screen). After a few seconds, or as soon as you scroll, the picture shrinks to a small corner player that keeps playing. Click it to go big again.</p>
+</section>
+
+<section class="demo F">
+  <div class="tag"><b>F</b><span>Streaming-first: big trailer, then large provider tiles.</span></div>
+  <div class="win">
+    <div class="x">✕</div>
+    <div class="vid"><div class="play">▶</div><div class="vol">🔈 ━━●━━━</div></div>
+    <div style="padding:14px 28px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between;border-top:1px solid var(--ls)"><div style="display:flex;gap:16px;align-items:baseline;flex-wrap:wrap"><div class="title" style="margin:0;font-size:30px">Kahaani 2</div><div class="mono" style="color:var(--t2)">2016 · Thriller <span class="star">★ 6.5</span></div></div><div><span class="btn">＋ Watchlist</span><span class="btn">◉ Watched</span></div></div>
+    <div class="tiles">
+      <div class="tile"><small>Stream</small><b>Prime Video</b><small>Rent ₹ 99</small></div>
+      <div class="tile"><small>Stream</small><b>Netflix</b><small>Included</small></div>
+      <div class="tile"><small>Free with ads</small><b>Zee5</b><small>Included</small></div>
+    </div>
+    <div class="fold" style="top:560px"><em>fold at 1440 × 800</em></div>
+    <div class="cols"><div><div class="lbl">Plot</div><p class="syn">A schoolgirl with a disability is kidnapped. The investigating officer follows a trail through a small hill town to find who took her.</p></div><div class="facts"><div><span>Director</span><span>Sujoy Ghosh</span></div><div><span>Runtime</span><span>2h 14m</span></div><div><span>Language</span><span>Hindi</span></div></div></div>
+  </div>
+  <p style="color:var(--t2);max-width:70ch;margin-top:10px">Where to watch gets the most space: one tile per service, with the price or "Included". Tapping a tile opens that service.</p>
+</section>
+</body></html>

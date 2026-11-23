@@ -522,3 +522,12 @@ Open / next, in the order we discussed:
 ## v126: trailer fills the film window
 - No black edges: the player is scaled 1.34x to cover the frame, cropped evenly; frame is full width (max height viewport-170px). swiss.css v31, cache v126.
 
+
+## v128: film window layout F, smoother opening, faster loading, more films
+- Film window (layout F): trailer capped at 58% of the screen height, then title + Watchlist/Watched, then one big tile per streaming service (first one in the accent colour; opens the service). The full "Where to watch" list with the region picker stays below. Layout E (trailer shrinks to a corner after 8 s) is still in the code, switched off with `DM_LAYOUT` in index.html. Phones use a stronger zoom (1.55) to hide YouTube's own strips.
+- Opening animation: only fade + slide (no scale, no clip-path, no backdrop blur); the trailer player loads after the animation ends; poster stagger capped at 260 ms; scroll-driven shelf animation removed.
+- Loading: unused Anton/Barlow font preloads replaced by Switzer 500 and Cabinet Grotesk 800; "Streaming now" lookups start 700 ms after the first screen with 4 at a time; `_headers` gives vendor files, swiss.css, theme.css, games.js, hover-card.css and catalog_extra.json a one-year immutable cache (they are versioned with ?v=, so BUMP THE VERSION whenever they change).
+- Films: `scripts/add_more_films.mjs` adds Hindi, Bengali and English films without duplicates (TMDB id and title+year, against index.html and catalog_extra.json); `CAT.v` bumped.
+- swiss.css v33, sw cache v128.
+- Films added: Hindi 1,270 to 2,170; Bengali 291 to 367 (TMDB has few more with full data); English 3,400 to 4,600. 0 duplicate ids or title+year. CAT.v 3, sw cache v129.
+

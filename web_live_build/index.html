@@ -32,10 +32,10 @@
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
   <link rel="stylesheet" href="/tailwind.css">
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=31">
+  <link rel="stylesheet" href="/swiss.css?v=33">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -1931,7 +1931,7 @@
 
     // ---- The extra catalogue: thousands more Hollywood and Indian films live in catalog_extra.json (same fields as the built-in films),
     // loaded right after the first screen. A film already present (same TMDB id, or same title and year) is never added twice.
-    const CAT = { state: 'idle', added: 0, v: 2 };
+    const CAT = { state: 'idle', added: 0, v: 3 };
     const catNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
     function catMerge(list) {
       const ids = new Set(), keys = new Set();
@@ -2166,10 +2166,10 @@
       // size the player so the video always covers the frame (16:9 video in a tall phone banner would otherwise leave black bars); 1.25 hides YouTube's own bars
       const box = slot.dataset.fit ? { width: slot.offsetWidth, height: slot.offsetHeight } : slot.getBoundingClientRect();   // the film window grows in (scaled) when it opens: measure the real size
       // 1.6 and a shift up push YouTube's own title bar (top) and brand strip (bottom) outside the frame, so only the picture shows
-      const zoom = slot.dataset.fit ? 1.34 : (box.width < 768 ? 1.6 : 1.25);   // the film window shows the whole picture (just enough zoom to hide YouTube's edge bars); phones' banners need the stronger zoom; desktop keeps its original framing
+      const zoom = slot.dataset.fit ? (box.width < 768 ? 1.55 : 1.34) : (box.width < 768 ? 1.6 : 1.25);   // the film window shows the whole picture (just enough zoom to hide YouTube's edge bars); phones' banners need the stronger zoom; desktop keeps its original framing
       const cw = Math.max(box.width, (box.height * 16) / 9) * zoom, ch = (cw * 9) / 16;
       const overflowY = ch - box.height, topCrop = slot.dataset.fit ? overflowY / 2 : Math.min(overflowY, Math.max(0.17 * ch, overflowY / 2));   // at least 17% of the player's height is cut at the top
-      const fit = box.width > 0 && box.height > 0 ? `style="left:50%;top:${-Math.round(topCrop)}px;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translateX(-50%)"` : '';
+      const fit = slot.dataset.fit ? `style="left:50%;top:50%;aspect-ratio:16/9;width:max(${Math.round(zoom * 100)}cqw,calc(${zoom}*100cqh*16/9));transform:translate(-50%,-50%)"` : (box.width > 0 && box.height > 0 ? `style="left:50%;top:${-Math.round(topCrop)}px;width:${Math.round(cw)}px;height:${Math.round(ch)}px;transform:translateX(-50%)"` : '');
       slot.innerHTML = `<iframe class="pointer-events-none absolute ${fit ? '' : 'inset-0 h-full w-full scale-[1.7]'}" ${fit} src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(Preview.key)}?${params}" title="Trailer preview" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
       Preview.iframe = slot.querySelector('iframe');
       setPreviewUi();
@@ -2214,6 +2214,7 @@
       if (token !== Preview.token) return; // closed/changed meanwhile
       if (!keys.length) { Track.once('tf:' + item.id, 'trailer_fail', { id: String(item.id).slice(0, 80), t: item.title || '', w: 'none' }); if (opts && opts.force) showToast('No trailer found for this title.'); return; } // no trailer found
       Preview.keys = keys; Preview.keyIdx = 0; Preview.key = keys[0];
+      { const sl = pv('slot'); if (sl && sl.dataset.fit) { await new Promise(r => setTimeout(r, 340)); if (token !== Preview.token) return; } }
       mountPreviewIframe(Preview.startMuted);
     }
 
@@ -2640,7 +2641,7 @@
       if (!offers) return; // lookup failed or unknown: the search links stay as a safe fallback
       const sec = document.getElementById('wtwSection');
       if (!sec || sec.dataset.item !== item.id || selectedCountry !== cc) return; // the window moved on
-      document.querySelectorAll('#wtwSection a[data-ott], #wtwPrimary a[data-ott]').forEach(a => {
+      document.querySelectorAll('#wtwSection a[data-ott], #wtwPrimary a[data-ott], #dmxTiles a[data-ott]').forEach(a => {
         const u = directUrlFor(offers, a.dataset.ott);
         if (u) { a.href = u; a.dataset.direct = '1'; }
       });
@@ -2713,6 +2714,7 @@
         ${src ? `<p class="mt-1 text-xs text-white/35">${src}</p>` : ''}`;
 
       if (all === null) { // lookup failed
+        { const tb = document.getElementById('dmxTiles'); if (tb) tb.innerHTML = '<div class="dmx-tile dmx-tile-none"><small>Where to watch</small><b>Could not check right now. See the list below.</b></div>'; }
         sec.innerHTML = `${head}<div class="mt-4 rounded-2xl bg-white/[0.03] p-4 text-sm text-white/55 ring-1 ring-white/[0.06]">Couldn't check availability right now. <button type="button" class="text-white underline" onclick="refreshAvailabilityUi()">Try again</button> or <a class="text-white underline" target="_blank" rel="noopener noreferrer" href="https://www.justwatch.com/${cc === 'GB' ? 'uk' : cc.toLowerCase()}/search?q=${encodeURIComponent(item.title)}">search JustWatch</a>.</div>`;
         if (prim) prim.innerHTML = '';
         return;
@@ -2729,6 +2731,7 @@
       }
       body += `<p class="mt-4 text-[11px] leading-relaxed text-white/30">Availability by JustWatch via TMDB. Each link opens the title's page on that service in your region, or a search there when no direct page is available.${av.link ? ` <a class="underline hover:text-white/60" target="_blank" rel="noopener noreferrer" href="${esc(av.link)}">See all options</a>` : ''}</p>`;
       sec.innerHTML = head + body;
+      renderProviderTiles(item, cc, av);
 
       // primary action: the best way to watch in this region
       if (prim) {
@@ -2788,7 +2791,7 @@
       const token = ++OTT.freshToken; const cc = selectedCountry;
       let i = 0;
       const worker = async () => { while (i < cands.length) { const m = cands[i++]; await getWatchProviders(m); } };
-      await Promise.all(Array.from({ length: 6 }, worker));
+      await Promise.all(Array.from({ length: 4 }, worker));
       const holder = document.getElementById('freshRow');
       if (!holder || token !== OTT.freshToken || cc !== selectedCountry) return;
       holder.innerHTML = freshRowHtml(cands);
@@ -4635,7 +4638,7 @@ function posterCard(item, opts) {
       const starsHtml = `<section id="starsRow" aria-label="Trending stars">${starsInner()}</section>`;
       setTimeout(hydrateStars, 0);
 
-      setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 0);
+      setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 700);   // after the first screen is up
       return `
         <div class="space-y-14">
           <div class="wv-top space-y-5">${mobileTabs}${wallSection}<div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>
@@ -6331,6 +6334,21 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       showToast('Review deleted.');
     }
 
+    function dmxActionsHtml(item) {
+      const saved = userWatchlistIds.includes(item.id);
+      const seen = userWatchedHistory.some(h => h.id === item.id);
+      const pill = 'dmx-btn inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition';
+      return `<button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill}${saved ? ' is-on' : ''}"><i class="fa-solid fa-bookmark text-xs"></i>${saved ? 'Saved' : 'Watchlist'}</button>
+            <button type="button" onclick="markSeen('${item.id}')" class="${pill}${seen ? ' is-on' : ''}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>`;
+    }
+    // one large tile per service right under the trailer (layout F); the full list with the region picker stays further down
+    function renderProviderTiles(item, cc, av) {
+      const box = document.getElementById('dmxTiles'); if (!box) return;
+      const kindLine = e => (e.kinds.has('stream') ? 'Stream' : (e.kinds.has('ads') || e.kinds.has('free')) ? 'Free with ads' : 'Rent or buy');
+      const all = (av.stream || []).concat((av.rentbuy || []).filter(e => !(av.stream || []).includes(e))).slice(0, 6);
+      if (!all.length) { box.innerHTML = `<div class="dmx-tile dmx-tile-none"><small>Where to watch</small><b>Not available in ${esc(regionName(cc))} right now</b></div>`; return; }
+      box.innerHTML = all.map((e, i) => `<a href="${esc(buildProviderLink(e.raws[0], item.title, item.type === 'Series', cc, av.link))}" target="_blank" rel="noopener noreferrer" data-ott="${esc(e.name)}" class="dmx-tile${i === 0 ? ' is-first' : ''}"><small>${esc(kindLine(e))}</small><b>${esc(e.name)}</b><span class="dmx-go" aria-hidden="true"><i class="fa-solid fa-arrow-up-right-from-square"></i></span></a>`).join('');
+    }
     function detailBodyHtml(item) {
       const saved = userWatchlistIds.includes(item.id);
       const seen = userWatchedHistory.some(h => h.id === item.id);
@@ -6342,12 +6360,6 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       return `
         <div class="dmx">
           <div class="dmx-main">
-          <div class="dmx-actions flex flex-wrap items-center gap-2.5">
-            <span id="wtwPrimary"><span class="${pill} cursor-default text-white/40 ring-white/10">Checking availability…</span></span>
-            <button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill}${saved ? ' is-on' : ''}"><i class="fa-solid fa-bookmark text-xs"></i>${saved ? 'Saved' : 'Watchlist'}</button>
-            <button type="button" onclick="markSeen('${item.id}')" class="${pill}${seen ? ' is-on' : ''}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>
-          </div>
-
           <section id="wtwSection" data-item="${esc(item.id)}"></section>
 
           ${item.synopsis ? `<p class="dmx-syn max-w-2xl text-[15px] leading-relaxed text-white/70">${esc(item.synopsis)}</p>` : ''}
@@ -6392,12 +6404,42 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       dmMakeCollapsible('vibeSection', 'Show verdicts and reviews', 250);
     }
 
+    // ---- layout E: the trailer plays big, then shrinks to a corner player while the information takes over (wide screens only) ----
+    const DM_LAYOUT = 'F';   // 'F': big trailer, provider tiles under it (live). 'E': the trailer shrinks to a corner after 8 s (kept, switched off)
+    const dmWide = () => !!(window.matchMedia && window.matchMedia('(min-width: 1024px)').matches);
+    function dmSetMini(on) {
+      const c = document.getElementById('modalContent'), sc = document.getElementById('detailScroll');
+      const v = c && c.querySelector('.dmx-video');
+      if (!v || c.classList.contains('dm-mini') === on) return;
+      if (on && !dmWide()) return;
+      if (!on) c.dataset.manual = '1';
+      clearTimeout(window.__dmMiniTimer); window.__dmMiniTimer = 0;
+      const a = v.getBoundingClientRect(), rest = c.querySelectorAll('.dmx-hero, #detailBody');
+      c.classList.toggle('dm-mini', on);
+      if (sc) sc.scrollTop = 0;
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !v.animate) return;
+      const b = v.getBoundingClientRect();
+      if (!b.width || !a.width) return;
+      v.animate([{ transformOrigin: '0 0', transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}, ${a.height / b.height})` }, { transformOrigin: '0 0', transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      rest.forEach(el => el.animate([{ opacity: .25 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' }));
+    }
+    function dmArmMini() {
+      clearTimeout(window.__dmMiniTimer);
+      if (DM_LAYOUT !== 'E' || !dmWide()) return;
+      window.__dmMiniTimer = setTimeout(() => dmSetMini(true), 8000);
+    }
+    (function () {   // scrolling (wheel or touch) while the trailer is big shrinks it first, then the page scrolls
+      const go = e => { const c = document.getElementById('modalContent'); const m = document.getElementById('detailModal'); if (!c || !m || m.classList.contains('hidden') || !c.querySelector('.dmx-video') || c.classList.contains('dm-mini') || c.dataset.manual || DM_LAYOUT !== 'E' || !dmWide()) return; if (e.type === 'wheel' && e.deltaY <= 0) return; if (!e.target.closest || !e.target.closest('#detailScroll')) return; e.preventDefault(); dmSetMini(true); };
+      document.addEventListener('wheel', go, { passive: false });
+    })();
     function renderMovieDetailsModal(item) {
       const contentEl = document.getElementById('modalContent');
       if (!contentEl) return;
       // Re-render only the body when the same title is already open, so the trailer preview isn't interrupted
       if (contentEl.dataset.itemId === item.id && document.getElementById('detailBody')) {
         document.getElementById('detailBody').innerHTML = detailBodyHtml(item);
+        { const ha = document.getElementById('dmxHeroActions'); if (ha) ha.innerHTML = dmxActionsHtml(item); }
         fillAvailability(item);
         fillSimilar(item);
         fillVibes(item);
@@ -6406,26 +6448,35 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       }
       contentEl.dataset.itemId = item.id;
       const meta = [item.year, (item.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · '), item.duration].filter(Boolean).join('  ·  ');
+      contentEl.classList.remove('dm-mini'); contentEl.dataset.manual = '';
+      clearTimeout(window.__dmMiniTimer); window.__dmMiniTimer = 0;
       contentEl.innerHTML = `
-        <div class="dmx-hero">
-          <div class="dmx-video relative overflow-hidden bg-[#14141A]">
-            <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
-            <div id="previewSlot" data-fit="1" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
-            <div id="previewControls" class="dmx-ctl absolute bottom-3 right-3 z-[1] flex flex-wrap items-center justify-end gap-2">
-              <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25">
-                <button id="previewMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10" aria-label="Mute trailer"><i class="fa-solid fa-volume-high"></i></button>
-                <input id="previewVolume" type="range" min="0" max="100" step="1" value="70" oninput="setTrailerVolume(this.value)" class="h-1 w-24 cursor-pointer accent-white sm:w-32" aria-label="Trailer volume">
-              </div>
-              <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
+        <div class="dmx-video relative overflow-hidden bg-[#14141A]">
+          <img src="${esc(item.backdrop)}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.onerror=null;this.src='${esc(item.poster)}'">
+          <div id="previewSlot" data-fit="1" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-700"></div>
+          <button type="button" class="dmx-expand" onclick="dmSetMini(false)" aria-label="Expand trailer"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
+          <div id="previewControls" class="dmx-ctl absolute bottom-3 right-3 z-[1] flex flex-wrap items-center justify-end gap-2">
+            <div id="previewVolumeWrap" class="hidden items-center gap-2 rounded-full bg-black/55 py-1 pl-1 pr-4 ring-1 ring-white/25">
+              <button id="previewMuteBtn" type="button" onclick="toggleTrailerMute()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10" aria-label="Mute trailer"><i class="fa-solid fa-volume-high"></i></button>
+              <input id="previewVolume" type="range" min="0" max="100" step="1" value="70" oninput="setTrailerVolume(this.value)" class="h-1 w-24 cursor-pointer accent-white sm:w-32" aria-label="Trailer volume">
             </div>
+            <button id="previewReplayBtn" type="button" onclick="replayTrailerPreview()" class="hidden inline-flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm text-white ring-1 ring-white/25 transition hover:bg-black/80" aria-label="Replay preview"><i class="fa-solid fa-rotate-right text-xs"></i>Replay</button>
           </div>
-          <button type="button" onclick="closeDetails()" class="dmx-close absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" onclick="closeDetails()" class="dmx-close dmx-close-big absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="dmx-hero">
+          <button type="button" onclick="closeDetails()" class="dmx-close dmx-close-head absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/80" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
           <div class="dmx-head">
-            <h2 id="detailTitle" class="dmx-title break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
-            <p id="detailMeta" class="dmx-meta mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
+            <div class="dmx-headtxt">
+              <h2 id="detailTitle" class="dmx-title break-words font-display text-2xl font-medium leading-tight text-white sm:text-4xl">${heroTitleInner(item)}</h2>
+              <p id="detailMeta" class="dmx-meta mt-1.5 break-words text-sm text-white/60"><span id="detailCert">${certBadgeHtml(certFor(EXTRAS.cache.get((tmdbRef(item) ? (tmdbRef(item).isTv ? 'tv:' : 'movie:') + tmdbRef(item).n : '')), selectedCountry))}</span>${esc(meta)}${rtHtml(item, 'ml-3 whitespace-nowrap text-amber-300')}</p>
+            </div>
+            <div id="dmxHeroActions" class="dmx-actions flex flex-wrap items-center gap-2.5">${dmxActionsHtml(item)}</div>
           </div>
+          <div id="dmxTiles" class="dmx-tiles" aria-label="Where to watch"><div class="dmx-tile dmx-tile-skel"><small>Checking where to watch…</small></div></div>
         </div>
         <div id="detailBody">${detailBodyHtml(item)}</div>`;
+      dmArmMini();
       fillAvailability(item);
       fillTitleExtras(item);
       fillSimilar(item);
