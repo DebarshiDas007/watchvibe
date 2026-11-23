@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watchvibe-cache-v131';
+const CACHE_NAME = 'watchvibe-cache-v132';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -104,6 +104,20 @@ self.addEventListener('fetch', (event) => {
           return cached;
         });
       })
+    );
+    return;
+  }
+
+  // B2. The daily data file: always the newest from the network, the last saved copy only when offline
+  if (url.pathname === '/catalog_fresh.json') {
+    event.respondWith(
+      fetch(req).then((networkRes) => {
+        if (networkRes && networkRes.status === 200) {
+          const resClone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+        }
+        return networkRes;
+      }).catch(() => caches.match(req))
     );
     return;
   }

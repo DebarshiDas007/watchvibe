@@ -1959,6 +1959,29 @@
       }
       return n;
     }
+    // ---- Daily refresh: catalog_fresh.json (rebuilt every day by scripts/refresh_daily.mjs) carries today's TMDB ratings and the newest releases.
+    // Only `rating` is updated and new films are flagged __fr, so the Daily Challenge (which reads votes and the film pool) stays identical for every player.
+    const FRESH = { state: 'idle', day: null };
+    async function loadFreshCatalog() {
+      if (FRESH.state !== 'idle') return;
+      FRESH.state = 'loading';
+      try {
+        const r = await fetch('catalog_fresh.json', { cache: 'no-cache' });
+        if (!r.ok) throw new Error('fresh ' + r.status);
+        const d = await r.json();
+        const upd = (d && d.r) || {};
+        mediaDatabase.forEach(m => {
+          const t = /^tmdb-(m|tv)-(\d+)$/.exec(String(m.id));
+          const k = t ? t[1] + t[2] : (m.tmdbId ? (m.type === 'Movie' ? 'm' : 'tv') + m.tmdbId : '');
+          const v = k && upd[k];
+          if (typeof v === 'number' && v > 0 && v <= 10) m.rating = v;
+        });
+        const news = Array.isArray(d && d.news) ? d.news.filter(x => x && typeof x.title === 'string' && typeof x.id === 'string' && /^https:\/\/image\.tmdb\.org\//.test(String(x.poster)) && /^https:\/\/image\.tmdb\.org\//.test(String(x.backdrop))) : [];
+        news.forEach(x => { x.__fr = 1; });
+        catMerge(news);
+        FRESH.day = d && d.day; FRESH.state = 'done';
+      } catch (e) { FRESH.state = 'failed'; }
+    }
     async function loadExtraCatalog() {
       if (CAT.state !== 'idle') return;
       CAT.state = 'loading';
@@ -1969,6 +1992,7 @@
           CAT.added = catMerge(await r.json()); CAT.state = 'done';
         } catch (e) { if (attempt === 2) CAT.state = 'failed'; else await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
       }
+      await loadFreshCatalog();
       HOME.node = null;
       const ae = document.activeElement, typing = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
       if (!typing && (activeTab === 'daily' || (window.scrollY < 100 && (activeTab === 'discover' || activeTab === 'explore')))) refreshViews();
@@ -4757,7 +4781,7 @@ function posterCard(item, opts) {
     function dcYesterday(day) { return new Date(Date.parse(day + 'T00:00:00Z') - 864e5).toISOString().slice(0, 10); }
     function dcNumber() { return Math.floor((Date.parse(featDay() + 'T00:00:00Z') - DC_EPOCH) / 864e5) + 1; }
     const dcIsIndian = m => (m.region && String(m.region).startsWith('Indian')) || DC_IN_LANGS.has(m.language);
-    const dcBase = m => m.type === 'Movie' && m.backdrop && m.poster && m.synopsis && m.synopsis.length > 60 && Array.isArray(m.cast) && m.cast.length >= 3 && m.director && !/^(Director|Showrunner)$/.test(m.director);
+    const dcBase = m => m.type === 'Movie' && !m.__fr && m.backdrop && m.poster && m.synopsis && m.synopsis.length > 60 && Array.isArray(m.cast) && m.cast.length >= 3 && m.director && !/^(Director|Showrunner)$/.test(m.director);
     function dcNorm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ''); }
     function dcPools() {
       if (!DC._p || DC._pn !== mediaDatabase.length) {

@@ -1,0 +1,47 @@
+# Runs every day: refreshes catalog_fresh.json (current TMDB ratings + newest releases) and deploys the site.
+# One-time setup (you do this, I never touch your tokens): GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret:
+#   CLOUDFLARE_API_TOKEN   a Cloudflare API token with "Cloudflare Pages: Edit"  (the same one that is in your local .env)
+#   CLOUDFLARE_ACCOUNT_ID  your Cloudflare account id
+# Without those two secrets the data still refreshes and is committed, but the deploy step is skipped.
+name: Daily refresh
+
+on:
+  schedule:
+    - cron: '30 21 * * *'   # 03:00 India time
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refresh ratings and new releases
+        run: node scripts/refresh_daily.mjs
+      - name: Check the file is sane
+        run: |
+          node -e "const d=JSON.parse(require('fs').readFileSync('web_live_build/catalog_fresh.json','utf8')); if(!d.day||typeof d.r!=='object'||!Array.isArray(d.news)) throw new Error('bad catalog_fresh.json'); console.log('ok', d.day, Object.keys(d.r).length, 'ratings', d.news.length, 'new releases')"
+      - name: Commit the new data
+        run: |
+          git config user.name "watchvibe-bot"
+          git config user.email "watchvibe-bot@users.noreply.github.com"
+          git add web_live_build/catalog_fresh.json
+          git diff --cached --quiet || git commit -m "Daily data refresh $(date -u +%F)"
+          git push
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "No Cloudflare secrets set: skipping deploy"; exit 0; fi
+          npx --yes wrangler@3 pages deploy web_live_build --project-name watchvibe --commit-dirty=true

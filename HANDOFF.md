@@ -543,3 +543,11 @@ Open / next, in the order we discussed:
 - Audit notes: DB functions were already guarded (`api_rate_hit` needs a server secret, list functions clamp their inputs); OMDb key already lives only in the Cloudflare secret (old key remains in git history); TMDB limits per IP, so no proxy built.
 - Still manual: catalogue (ratings/votes/new films) is rebuilt by scripts, no scheduler. Domain switch needs canonical/og/sitemap/robots/ld+json URLs changed.
 - Not verified: real signed-in delete (sign-in is the owner's); leaked-password protection is a Supabase dashboard toggle.
+
+## v132 - daily catalogue refresh (24 Nov 2026)
+- `scripts/refresh_daily.mjs` writes `web_live_build/catalog_fresh.json`: today's TMDB rating for every catalogue film/series (only where it differs from the built-in value) plus films released in the last 60 days (hi/bn/en) that are not in the catalogue yet (capped at 300, `rel` = release date). Takes ~10 min, never invents data (incomplete films are skipped and retried next day). Aborts the ratings part if >25% of lookups fail.
+- App: `loadFreshCatalog()` runs inside `loadExtraCatalog()`; updates only `rating` (NOT totalVotes) and flags new films `__fr`; `dcBase` skips `__fr` so the Daily Challenge stays identical for every player.
+- sw.js: `/catalog_fresh.json` is network-first (cache v132); `_headers`: no-cache for it.
+- `.github/workflows/daily-refresh.yml`: runs at 03:00 IST, refreshes, commits and deploys. NEEDS the repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (owner adds them; same values as the local .env). Without them it still commits the data but skips the deploy.
+- Left as it was: catalog_extra.json and the built-in list only change when scripts are run by hand (they are cached for a year, keyed by CAT.v).
+- The workflow file is kept at `scripts/daily-refresh.workflow.yml` because the stored GitHub token has no `workflow` scope and GitHub refused the push. To activate it: copy it to `.github/workflows/daily-refresh.yml` (via the GitHub web editor, or after giving the token the `workflow` scope) and add the two Cloudflare secrets.
