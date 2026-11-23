@@ -6,6 +6,8 @@
 #   - a failed refresh or deploy changes nothing on the live site and is retried at the next trigger
 # Log: logs\daily_refresh.log
 $ErrorActionPreference = 'Continue'
+$env:PYTHONUTF8 = '1'; $env:PYTHONIOENCODING = 'utf-8'   # deploy.py prints emoji; without this it crashes when its output is piped to the log
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 $logDir = Join-Path $repo 'logs'
