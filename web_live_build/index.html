@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=26">
+  <link rel="stylesheet" href="/swiss.css?v=27">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -3414,6 +3414,7 @@
 
     function toggleAiMood(id) {   // one mood at a time: a second tap on the chosen one clears it
       aiMoods = aiMoods[0] === id ? [] : [id];
+      if (selectedTopCategory === 'Series') MPF.kind = 'tv'; else if (selectedTopCategory === 'Movie') MPF.kind = 'movie';   // picked from the Movies or Series list: stay on that kind
       openMoodPage();
     }
 
@@ -3996,7 +3997,7 @@
       try { localStorage.setItem('watchvibe_kw_v1', JSON.stringify(KW.map)); } catch (e) {}
       return out;
     }
-    const moodPageActive = () => aiMoods.length > 0 || aiMaxRuntime > 0 || filtersActive();
+    const moodPageActive = () => aiMoods.length > 0 || aiMaxRuntime > 0 || filtersActive() || !!(selectedTopLanguage && selectedTopCategory === 'all' && !window.homeRow);
     function mpReset() { aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; FLT.genre = ''; FLT.era = ''; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; mpPush(false); }
     function moodTitle() {
       const mood = AI_MOODS.find(x => x.id === aiMoods[0]);
@@ -4037,13 +4038,13 @@
       try {
         const h = mpHash(), base = location.pathname + location.search;
         if (h) { if (h !== location.hash) history[replace ? 'replaceState' : 'pushState'](null, '', base + h); }
-        else if (/^#(mood|rt|genre|era)=/.test(location.hash)) history[replace ? 'replaceState' : 'pushState'](null, '', base);
+        else if (/^#(mood|rt|genre|era|lang)=/.test(location.hash)) history[replace ? 'replaceState' : 'pushState'](null, '', base);
       } catch (e) {}
     }
     function mpFromHash() {
       const h = location.hash;
       if (h === mpHash() || (!h && !moodPageActive())) return;
-      if (/^#(mood|rt|genre|era)=/.test(h)) {
+      if (/^#(mood|rt|genre|era|lang)=/.test(h)) {
         const p = new URLSearchParams(h.slice(1));
         const id = p.get('mood');
         aiMoods = AI_MOODS.some(x => x.id === id) ? [id] : [];
@@ -4056,7 +4057,7 @@
         if (MPF.kind === 'tv') aiMaxRuntime = 0;
         if (moodPageActive()) { openMoodPage(true); return; }
       }
-      if (moodPageActive()) { aiMoods = []; aiMaxRuntime = 0; FLT.genre = ''; FLT.era = ''; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; refreshViews(); }
+      if (moodPageActive()) { aiMoods = []; aiMaxRuntime = 0; FLT.genre = ''; FLT.era = ''; selectedTopLanguage = ''; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; refreshViews(); }
     }
     window.addEventListener('popstate', mpFromHash);
     window.addEventListener('load', () => setTimeout(mpFromHash, 700));
@@ -4095,6 +4096,7 @@
           if (s.k) { s.kids = await kwIds(s.k); if (!s.kids.length) continue; }
           srcs.push(s);
         }
+        if (srcs.length && (FLT.genre || FLT.era || selectedTopLanguage || aiMaxRuntime)) { const wx = ((table[id] || [])[0] || {}).w || ''; srcs.push({ w: wx, a: 6.2, v: 60 }, { w: wx, a: 5.4, v: 15 }); }
         if (srcs.length) states.push({ id, srcs, si: 0, page: 1, done: false });
       }
       if (!states.length) states.push({ id: 'filter', srcs: [{ a: 6.8, v: 400 }, { a: 6.2, v: 80 }, { a: 5.4, v: 20 }], si: 0, page: 1, done: false });   // no mood: the genre, era, language and runtime do the narrowing
@@ -4106,6 +4108,7 @@
         const src = st.srcs[st.si]; if (!src) { st.done = true; break; }
         const pages = []; for (let i = 0; i < nPages; i++) { if (src.tp && st.page + i > Math.min(src.tp, 500)) break; pages.push(st.page + i); }
         const rs = await Promise.all(pages.map(pg => fetch(mpUrl(src, pg)).then(r => r.ok ? r.json() : null).catch(() => null)));
+        if (rs.length && rs.every(j => !j)) st.netFail = true;
         let tp = 0; rs.forEach(j => { if (j) { tp = Math.max(tp, j.total_pages || 0); got.push(...(j.results || [])); } });
         if (tp) src.tp = tp;
         st.page += pages.length;
@@ -4136,19 +4139,33 @@
         if (g !== MP.gen) return;
         batches.forEach(b => b.list.forEach(r => { const it = mpItem(r, b.id); if (it && !MP.seen.has(it.id)) { MP.seen.add(it.id); MP.items.push(it); } }));
         MP.exhausted = MP.states.every(s => s.done);
-        if (!MP.items.length) throw new Error('empty');
+        if (!MP.items.length) throw new Error(MP.states.every(st => st.netFail) ? 'net' : 'empty');
         mpRemember();
       } catch (e) {
         if (g !== MP.gen) return;
-        if (MPF.kind === 'tv') { MP.exhausted = true; }
+        if (MPF.kind === 'tv' || (e && e.message === 'empty')) { MP.exhausted = true; }   // the movie database answered: there is simply nothing for this mix
         else {
-          // TMDB could not be reached: fall back to WatchVibe's own catalogue so the page is never empty
-          window.AI_TOPN = 60; try { runLocalVibeMatcher('', true); } catch (e2) {} window.AI_TOPN = 0;
-          MP.items = (aiVibeResults || []).slice(); MP.fallback = true; MP.exhausted = true;
+          // TMDB could not be reached: fall back to WatchVibe's own catalogue, narrowed by every filter in use (an empty result is honest, a wrong one is not)
+          window.AI_TOPN = 400; try { runLocalVibeMatcher('', true); } catch (e2) {} window.AI_TOPN = 0;
+          let list = (aiVibeResults || []).slice();
+          if (!aiMoods.length) list = mediaDatabase.filter(m => m.type === 'Movie').sort((a, b) => imdbSortVal(b) - imdbSortVal(a)).slice(0, 600);
+          MP.items = mpLocalFilter(list); MP.fallback = true; MP.exhausted = true;
         }
       } finally {
         if (g === MP.gen) { MP.loading = false; if (activeTab === 'discover') refreshViews(); }
       }
+    }
+    // the same filters, applied to WatchVibe's own catalogue (only used when the movie database cannot be reached)
+    function mpLocalFilter(list) {
+      const e = eraOpt(), g = genreOpt();
+      return list.filter(m => {
+        if (selectedTopLanguage && m.language !== selectedTopLanguage) return false;
+        const y = Number(m.year) || 0;
+        if (e) { const from = e[2] ? Number(e[2].slice(0, 4)) : 0, to = e[3] ? Number(e[3].slice(0, 4)) : 9999; if (y < from || y > to) return false; }
+        if (g && !(m.genres || []).some(n => String(n).toLowerCase() === g[1].toLowerCase() || (g[0] === 'scifi' && /sci/i.test(n)))) return false;
+        if (aiMaxRuntime) { const r = parseRuntimeMinutes(m.duration); if (!r || r > aiMaxRuntime) return false; }
+        return true;
+      });
     }
     function openMoodPage(fromHash) {
       if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; }
@@ -4521,6 +4538,7 @@ function posterCard(item, opts) {
         return `
           <div class="space-y-8">
             ${mobileTabs}
+            <div class="wv-moodrow no-scrollbar" role="group" aria-label="Mood">${moodRowChips}</div>
             <div class="flex flex-wrap items-end justify-between gap-4">
               <div>
                 ${window.homeRow ? `<button type="button" onclick="goHome()" class="mb-2 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>Home</button>` : ''}
