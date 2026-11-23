@@ -27,6 +27,8 @@ header button[aria-label="WatchVibe home"] .wv-w1 { color: var(--text); }
 header button[aria-label="WatchVibe home"] .text-purple-400 { color: var(--accent); }
 .top-nav-pill { font-family: var(--wv-mono); font-size: 12px !important; font-weight: 500 !important; text-transform: uppercase; letter-spacing: .04em; }
 .top-nav-pill[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--accent); }
+/* mono caps are wider: the icon-only menu stays until there is really room for the labels */
+@media (min-width: 1500px) and (max-width: 1799px) { .top-nav-pill [class*="min-[1500px]:inline"] { display: none; } }
 
 /* ---- the accent is blue now (theme.css painted it orange) ---- */
 [class~="bg-purple-500/10"], [class~="bg-purple-500/15"], [class~="bg-purple-500/20"], [class~="bg-purple-500/25"], [class~="bg-purple-500/30"], [class~="bg-purple-400/15"], [class~="bg-purple-400/20"] { background-color: var(--accent-soft); }
@@ -132,6 +134,98 @@ div.wv-top.space-y-5 > #wvFilterBar { margin: 0 !important; }
 }
 @media (hover: none) { .wvw-pc:hover .wvw-ph { outline-color: transparent; } .wvw-pc.on .wvw-ph { outline-color: var(--accent); } }
 @media (prefers-reduced-motion: reduce) { .wvw-pc, .wvw-prog i { transition: none; } }
+
+/* ================= wall looks (demo): data-wall = glow | stage ================= */
+#wallSwitch { position: fixed; z-index: 60; right: 14px; bottom: 76px; display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--surface); border: 1px solid var(--text); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+#wallSwitch span { font: 500 11px var(--wv-mono); text-transform: uppercase; color: var(--text-2); padding: 0 8px; }
+#wallSwitch button { height: 34px; padding: 0 12px; border: 1px solid transparent; background: transparent; color: var(--text); font: 500 12px var(--wv-mono); text-transform: uppercase; cursor: pointer; }
+#wallSwitch button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+@media (min-width: 768px) { #wallSwitch { bottom: 18px; } }
+
+/* A · Glow: bigger wall, the film in front glows softly behind it */
+html[data-wall="glow"] #wvWall { position: relative; isolation: isolate; padding: 34px clamp(18px, 2.4vw, 40px) 26px; border: 1px solid var(--line); overflow: hidden; }
+html[data-wall="glow"] #wvWall::before { content: ""; position: absolute; inset: -40px; z-index: -2; background: var(--bd) center / cover; filter: blur(46px) saturate(1.3); opacity: .42; transition: background-image .5s; }
+html[data-wall="glow"] #wvWall::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 55%, transparent) 55%, color-mix(in srgb, var(--bg) 85%, transparent) 100%); }
+html[data-wall="glow"] .wvw-title { font-size: clamp(40px, 4.6vw, 84px); }
+html[data-wall="glow"] .wvw-syn { font-size: 16px; max-width: 520px; -webkit-line-clamp: 5; }
+html[data-wall="glow"] .wvw-h { font-size: clamp(40px, 4.8vw, 84px); }
+@media (min-width: 901px) {
+  html[data-wall="glow"] #wvWall { grid-template-columns: minmax(340px, 31%) minmax(0, 1fr); }
+  html[data-wall="glow"] .wvw-now { padding-top: 64px; }
+  html[data-wall="glow"] .wvw-pc { width: clamp(240px, 17vw, 330px); }
+  html[data-wall="glow"] .wvw-nn { font-size: clamp(104px, 8.4vw, 132px); top: clamp(-60px, -3.4vw, -48px); }
+  html[data-wall="glow"] .wvw-t { font-size: clamp(18px, 1.3vw, 21px); }
+  html[data-wall="glow"] .wvw-snap { padding-top: 66px; }
+}
+
+/* B · Cinema stage: the film's backdrop fills the first screen, the numbered posters sit on it */
+@media (min-width: 901px) {
+  html[data-wall="stage"] #wvWall { position: relative; isolation: isolate; display: block; height: clamp(800px, calc(100vh - 40px), 980px); overflow: hidden; border: 1px solid var(--line); }
+  html[data-wall="stage"] #wvWall::before { content: ""; position: absolute; inset: 0; z-index: -2; background: var(--bd) center 22% / cover; transition: background-image .5s; }
+  html[data-wall="stage"] #wvWall::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, color-mix(in srgb, var(--bg) 96%, transparent) 0%, color-mix(in srgb, var(--bg) 70%, transparent) 38%, transparent 72%), linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 82%, transparent) 36%, transparent 64%); }
+  html[data-wall="stage"] .wvw-now { position: absolute; left: clamp(22px, 2.6vw, 44px); top: clamp(30px, 4vw, 60px); width: min(600px, 44%); padding: 0; }
+  html[data-wall="stage"] .wvw-title { font-size: clamp(40px, 4.2vw, 76px); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 10px; }
+  html[data-wall="stage"] .wvw-syn { font-size: 16px; max-width: 540px; color: var(--text); opacity: .9; -webkit-line-clamp: 2; margin-bottom: 16px; }
+  html[data-wall="stage"] .wvw-all { margin-top: 10px; }
+  html[data-wall="stage"] .wvw-right { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 clamp(22px, 2.6vw, 44px) 18px; }
+  html[data-wall="stage"] .wvw-head { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: -22px; position: relative; z-index: 3; }
+  html[data-wall="stage"] .wvw-h { font-size: clamp(28px, 2.4vw, 40px); white-space: nowrap; }
+  html[data-wall="stage"] .wvw-chips { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-end; scrollbar-width: none; }
+  html[data-wall="stage"] .wvw-chips::-webkit-scrollbar { display: none; }
+  html[data-wall="stage"] .wvw-chips .wv-chip { flex: 0 0 auto; background: color-mix(in srgb, var(--bg) 70%, transparent); }
+  html[data-wall="stage"] .wvw-snap { padding-top: 58px; }
+  html[data-wall="stage"] .wvw-pc { width: clamp(160px, 10.6vw, 210px); }
+  html[data-wall="stage"] .wvw-nn { font-size: clamp(80px, 5.6vw, 104px); top: clamp(-50px, -2.8vw, -40px); }
+  html[data-wall="stage"] .wvw-t { font-size: 16px; margin-top: 10px; }
+  html[data-wall="stage"] .wvw-s { display: none; }
+}
+@media (max-width: 900px) {
+  html[data-wall="stage"] #wvWall { position: relative; isolation: isolate; overflow: hidden; padding: 18px 0 0; }
+  html[data-wall="stage"] #wvWall::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 360px; z-index: -2; background: var(--bd) center 20% / cover; }
+  html[data-wall="stage"] #wvWall::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 360px; z-index: -1; background: linear-gradient(0deg, var(--bg), color-mix(in srgb, var(--bg) 50%, transparent) 60%, color-mix(in srgb, var(--bg) 80%, transparent)); }
+}
+
+/* C · Clean: fewer things on screen, much bigger posters. Small label, one title, two buttons; posters carry the page; moods sit under the wall */
+html[data-wall="clean"] #wvWall { align-items: center; }
+html[data-wall="clean"] .wvw-now { padding-top: 0; }
+html[data-wall="clean"] .wvw-syn, html[data-wall="clean"] .wvw-s, html[data-wall="clean"] .wvw-prog { display: none; }
+html[data-wall="clean"] .wvw-title { font-size: clamp(36px, 3.8vw, 68px); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 14px 0 12px; }
+html[data-wall="clean"] .wvw-meta { margin-bottom: 22px; }
+html[data-wall="clean"] .wvw-acts .wv-btn-g[data-wall="open"] { display: none; }
+html[data-wall="clean"] .wvw-acts .wv-btn-g[data-wall="wl"] span { display: inline; }
+html[data-wall="clean"] .wvw-right { display: flex; flex-direction: column; }
+html[data-wall="clean"] .wvw-head { display: contents; }
+html[data-wall="clean"] .wvw-h { order: 1; font: 500 12px/1 var(--wv-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); margin-bottom: 4px; }
+html[data-wall="clean"] .wvw-h em { color: var(--accent); }
+html[data-wall="clean"] #wvwBody { order: 2; }
+html[data-wall="clean"] .wvw-chips { order: 3; margin-top: 14px; }
+html[data-wall="clean"] .wvw-snap { padding-top: 34px; gap: 22px; }
+html[data-wall="clean"] .wvw-nn { position: static; display: block; font: 500 13px/1 var(--wv-mono); letter-spacing: .06em; -webkit-text-stroke: 0; color: var(--text-2); margin-bottom: 10px; }
+html[data-wall="clean"] .wvw-pc.on .wvw-nn { color: var(--accent); }
+html[data-wall="clean"] .wvw-t { font-size: clamp(17px, 1.2vw, 20px); }
+html[data-wall="clean"] .wvw-foot { margin-top: 0; justify-content: flex-end; }
+@media (min-width: 901px) {
+  html[data-wall="clean"] #wvWall { grid-template-columns: minmax(300px, 24%) minmax(0, 1fr); gap: 0 clamp(28px, 3.4vw, 64px); }
+  html[data-wall="clean"] .wvw-pc { width: clamp(230px, 19vw, 400px); }
+}
+/* sleeker and tighter */
+#mainViewport > .space-y-14 > * + * { margin-top: 2.6rem !important; }
+.wv-shelf { padding-top: 22px; }
+html[data-wall="clean"] .wvw-snap { gap: 18px; padding-bottom: 12px; }
+html[data-wall="clean"] .wvw-ph { box-shadow: 0 22px 36px -26px rgba(0,0,0,.6); }
+html[data-wall="clean"] .wvw-title { letter-spacing: -.055em; line-height: .96; }
+html[data-wall="clean"] .wvw-mo { font-size: 11px; }
+html[data-wall="clean"] .wvw-chips { margin-top: 6px; gap: 6px; }
+html[data-wall="clean"] .wvw-chips .wv-chip { height: 32px; padding: 0 12px; font-size: 11px; }
+html[data-wall="clean"] .wvw-acts .wv-btn { height: 42px; padding: 0 18px; font-size: 14px; }
+html[data-wall="clean"] .wvw-foot { margin-top: -6px; margin-bottom: 12px; }
+html[data-wall="clean"] .wvw-arrows button { width: 38px; height: 38px; }
+@media (min-width: 1200px) {
+  html[data-wall="clean"] div.wv-top.space-y-5 > #wvFilterBar { margin-top: -44px !important; position: relative; z-index: 2; pointer-events: none; }
+  html[data-wall="clean"] #wvFilterBar > * { pointer-events: auto; }
+  html[data-wall="clean"] div.wv-top.space-y-5 { row-gap: 0 !important; }
+}
+@media (max-width: 900px) { html[data-wall="clean"] .wvw-chips { margin-bottom: 22px; } html[data-wall="clean"] .wvw-snap { padding-top: 22px; } html[data-wall="clean"] .wvw-pc { width: min(230px, 62vw); } html[data-wall="clean"] .wvw-prog { display: block; } }
 
 /* ================= everything theme.css hard-coded for dark now follows the variables ================= */
 #headerSearchBtn { background: var(--surface); border: 1px solid var(--line-strong); }

@@ -442,3 +442,8 @@ Open / next, in the order we discussed:
 - Home top: Tonight's poster wall (numbered snap posters, arrows, progress bar) with a Now showing panel (Play trailer opens the title window, which starts the trailer; Open film; Watchlist). Mood chips re-sort the wall live; "All ... films" opens that mood's full page. Under 2h filters the wall. Featured daily picks still lead the wall. Old hero carousel code kept but not mounted.
 - Everything else unchanged: shelves, Top 10, mood pages (#mood=), language filter, watchlist, daily, games, stars, account menu. theme.css hard-coded dark colours now follow variables.
 - Checked: product sweep problems [] at 375/768/1440 (dark) and 375 (light). sw.js cache v109, swiss.css precached.
+
+## v110: wall look "Clean" is now the home look
+- Poster wall: Clean look (small label, title + Play trailer + Watchlist, much bigger posters, moods under the wall, language select beside the chips on wide screens). Tighter gaps between shelves. `?wall=now|glow|stage|clean` shows the other looks with a demo switch (not linked anywhere).
+- Top menu keeps icons only between 1500 and 1799 px (mono caps were too wide). swiss.css?v=10, cache v110.
+- Checked: product sweep problems [] at 1900/1600/1440/768/375 (dark) and 375 (light).
