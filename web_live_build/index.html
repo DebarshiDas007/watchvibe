@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/anton.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/barlow-condensed-700.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=23">
+  <link rel="stylesheet" href="/swiss.css?v=26">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -3967,6 +3967,15 @@
       gem: [{ w: '99', a: 7.6, v: 100, vmax: 1500 }, { w: '99', a: 7.3, v: 60, vmax: 800 }]
     };
     const MPF = { kind: 'movie', sort: 'top' };   // what the page lists, and how it is ordered
+    // Genre and era join the mood, language, type, runtime and sort filters: every one of them narrows the same list, so any mix works
+    // (a Bengali drama from the 1950s and 60s, a top-rated action film, a cry-worthy romance under two hours...).
+    const FLT = { genre: '', era: '' };
+    const GENRE_OPTS = [['action', 'Action', '28', '10759'], ['adventure', 'Adventure', '12', '10759'], ['animation', 'Animation', '16', '16'], ['comedy', 'Comedy', '35', '35'], ['crime', 'Crime', '80', '80'], ['documentary', 'Documentary', '99', '99'], ['drama', 'Drama', '18', '18'], ['family', 'Family', '10751', '10751'], ['fantasy', 'Fantasy', '14', '10765'], ['history', 'History', '36', ''], ['horror', 'Horror', '27', ''], ['music', 'Music', '10402', ''], ['mystery', 'Mystery', '9648', '9648'], ['romance', 'Romance', '10749', ''], ['scifi', 'Sci-Fi', '878', '10765'], ['thriller', 'Thriller', '53', ''], ['war', 'War', '10752', '10768'], ['western', 'Western', '37', '37']];   // [key, label, movie genre id, series genre id ('' = series have none)]
+    const ERA_OPTS = [['2020s', '2020s', '2020-01-01', ''], ['2010s', '2010s', '2010-01-01', '2019-12-31'], ['2000s', '2000s', '2000-01-01', '2009-12-31'], ['1990s', '1990s', '1990-01-01', '1999-12-31'], ['1980s', '1980s', '1980-01-01', '1989-12-31'], ['1970s', '1970s', '1970-01-01', '1979-12-31'], ['1960s', '1960s', '1960-01-01', '1969-12-31'], ['1950s', '1950s', '1950-01-01', '1959-12-31'], ['pre1950', 'Before 1950', '', '1949-12-31'], ['c5060', '1950s and 1960s', '1950-01-01', '1969-12-31'], ['c7080', '1970s and 1980s', '1970-01-01', '1989-12-31'], ['pre1980', 'Before 1980', '', '1979-12-31']];   // [key, label, from, to]
+    const genreOpt = () => GENRE_OPTS.find(x => x[0] === FLT.genre) || null;
+    const eraOpt = () => ERA_OPTS.find(x => x[0] === FLT.era) || null;
+    const genreIdNow = () => { const g = genreOpt(); return g ? (MPF.kind === 'tv' ? g[3] : g[2]) : ''; };
+    const filtersActive = () => !!(FLT.genre || FLT.era);
     const MP = { gen: 0, states: [], items: [], seen: new Set(), loading: false, exhausted: false, fallback: false, obs: null };
     const MP_CACHE = new Map();
     const KW = { map: (() => { try { return JSON.parse(localStorage.getItem('watchvibe_kw_v1') || '{}') || {}; } catch (e) { return {}; } })() };
@@ -3987,20 +3996,38 @@
       try { localStorage.setItem('watchvibe_kw_v1', JSON.stringify(KW.map)); } catch (e) {}
       return out;
     }
-    const moodPageActive = () => aiMoods.length > 0 || aiMaxRuntime > 0;
-    function mpReset() { aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; mpPush(false); }
+    const moodPageActive = () => aiMoods.length > 0 || aiMaxRuntime > 0 || filtersActive();
+    function mpReset() { aiMoods = []; aiVibeQuery = ''; aiMaxRuntime = 0; FLT.genre = ''; FLT.era = ''; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; mpPush(false); }
     function moodTitle() {
       const mood = AI_MOODS.find(x => x.id === aiMoods[0]);
       if (mood) return mood.label;
-      return 'Films under 2 hours';
+      const g = genreOpt();
+      if (g) return MPF.kind === 'tv' ? g[1] + ' series' : g[1] + ' films';
+      if (aiMaxRuntime) return 'Films under 2 hours';
+      const e = eraOpt();
+      if (e) return (MPF.kind === 'tv' ? 'Series from ' : 'Films from ') + e[1].replace(/^Before/, 'before');
+      return MPF.kind === 'tv' ? 'Series' : 'Films';
     }
-    function mpKey() { return [MPF.kind, aiMoods[0] || 'time', aiMaxRuntime, selectedTopLanguage, MPF.sort].join('|'); }
+    // a plain-words line of every filter in use
+    function mpSummary() {
+      const bits = [];
+      const g = genreOpt(); if (g && aiMoods[0]) bits.push(g[1]);
+      if (selectedTopLanguage && DC_LANG[selectedTopLanguage]) bits.push(DC_LANG[selectedTopLanguage] + '-language');
+      const e = eraOpt(); if (e && !(!aiMoods[0] && !g && !aiMaxRuntime)) bits.push(e[1]);
+      if (aiMaxRuntime && MPF.kind !== 'tv') bits.push('under 2 hours');
+      bits.push({ top: 'best rated first', new: 'newest first', pop: 'most popular first' }[MPF.sort] || 'best rated first');
+      const line = bits.join(' · ');
+      return line.charAt(0).toUpperCase() + line.slice(1);
+    }
+    function mpKey() { return [MPF.kind, aiMoods[0] || 'time', aiMaxRuntime, selectedTopLanguage, MPF.sort, FLT.genre, FLT.era].join('|'); }
     // ---- the address: #mood=cry&type=series&sort=new&lang=hi&rt=1
     function mpHash() {
       if (!moodPageActive()) return '';
       const p = new URLSearchParams();
       if (aiMoods[0]) p.set('mood', aiMoods[0]);
       if (aiMaxRuntime) p.set('rt', '1');
+      if (FLT.genre) p.set('genre', FLT.genre);
+      if (FLT.era) p.set('era', FLT.era);
       if (MPF.kind === 'tv') p.set('type', 'series');
       if (MPF.sort !== 'top') p.set('sort', MPF.sort);
       if (selectedTopLanguage) p.set('lang', selectedTopLanguage);
@@ -4010,24 +4037,26 @@
       try {
         const h = mpHash(), base = location.pathname + location.search;
         if (h) { if (h !== location.hash) history[replace ? 'replaceState' : 'pushState'](null, '', base + h); }
-        else if (/^#(mood|rt)=/.test(location.hash)) history[replace ? 'replaceState' : 'pushState'](null, '', base);
+        else if (/^#(mood|rt|genre|era)=/.test(location.hash)) history[replace ? 'replaceState' : 'pushState'](null, '', base);
       } catch (e) {}
     }
     function mpFromHash() {
       const h = location.hash;
       if (h === mpHash() || (!h && !moodPageActive())) return;
-      if (/^#(mood|rt)=/.test(h)) {
+      if (/^#(mood|rt|genre|era)=/.test(h)) {
         const p = new URLSearchParams(h.slice(1));
         const id = p.get('mood');
         aiMoods = AI_MOODS.some(x => x.id === id) ? [id] : [];
         aiMaxRuntime = p.get('rt') ? 120 : 0;
+        FLT.genre = GENRE_OPTS.some(x => x[0] === p.get('genre')) ? p.get('genre') : '';
+        FLT.era = ERA_OPTS.some(x => x[0] === p.get('era')) ? p.get('era') : '';
         MPF.kind = p.get('type') === 'series' ? 'tv' : 'movie';
         MPF.sort = ['new', 'pop'].includes(p.get('sort')) ? p.get('sort') : 'top';
         const lg = p.get('lang'); selectedTopLanguage = /^[a-z]{2}$/.test(lg || '') ? lg : '';
         if (MPF.kind === 'tv') aiMaxRuntime = 0;
         if (moodPageActive()) { openMoodPage(true); return; }
       }
-      if (moodPageActive()) { aiMoods = []; aiMaxRuntime = 0; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; refreshViews(); }
+      if (moodPageActive()) { aiMoods = []; aiMaxRuntime = 0; FLT.genre = ''; FLT.era = ''; MPF.kind = 'movie'; MPF.sort = 'top'; MP.gen++; refreshViews(); }
     }
     window.addEventListener('popstate', mpFromHash);
     window.addEventListener('load', () => setTimeout(mpFromHash, 700));
@@ -4037,12 +4066,21 @@
       if (src.search) return `${TMDB_BASE_URL}/search/${kind}?api_key=${key}&include_adult=false&language=en-US&query=${encodeURIComponent(src.search)}&page=${page}`;
       const today = new Date().toISOString().slice(0, 10);
       const sorts = { top: 'vote_average.desc', pop: 'popularity.desc', new: (tv ? 'first_air_date.desc' : 'primary_release_date.desc') };
-      const p = new URLSearchParams({ api_key: key, include_adult: 'false', language: 'en-US', sort_by: sorts[MPF.sort] || sorts.top, page: String(page), 'vote_count.gte': String(src.v || 500) });
-      if (MPF.sort === 'new') p.set(tv ? 'first_air_date.lte' : 'primary_release_date.lte', today);
-      if (src.a) p.set('vote_average.gte', String(src.a));
+      const era = eraOpt(), dateKey = tv ? 'first_air_date' : 'primary_release_date';
+      const old = !!(era && era[3] && era[3] < '1990-01-01'), nonEn = !!(selectedTopLanguage && selectedTopLanguage !== 'en');
+      // older films and films in smaller languages have far fewer votes on TMDB: ask for fewer so the list is not empty, and never trust a handful of votes
+      let minVotes = src.v || 500; if (old) minVotes = Math.max(20, Math.round(minVotes / 12)); if (nonEn) minVotes = Math.max(12, Math.round(minVotes / 8));
+      const p = new URLSearchParams({ api_key: key, include_adult: 'false', language: 'en-US', sort_by: sorts[MPF.sort] || sorts.top, page: String(page), 'vote_count.gte': String(minVotes) });
+      let from = era ? era[2] : '', to = era ? era[3] : '';
+      if (MPF.sort === 'new' && (!to || to > today)) to = today;
+      if (from) p.set(dateKey + '.gte', from);
+      if (to) p.set(dateKey + '.lte', to);
+      if (src.a) p.set('vote_average.gte', String((old || nonEn) ? Math.min(src.a, 6.2) : src.a));
       if (src.vmax) p.set('vote_count.lte', String(src.vmax));
-      if (src.g) p.set('with_genres', src.g);
-      if (src.w) p.set('without_genres', src.w);
+      let wg = src.g || '', wo = src.w || ''; const gid = genreIdNow();
+      if (gid) { wg = (wg && !wg.includes('|') && !wg.split(',').includes(gid)) ? wg + ',' + gid : (wg.split(',').includes(gid) && !wg.includes('|') ? wg : gid); wo = wo.split(',').filter(x => x && x !== gid).join(','); }
+      if (wg) p.set('with_genres', wg);
+      if (wo) p.set('without_genres', wo);
       if (src.kids && src.kids.length) p.set('with_keywords', src.kids.join('|'));
       if (aiMaxRuntime && !tv) p.set('with_runtime.lte', String(aiMaxRuntime));
       if (selectedTopLanguage) p.set('with_original_language', selectedTopLanguage);
@@ -4059,7 +4097,7 @@
         }
         if (srcs.length) states.push({ id, srcs, si: 0, page: 1, done: false });
       }
-      if (!states.length && aiMaxRuntime) states.push({ id: 'time', srcs: [{ a: 7, v: 3000 }], si: 0, page: 1, done: false });
+      if (!states.length) states.push({ id: 'filter', srcs: [{ a: 6.8, v: 400 }, { a: 6.2, v: 80 }, { a: 5.4, v: 20 }], si: 0, page: 1, done: false });   // no mood: the genre, era, language and runtime do the narrowing
       return states;
     }
     async function mpFetchState(st, nPages) {
@@ -4124,7 +4162,10 @@
       if (!hit) mpLoad(MP.gen);
     }
     function mpMore() { if (!MP.loading && !MP.exhausted) { mpLoad(MP.gen); refreshViews(); } }
-    function setMoodKind(k) { if (MPF.kind === k) return; MPF.kind = k; if (k === 'tv') aiMaxRuntime = 0; if (!moodPageActive()) { refreshViews(); return; } openMoodPage(); }
+    function setMoodKind(k) { if (MPF.kind === k) return; MPF.kind = k; if (k === 'tv') { aiMaxRuntime = 0; if (FLT.genre && !genreIdNow()) FLT.genre = ''; } if (!moodPageActive()) { refreshViews(); return; } openMoodPage(); }
+    function setFilterGenre(v) { FLT.genre = GENRE_OPTS.some(x => x[0] === v) ? v : ''; if (FLT.genre && MPF.kind === 'tv' && !genreIdNow()) MPF.kind = 'movie'; if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; } openMoodPage(); }
+    function setFilterEra(v) { FLT.era = ERA_OPTS.some(x => x[0] === v) ? v : ''; if (!moodPageActive()) { MP.gen++; mpPush(false); refreshViews(); return; } openMoodPage(); }
+    function clearAllFilters() { selectedTopLanguage = ''; mpReset(); window.homeRow = null; goHome(); }
     function setMoodSort(v) { MPF.sort = ['new', 'pop'].includes(v) ? v : 'top'; openMoodPage(); }
     // films keep arriving as the visitor nears the bottom
     function mpObserve() {
@@ -4139,10 +4180,14 @@
       const skeleton = Array.from({ length: 18 }, () => '<div><div class="aspect-[2/3] animate-pulse rounded-xl bg-white/[0.05]"></div><div class="mt-3 h-3 w-3/4 animate-pulse rounded bg-white/[0.05]"></div></div>').join('');
       const grid = items.length ? items.map(i => posterCard(i, { wide: true })).join('') : (MP.loading ? skeleton : '');
       const mood = AI_MOODS.find(x => x.id === aiMoods[0]);
-      const desc = mood ? MOOD_DESC[mood.id] : 'Films that run two hours or less, best rated first.';
+      const desc = (mood ? MOOD_DESC[mood.id] + ' ' : '') + mpSummary() + '.';
       const sub = MP.fallback ? 'Matches from the WatchVibe catalogue (the movie database could not be reached just now).' : 'Ranked by the TMDB community, not by WatchVibe votes.';
       const seg = (label, on, fn) => `<button type="button" onclick="${fn}" aria-pressed="${on}" class="wv-seg-b${on ? ' is-on' : ''}">${label}</button>`;
       const sortSel = `<select onchange="setMoodSort(this.value)" aria-label="Sort" class="wv-sel">${[['top', 'Top rated'], ['new', 'Newest'], ['pop', 'Most popular']].map(([v, l]) => `<option value="${v}" ${MPF.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+      const genreSel = `<select onchange="setFilterGenre(this.value)" aria-label="Genre" class="wv-sel"><option value="">All genres</option>${GENRE_OPTS.filter(g => !tv || g[3]).map(g => `<option value="${g[0]}" ${FLT.genre === g[0] ? 'selected' : ''}>${g[1]}</option>`).join('')}</select>`;
+      const eraSel = `<select onchange="setFilterEra(this.value)" aria-label="Era" class="wv-sel"><option value="">Any time</option>${ERA_OPTS.map(e => `<option value="${e[0]}" ${FLT.era === e[0] ? 'selected' : ''}>${e[1]}</option>`).join('')}</select>`;
+      const anyFilter = aiMoods.length + (aiMaxRuntime ? 1 : 0) + (FLT.genre ? 1 : 0) + (FLT.era ? 1 : 0) + (selectedTopLanguage ? 1 : 0);
+      const clearAll = anyFilter ? `<button type="button" onclick="clearAllFilters()" class="wv-clearall">Clear all</button>` : '';
       setTimeout(mpObserve, 0);
       return `
         <div class="space-y-6">
@@ -4152,7 +4197,7 @@
               <div class="wv-seg" role="group" aria-label="Type">${seg('Movies', !tv, "setMoodKind('movie')")}${seg('Series', tv, "setMoodKind('tv')")}</div>
               ${tv ? '' : ctx.underChip}
               <span class="wv-grow"></span>
-              ${ctx.langSelect}${sortSel}
+              ${genreSel}${eraSel}${ctx.langSelect}${sortSel}${clearAll}
             </div>
           </div>
           <div>
@@ -4160,7 +4205,7 @@
             <p class="mt-2 text-[15px] text-white/70">${esc(desc)}</p>
             <p class="mt-1 text-sm text-white/45">${items.length ? items.length + (MP.exhausted ? '' : '+') + (tv ? ' series. ' : ' films. ') : ''}${esc(sub)}</p>
           </div>
-          ${!items.length && !MP.loading ? '<div class="rounded-2xl bg-white/[0.03] py-16 text-center ring-1 ring-white/[0.06]"><div class="text-white/80">Nothing came up for this one.</div><button type="button" onclick="clearAiVibeMatcher()" class="mt-3 text-sm text-purple-300 hover:text-white">Back to all moods</button></div>'
+          ${!items.length && !MP.loading ? '<div class="rounded-2xl bg-white/[0.03] py-16 text-center ring-1 ring-white/[0.06]"><div class="text-white/80">Nothing matches that exact mix.</div><p class="mx-auto mt-1 max-w-sm text-sm text-white/45">Try taking one filter away, such as the mood or the era.</p><button type="button" onclick="clearAllFilters()" class="mt-3 text-sm text-purple-300 hover:text-white">Clear all filters</button></div>'
             : `<div class="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">${grid}</div>`}
           <div id="mpSentinel" aria-hidden="true"></div>
           ${items.length && !MP.exhausted ? `<div class="pt-2 text-center"><button type="button" onclick="mpMore()" class="rounded-full bg-white/[0.06] px-7 py-3 text-sm font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10">${MP.loading ? 'Loading more…' : 'Show more'}</button></div>` : ''}
@@ -4449,6 +4494,8 @@ function posterCard(item, opts) {
       const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
       const toolbar = `
         <div class="wv-toolbar flex flex-wrap items-center justify-end gap-2">
+          <select onchange="setFilterGenre(this.value)" class="${selectCls}" aria-label="Genre"><option value="" class="bg-[#14141A]">All genres</option>${GENRE_OPTS.map(g => `<option value="${g[0]}" class="bg-[#14141A]" ${FLT.genre === g[0] ? 'selected' : ''}>${g[1]}</option>`).join('')}</select>
+          <select onchange="setFilterEra(this.value)" class="${selectCls}" aria-label="Era"><option value="" class="bg-[#14141A]">Any time</option>${ERA_OPTS.map(e => `<option value="${e[0]}" class="bg-[#14141A]" ${FLT.era === e[0] ? 'selected' : ''}>${e[1]}</option>`).join('')}</select>
           <select id="topLanguageSelect" onchange="setTopLanguage(this.value)" class="${selectCls}" aria-label="Language">
             ${langOptions.map(([v, l]) => `<option value="${v}" class="bg-[#14141A]" ${v === selectedTopLanguage ? 'selected' : ''}>${l}</option>`).join('')}
           </select>

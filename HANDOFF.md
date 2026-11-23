@@ -496,3 +496,8 @@ Open / next, in the order we discussed:
 - Tables api_hits and app_secrets have row-level security with no policies; old rows are cleaned up by the function itself.
 ## OMDb key replaced
 - The OMDb key in the OMDB_KEY secret is a new one (requested from a new mailbox and activated). The old key is no longer used by the site; it is still in Git history and OMDb cannot revoke keys, so it stays usable by anyone who finds it.
+
+## v122: filters that combine (genre, era, language, mood, type, runtime, sort)
+- Filter page: new Genre and Era selects next to Language and Sort; every filter narrows the same TMDB list, with or without a mood (genre-only, language-only, era-only pages work). Era options: decades, before 1950, 1950s and 1960s, 1970s and 1980s, before 1980. Older films and non-English films get a lower vote minimum so the list is not empty. Address keeps all of it (#genre=drama&era=c5060&lang=bn). Clear all button; friendlier empty message.
+- Home filter bar also has Genre and Era (they open the filter page). Series list only genres TMDB has for TV.
+- Tested: Drama + Bengali + 1950s and 1960s (Satyajit Ray classics), Action + top rated, Cry + Romance + under 2h, adding a mood on top, series switch, hash restore. swiss.css?v=26, cache v121.
