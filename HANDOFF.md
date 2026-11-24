@@ -566,3 +566,7 @@ Open / next, in the order we discussed:
 - Game room "Leave" (games.js `gnLeaveRoom`, games.js?v=6): goes back to the Game night page (name, Create a room / Join, the three games) instead of closing everything to Home. The X on that page still closes it.
 - Rating sheet (`rateSheetTier`): tapping the selected "How was it?" option again clears it (feelings already did); hint "Tap again to clear." added.
 - Not verified: the real stale-cache path on the user's own device (reproduced with the old file instead); real 2+ player room.
+
+## v135 - one "Where to watch" (25 Nov 2026)
+- The film window listed the same services twice (provider tiles under the trailer AND a long "Where to watch" list lower down). Now ONE place: `renderProviderTiles` shows a logo tile for every service you can stream (subscription / free, de-duplicated by normalised name so "Sony Liv" = "Sonyliv") and a compact row of logo chips for rent or buy. The long list is removed; `#wtwSection` stays as one thin line (region picker, source of the region, JustWatch credit, "See all options") and still carries `data-item` for the direct-link upgrade and click tracking. Not available / failed lookups keep their messages. Phones: 2 tiles per row. swiss.css v36, cache v135.
+- Tested: sweep clean at 375/768/1440, film window has no sideways scroll at any width, empty and rent-only states render.

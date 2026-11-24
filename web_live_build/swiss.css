@@ -598,3 +598,35 @@ a.dmx-tile.is-first:hover { background: #fff; }
 }
 /* a redraw over a finished page changes content without replaying the entrance animations */
 .wv-calm #mainViewport .wvw-now > *, .wv-calm #mainViewport .wvw-pc, .wv-calm #mainViewport .wv-shelf, .wv-calm #mainViewport .wv-shelf * { animation-duration: 0s !important; animation-delay: 0s !important; }
+/* ---- One "Where to watch": logo tiles for streaming, compact logo chips for rent or buy, a thin region line below (replaces the long list) ---- */
+.dmx-tiles { display: flex; flex-wrap: wrap; grid-template-columns: none; }
+.dmx-tile { flex: 1 1 250px; border-left: 0; box-shadow: inset -1px -1px 0 rgba(255,255,255,.2); }
+.dmx-tile:first-child { border-left: 0; }
+.dmx-tile.has-logo { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 14px 40px 14px 16px; min-height: 78px; }
+.dmx-tt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dmx-logo { flex: 0 0 auto; width: 44px; height: 44px; object-fit: cover; display: block; background: #1b1b1b; }
+.dmx-logo-fb { display: flex; align-items: center; justify-content: center; font: 800 20px var(--wv-head); color: #fff; background: #2a2a2a; }
+a.dmx-tile.is-first .dmx-logo-fb { color: #0b0b0b; background: rgba(0,0,0,.12); }
+.dmx-tile.has-logo b { font-size: clamp(16px, 1.45vw, 20px); }
+.dmx-rent { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 13px 16px; border-top: 1px solid rgba(255,255,255,.14); }
+.dmx-rent-l { font: 500 11px var(--wv-mono); text-transform: uppercase; letter-spacing: .05em; color: rgba(255,255,255,.6); margin-right: 4px; }
+.dmx-chip { display: inline-flex; align-items: center; gap: 9px; padding: 5px 12px 5px 5px; border: 1px solid rgba(255,255,255,.28); color: #fff; text-decoration: none; font-size: 14px; font-weight: 500; transition: background .2s, color .2s, border-color .2s; }
+.dmx-chip em { font: 500 10.5px var(--wv-mono); font-style: normal; text-transform: uppercase; letter-spacing: .04em; color: rgba(255,255,255,.55); }
+.dmx-chip-logo { width: 28px; height: 28px; object-fit: cover; display: block; background: #1b1b1b; flex: 0 0 auto; }
+.dmx-chip:hover { background: #fff; color: #000; border-color: #fff; }
+.dmx-chip:hover em { color: rgba(0,0,0,.6); }
+.dmx-wtw { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 4px 0 14px; font-size: 13px; color: var(--text-2); }
+.dmx-wtw-l { font: 500 11px var(--wv-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); }
+.dmx-wtw-s { color: var(--muted); }
+.dmx-wtw-c { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+.dmx-wtw-c a { color: inherit; }
+@media (max-width: 640px) {
+  .dmx-tiles { grid-template-columns: none; }
+  .dmx-tile, .dmx-tile:nth-child(odd), .dmx-tile:nth-child(-n+2) { flex: 1 1 50%; max-width: 100%; border-top: 0; border-left: 0; min-height: 64px; }
+  .dmx-tile.has-logo { padding: 10px 26px 10px 10px; gap: 10px; min-height: 64px; }
+  .dmx-tile.has-logo b { font-size: 15px; }
+  .dmx-tile .dmx-go { right: 9px; font-size: 10px; }
+  .dmx-logo { width: 36px; height: 36px; }
+  .dmx-tile-none, .dmx-tile-skel { flex-basis: 100%; }
+  .dmx-wtw-c { margin-left: 0; width: 100%; }
+}
