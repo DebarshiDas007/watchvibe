@@ -31,11 +31,11 @@
   <meta name="twitter:description" content="Mood-based movie and series picks with IMDb ratings and where to stream.">
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
-  <link rel="stylesheet" href="/tailwind.css?v=4f56026a2f">
+  <link rel="stylesheet" href="/tailwind.css?v=0588e0a908">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=36">
+  <link rel="stylesheet" href="/swiss.css?v=37">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -259,7 +259,7 @@
 
       if (currentUserSession) {
         // Format to real human name (not email handle)
-        currentUserSession.name = sanitizeRealUserName(currentUserSession.name, currentUserSession.email);
+        if (!currentUserSession.nameCustom) currentUserSession.name = sanitizeRealUserName(currentUserSession.name, currentUserSession.email);   // a name the user typed is kept exactly
         const firstName = currentUserSession.name.split(' ')[0];
         if (label) label.innerText = firstName;
         const initial = ((firstName || 'U')[0] || 'U').toUpperCase();
@@ -818,6 +818,7 @@
               <div id="authActiveUserName" class="truncate text-[15px] font-medium text-white"></div>
               <div id="authActiveUserEmail" class="truncate text-xs text-white/45"></div>
               <div class="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-300/90"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>Signed in and synced</div>
+              <button type="button" onclick="profOpenEditor()" class="pe-edit-link">Edit name and picture</button>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -1483,7 +1484,9 @@
         verified: !!user.email_confirmed_at,
         createdAt: user.created_at || new Date().toISOString()
       };
+      profApply(currentUserSession);   // the name and picture the user chose (kept in their profile row, cached on this device)
       if (isNewUser) {
+        profLoad(user.id);
         loadUserWatchlistStore(true);
         syncUserDataFromSupabaseCloud();
         try {
@@ -1507,6 +1510,7 @@
 
     function setLoggedOutUser() {
       const hadSession = !!currentUserSession;
+      if (hadSession) profForget(currentUserSession.id);   // a shared device keeps nothing of the last person's name or picture
       libReset();
       currentAuthUser = null;
       currentUserSession = null;
@@ -4363,19 +4367,20 @@
       return [...starsCatalogue().values()].filter(o => o.n >= 2).sort((a, b) => b.score - a.score).slice(0, 12)
         .map(o => ({ name: o.name, img: '', known: o.n + ' films here' }));
     }
+    // portrait cards in the poster-wall style: tall picture, big outlined rank number, name in the headline face, what they are known for in mono
     function starsCards(list) {
-      return list.map(a => `
-        <button type="button" data-person="${esc(a.name)}" data-role="Actor" class="group wv-star w-[104px] shrink-0 text-center focus:outline-none sm:w-[120px]">
-          <span class="mx-auto block h-[88px] w-[88px] overflow-hidden rounded-full bg-[#26262C] ring-1 ring-white/10 transition duration-300 group-hover:ring-2 group-hover:ring-white/40 group-focus-visible:ring-2 group-focus-visible:ring-purple-400 sm:h-[104px] sm:w-[104px]"><img src="${esc(a.img || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(a.name) + '&background=26262C&color=D6502F&size=208&bold=true'))}" alt="" loading="lazy" decoding="async" data-n="${esc(a.name)}" class="h-full w-full object-cover" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name='+encodeURIComponent(this.dataset.n)+'&background=26262C&color=D6502F&size=208&bold=true'"></span>
-          <div class="mt-3 truncate text-[13px] font-semibold text-white">${esc(a.name)}</div>
-          ${a.known ? `<div class="mt-0.5 truncate text-xs text-white/45">${esc(a.known)}</div>` : ''}
+      return list.map((a, i) => `
+        <button type="button" data-person="${esc(a.name)}" data-role="Actor" class="wv-star wvs-card" aria-label="${esc(a.name)}, number ${i + 1}">
+          <span class="wvs-ph"><img src="${esc(a.img || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(a.name) + '&background=26262C&color=D6502F&size=360&bold=true'))}" alt="" loading="lazy" decoding="async" data-n="${esc(a.name)}" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name='+encodeURIComponent(this.dataset.n)+'&background=26262C&color=D6502F&size=360&bold=true'"><span class="wvs-n" aria-hidden="true">${wallPad(i + 1)}</span></span>
+          <span class="wvs-name">${esc(a.name)}</span>
+          ${a.known ? `<span class="wvs-known">${esc(a.known)}</span>` : ''}
         </button>`).join('');
     }
     function starsInner() {
       const list = STARS.list || starsFallback();
       if (list.length < 4) return '';
-      return `<div class="mb-4"><h2 class="font-display text-[22px] font-medium text-white">Trending stars</h2><p class="mt-1 text-sm text-white/45">Popular this week. Tap one for their films.</p></div>
-        <div class="no-scrollbar -mx-1 flex gap-5 overflow-x-auto px-1 pb-2 sm:gap-6">${starsCards(list)}</div>`;
+      return `<div class="wvs-h"><div><div class="wvs-eyebrow">Popular this week</div><h2>Trending stars</h2></div><p>Tap one for their films</p></div>
+        <div class="wvs-row no-scrollbar">${starsCards(list)}</div>`;
     }
     async function hydrateStars() {
       if (STARS.busy) return;
@@ -5220,21 +5225,32 @@ function posterCard(item, opts) {
     // the Game night card on the home page
     function gamesCardHtml() {
       return `
-        <section class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-transparent p-4 ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5">
-          <div class="flex items-center gap-4"><span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white sm:flex"><i class="fa-solid fa-gamepad"></i></span>
-            <div class="min-w-0"><div class="font-display text-[17px] leading-snug text-white lg:text-xl"><i class="fa-solid fa-gamepad mr-1.5 text-[15px] text-pink-300 sm:hidden"></i>Game night with friends</div><div class="mt-1 text-sm text-white/55">Draw the Movie, Movie Fibber and Who's the Impostor? Start a room and send the link.</div></div></div>
-          <button type="button" onclick="openGames()" class="w-full shrink-0 rounded-full py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/[0.08] active:scale-[.98] sm:w-auto sm:px-6">Start a room</button>
+        <section class="wvb wvb-games" aria-label="Game night">
+          <div class="wvb-no" aria-hidden="true">03</div>
+          <div class="wvb-body">
+            <div class="wvb-eyebrow">Game night &middot; live with friends</div>
+            <h2 class="wvb-h">Movie games for friends.</h2>
+            <p class="wvb-p">Start a room, send the link and play together on phones or computers. No sign-in needed.</p>
+            <div class="wvb-games">${(typeof GN_GAMES !== 'undefined' ? Object.keys(GN_GAMES).map(g => GN_GAMES[g].name) : ['Draw the Movie', 'Movie Fibber', "Who's the Impostor?"]).map(n => `<span class="wvb-game">${esc(n)}</span>`).join('')}</div>
+          </div>
+          <button type="button" onclick="openGames()" class="wvb-cta">Start a room <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </section>`;
     }
     // the home-page card
     function dailyCardHtml() {
       const streak = dcStreakNow();
-      const chips = DC_LEVELS.map(l => { const s = dcStateOf(l), c = DC_LEVEL[l]; const txt = !s ? '0/' + DC_ROUND : s.finished ? s.score + ' pts' : (s.cur + 1) + '/' + DC_ROUND; return `<span class="rounded-full px-2.5 py-1 text-xs ring-1 ${c.cls}">${c.label} ${txt}</span>`; }).join('');
+      const LV = { easy: '#7BD4A0', medium: '#E9A23B', hard: '#E4736A' };
+      const cells = DC_LEVELS.map(l => { const s = dcStateOf(l), c = DC_LEVEL[l]; const txt = !s ? '0/' + DC_ROUND : s.finished ? s.score + ' pts' : (s.cur + 1) + '/' + DC_ROUND; const pct = !s ? 0 : s.finished ? 100 : Math.round(100 * (s.cur || 0) / DC_ROUND); return `<div class="wvb-lv" style="--p:${pct}%;--lc:${LV[l] || 'var(--accent)'}"><span>${esc(c.label)}</span><b>${esc(txt)}</b><i></i></div>`; }).join('');
       return `
-        <section class="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent p-4 ring-1 ring-white/10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-5">
-          <div class="flex items-center gap-4"><span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl text-white sm:flex"><i class="fa-solid fa-bolt"></i></span>
-            <div class="min-w-0"><div class="font-display text-[17px] leading-snug text-white lg:text-xl"><i class="fa-solid fa-bolt mr-1.5 text-[15px] text-purple-300 sm:hidden"></i>Daily Challenge #${dcNumber()}: Guess the film</div><div class="mt-1 text-sm text-white/55">3 levels, 20 questions each${streak ? ` · ${streak}-day streak 🔥` : ''}</div><div class="mt-2.5 flex flex-wrap gap-2">${chips}</div></div></div>
-          <button type="button" onclick="DC.level = null; switchTab('daily')" class="w-full shrink-0 rounded-full py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/[0.08] active:scale-[.98] sm:w-auto sm:px-6">Play now</button>
+        <section class="wvb wvb-daily" aria-label="Daily Challenge">
+          <div class="wvb-no" aria-hidden="true">${esc(String(dcNumber()))}</div>
+          <div class="wvb-body">
+            <div class="wvb-eyebrow">Daily challenge &middot; new every day${streak ? ` &middot; ${streak}-day streak` : ''}</div>
+            <h2 class="wvb-h">Guess the film.</h2>
+            <p class="wvb-p">3 levels, 20 questions each. Everyone gets the same ones today.</p>
+            <div class="wvb-levels" role="group" aria-label="Your progress today">${cells}</div>
+          </div>
+          <button type="button" onclick="DC.level = null; switchTab('daily')" class="wvb-cta">Play now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </section>`;
     }
 
@@ -7627,6 +7643,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     }
     function userAvatarHtml(sess, textCls) {
+      if (sess && sess.photo && profValidPhoto(sess.photo)) return `<img src="${esc(sess.photo)}" alt="" class="h-full w-full object-cover">`;   // the user's own cropped picture wins
       const ch = sess && AVATARS.find(a => a.id === sess.character);
       if (ch) return `<img src="${avatarUri(ch)}" alt="${esc(ch.name)}" class="h-full w-full object-cover">`;
       if (sess && sess.avatar) return `<img src="${esc(sess.avatar)}" referrerpolicy="no-referrer" alt="" class="h-full w-full object-cover">`;
@@ -7655,17 +7672,208 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       if (!currentUserSession || !AVATARS.some(a => a.id === id)) return;
       currentUserSession.character = id;
       try { localStorage.setItem(AVATAR_KEY + ':' + currentUserSession.id, id); } catch (e) {}
+      if (currentUserSession.photo) profSetPhoto(null);   // picking an icon replaces an uploaded picture
       updateProfileUiState();
       if (activeTab === 'profile') refreshViews();
       try { if (window.supabaseClient) await window.supabaseClient.auth.updateUser({ data: { character: id } }); } catch (e) {}
     }
+
+    // ---- The user's own name and profile picture. They live in the user's profile row (display_name, photo); the database only accepts a name of
+    // 2 to 24 characters and a small JPEG the app cropped itself. The picture is shown only to its owner (header, profile), never published.
+    const PROF = { cache: {}, loaded: {} };
+    const profKey = uid => 'watchvibe_prof:' + uid;
+    const profValidPhoto = p => typeof p === 'string' && p.length <= 100000 && /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(p);
+    // a name is 2 to 24 characters, no web addresses or e-mail addresses, no markup; returns '' when it cannot be used
+    function profCleanName(v) {
+      const n = String(v == null ? '' : v).normalize('NFKC').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+      if (n.length < 2 || /https?:|www\.|@|\.(com|in|net|org|io)\b/i.test(n)) return '';
+      return n;
+    }
+    function profRead(uid) {
+      if (PROF.cache[uid]) return PROF.cache[uid];
+      try { const o = JSON.parse(localStorage.getItem(profKey(uid)) || 'null'); if (o && typeof o === 'object') return (PROF.cache[uid] = { n: profCleanName(o.n), p: profValidPhoto(o.p) ? o.p : null }); } catch (e) {}
+      return null;
+    }
+    function profStore(uid, rec) {
+      PROF.cache[uid] = rec;
+      try { localStorage.setItem(profKey(uid), JSON.stringify(rec)); } catch (e) {}
+    }
+    function profForget(uid) { delete PROF.cache[uid]; delete PROF.loaded[uid]; try { localStorage.removeItem(profKey(uid)); } catch (e) {} }
+    function profApply(sess) {
+      const rec = sess && profRead(sess.id); if (!rec) return;
+      if (rec.n) { sess.name = rec.n; sess.nameCustom = true; }
+      sess.photo = rec.p || null;
+    }
+    function profRefreshUi() {
+      updateProfileUiState(); updateSidebarUserCard();
+      if (activeTab === 'profile') refreshViews();
+    }
+    async function profLoad(uid) {
+      if (PROF.loaded[uid] || !sbc()) return;
+      PROF.loaded[uid] = true;
+      try {
+        const { data, error } = await sbc().from('profiles').select('display_name,photo').eq('id', uid).maybeSingle();
+        if (error || !data) return;
+        const rec = { n: profCleanName(data.display_name), p: profValidPhoto(data.photo) ? data.photo : null };
+        profStore(uid, rec);
+        if (currentUserSession && currentUserSession.id === uid) { profApply(currentUserSession); profRefreshUi(); }
+      } catch (e) {}
+    }
+    async function profSetPhoto(photo) {   // used when an icon is picked in place of an uploaded picture
+      const s = currentUserSession; if (!s) return;
+      const old = profRead(s.id) || { n: '', p: null };
+      s.photo = null; profStore(s.id, { n: old.n, p: null });
+      try { if (sbc()) await sbc().from('profiles').update({ photo: null }).eq('id', s.id); } catch (e) {}
+    }
+
+    // ---- Edit profile window: name, upload a picture, move and zoom it inside a circle (like a WhatsApp or Facebook profile picture)
+    const PE = { open: false, step: 'main', name: '', newPhoto: null, removePhoto: false, busy: false, err: '', img: null, iw: 0, ih: 0, base: 1, z: 1, ox: 0, oy: 0, V: 260, ptrs: new Map(), pinch: 0 };
+    function profOpenEditor() {
+      if (!currentUserSession) { openAuthModal(); return; }
+      Object.assign(PE, { open: true, step: 'main', name: currentUserSession.name || '', newPhoto: null, removePhoto: false, busy: false, err: '', img: null });
+      peRender();
+    }
+    function peClose() { const el = document.getElementById('profEdit'); PE.open = false; PE.img = null; if (el) el.remove(); }
+    function peShownSession() {
+      const s = Object.assign({}, currentUserSession);
+      s.photo = PE.removePhoto ? null : (PE.newPhoto || s.photo || null);
+      return s;
+    }
+    function peRender() {
+      let el = document.getElementById('profEdit');
+      if (!el) { el = document.createElement('div'); el.id = 'profEdit'; el.className = 'pe-overlay'; el.onclick = e => { if (e.target === el) peClose(); }; document.body.appendChild(el); }
+      if (PE.step === 'crop') {
+        el.innerHTML = `<div class="pe-card" role="dialog" aria-modal="true" aria-labelledby="peTitle">
+          <div class="pe-eyebrow">Profile picture</div><h2 id="peTitle" class="pe-title">Move and zoom</h2>
+          <div class="pe-stage" id="peStage"><canvas id="peCanvas" aria-label="Your picture. Drag to move it, use the slider to zoom."></canvas><div class="pe-mask" aria-hidden="true"></div></div>
+          <div class="pe-zoom"><span aria-hidden="true">&minus;</span><input id="peZoom" type="range" min="1" max="4" step="0.01" value="${PE.z}" oninput="peZoomTo(this.value)" aria-label="Zoom"><span aria-hidden="true">+</span></div>
+          <p id="peErr" role="alert" class="pe-err"${PE.err ? '' : ' hidden'}>${esc(PE.err)}</p>
+          <div class="pe-actions"><button type="button" class="pe-btn pe-primary" onclick="peUse()">Use this picture</button><button type="button" class="pe-btn" onclick="peBack()">Back</button></div>
+        </div>`;
+        peSetupStage();
+        return;
+      }
+      const hasPhoto = !PE.removePhoto && (PE.newPhoto || currentUserSession.photo);
+      el.innerHTML = `<div class="pe-card" role="dialog" aria-modal="true" aria-labelledby="peTitle">
+        <button type="button" class="pe-x" onclick="peClose()" aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div class="pe-eyebrow">Your profile</div><h2 id="peTitle" class="pe-title">Edit profile</h2>
+        <div class="pe-top">
+          <div class="pe-dp">${userAvatarHtml(peShownSession(), 'pe-dp-i')}</div>
+          <div class="pe-dp-side">
+            <button type="button" class="pe-btn" onclick="document.getElementById('peFile').click()"><i class="fa-solid fa-camera" aria-hidden="true"></i> Upload picture</button>
+            ${hasPhoto ? '<button type="button" class="pe-link" onclick="peRemove()">Remove picture</button>' : ''}
+            <small>JPG, PNG or WebP. Then move and zoom it to fit the circle.</small>
+          </div>
+        </div>
+        <label class="pe-label" for="peName">Name</label>
+        <input id="peName" class="pe-input" maxlength="24" autocomplete="nickname" value="${esc(PE.name)}" oninput="PE.name=this.value">
+        <p class="pe-hint">2 to 24 characters. Shown on your profile and your reviews.</p>
+        <p id="peErr" role="alert" class="pe-err"${PE.err ? '' : ' hidden'}>${esc(PE.err)}</p>
+        <div class="pe-actions"><button type="button" id="peSave" class="pe-btn pe-primary" onclick="peSave()">Save</button><button type="button" class="pe-btn" onclick="peClose()">Cancel</button></div>
+        <input id="peFile" type="file" accept="image/*" hidden onchange="peFileChosen(this)">
+      </div>`;
+    }
+    function peErr(msg) { PE.err = msg || ''; const e = document.getElementById('peErr'); if (e) { e.textContent = PE.err; e.hidden = !PE.err; } }
+    function peRemove() { PE.removePhoto = true; PE.newPhoto = null; PE.err = ''; peRender(); }
+    function peBack() { PE.step = 'main'; PE.img = null; PE.err = ''; peRender(); }
+    async function peFileChosen(input) {
+      const f = input && input.files && input.files[0]; if (input) input.value = '';
+      if (!f) return;
+      if (!/^image\//.test(f.type) || f.size > 15 * 1024 * 1024) { peErr(f.size > 15 * 1024 * 1024 ? 'That picture is too large. Please choose one under 15 MB.' : 'Please choose a picture file (JPG, PNG or WebP).'); return; }
+      let src = null, w = 0, h = 0;
+      try {
+        if (window.createImageBitmap) { try { src = await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch (e) { src = await createImageBitmap(f); } w = src.width; h = src.height; }
+        else {
+          const url = URL.createObjectURL(f);
+          src = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = url; });
+          URL.revokeObjectURL(url); w = src.naturalWidth; h = src.naturalHeight;
+        }
+      } catch (e) { peErr('That file could not be read as a picture. Try a JPG or PNG.'); return; }
+      if (!w || !h || Math.min(w, h) < 64) { peErr('That picture is too small. Please choose a larger one.'); return; }
+      // keep the working copy light: very large photos are scaled down first
+      const k = Math.min(1, 1600 / Math.max(w, h));
+      if (k < 1) { const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); src = c; w = c.width; h = c.height; }
+      Object.assign(PE, { step: 'crop', img: src, iw: w, ih: h, z: 1, ox: 0, oy: 0, err: '' });
+      peRender();
+    }
+    function peSetupStage() {
+      const st = document.getElementById('peStage'), cv = document.getElementById('peCanvas'); if (!st || !cv || !PE.img) return;
+      PE.V = Math.round(st.clientWidth) || 260;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(PE.V * dpr); cv.height = Math.round(PE.V * dpr);
+      PE.base = Math.max(PE.V / PE.iw, PE.V / PE.ih);   // the picture always covers the circle
+      PE.ptrs.clear(); PE.pinch = 0;
+      st.onpointerdown = e => { st.setPointerCapture(e.pointerId); PE.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (PE.ptrs.size === 2) PE.pinch = peDist(); };
+      st.onpointermove = e => {
+        const p = PE.ptrs.get(e.pointerId); if (!p) return;
+        if (PE.ptrs.size === 1) { PE.ox += e.clientX - p.x; PE.oy += e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; peClamp(); peDraw(); }
+        else { p.x = e.clientX; p.y = e.clientY; const d = peDist(); if (PE.pinch && d) { peZoomTo(PE.z * d / PE.pinch); } PE.pinch = d; }
+      };
+      const up = e => { PE.ptrs.delete(e.pointerId); PE.pinch = PE.ptrs.size === 2 ? peDist() : 0; };
+      st.onpointerup = up; st.onpointercancel = up;
+      st.onwheel = e => { e.preventDefault(); peZoomTo(PE.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); };
+      st.tabIndex = 0;
+      st.onkeydown = e => { const m = { ArrowLeft: [-8, 0], ArrowRight: [8, 0], ArrowUp: [0, -8], ArrowDown: [0, 8] }[e.key]; if (m) { e.preventDefault(); PE.ox += m[0]; PE.oy += m[1]; peClamp(); peDraw(); } else if (e.key === '+' || e.key === '=') peZoomTo(PE.z * 1.1); else if (e.key === '-') peZoomTo(PE.z / 1.1); };
+      peDraw();
+    }
+    function peDist() { const a = [...PE.ptrs.values()]; return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }
+    function peZoomTo(v) { PE.z = Math.min(4, Math.max(1, Number(v) || 1)); const r = document.getElementById('peZoom'); if (r && Number(r.value) !== PE.z) r.value = PE.z; peClamp(); peDraw(); }
+    function peClamp() { const s = PE.base * PE.z, mx = Math.max(0, (PE.iw * s - PE.V) / 2), my = Math.max(0, (PE.ih * s - PE.V) / 2); PE.ox = Math.min(mx, Math.max(-mx, PE.ox)); PE.oy = Math.min(my, Math.max(-my, PE.oy)); }
+    function peDraw() {
+      const cv = document.getElementById('peCanvas'); if (!cv || !PE.img) return;
+      const k = cv.width / PE.V, ctx = cv.getContext('2d'), s = PE.base * PE.z, w = PE.iw * s, h = PE.ih * s;
+      ctx.setTransform(k, 0, 0, k, 0, 0); ctx.imageSmoothingQuality = 'high';
+      ctx.fillStyle = '#111'; ctx.fillRect(0, 0, PE.V, PE.V);
+      ctx.drawImage(PE.img, PE.V / 2 - w / 2 + PE.ox, PE.V / 2 - h / 2 + PE.oy, w, h);
+    }
+    function peUse() {   // the part inside the circle becomes a 256 x 256 JPEG
+      if (!PE.img) return;
+      const out = document.createElement('canvas'); out.width = out.height = 256;
+      const ctx = out.getContext('2d'), f = 256 / PE.V, s = PE.base * PE.z, w = PE.iw * s, h = PE.ih * s;
+      ctx.imageSmoothingQuality = 'high'; ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 256, 256);
+      ctx.drawImage(PE.img, (PE.V / 2 - w / 2 + PE.ox) * f, (PE.V / 2 - h / 2 + PE.oy) * f, w * f, h * f);
+      let q = 0.86, url = out.toDataURL('image/jpeg', q);
+      while (url.length > 90000 && q > 0.5) { q -= 0.1; url = out.toDataURL('image/jpeg', q); }
+      if (!profValidPhoto(url)) { peErr('This picture could not be prepared. Try another one.'); return; }
+      PE.newPhoto = url; PE.removePhoto = false; PE.step = 'main'; PE.img = null; PE.err = '';
+      peRender();
+    }
+    async function peSave() {
+      if (PE.busy || !currentUserSession) return;
+      const nm = profCleanName(PE.name);
+      if (!nm) { peErr(/@|https?:|www\.|\.(com|in|net|org|io)\b/i.test(PE.name) ? 'Please use a name, not an address or e-mail.' : 'Your name needs 2 to 24 characters.'); return; }
+      const s = currentUserSession, old = profRead(s.id) || { n: '', p: null };
+      const patch = {};
+      if (nm !== s.name || !s.nameCustom) patch.display_name = nm;
+      if (PE.removePhoto && s.photo) patch.photo = null;
+      else if (PE.newPhoto) patch.photo = PE.newPhoto;
+      if (!Object.keys(patch).length) { peClose(); return; }
+      if (!sbc()) { peErr('You seem to be offline. Please try again in a moment.'); return; }
+      PE.busy = true; const btn = document.getElementById('peSave'); if (btn) btn.disabled = true; peErr('');
+      try {
+        patch.updated_at = new Date().toISOString();
+        const { data, error } = await sbc().from('profiles').update(patch).eq('id', s.id).select('id');
+        if (error || !data || !data.length) throw error || new Error('no profile row');
+        const rec = { n: 'display_name' in patch ? nm : old.n, p: 'photo' in patch ? patch.photo : old.p };
+        profStore(s.id, rec);
+        if (currentUserSession && currentUserSession.id === s.id) profApply(currentUserSession);
+        peClose(); profRefreshUi();
+        if (document.getElementById('authModal') && !document.getElementById('authModal').classList.contains('hidden')) updateProfileUiState();
+        showToast('Profile updated.');
+      } catch (e) {
+        PE.busy = false; if (btn) btn.disabled = false;
+        peErr('Could not save your profile. Please try again.');
+      }
+      PE.busy = false;
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && PE.open) peClose(); });
 
     function renderProfile() {
       const s = getProfileStats();
       const sess = currentUserSession;
       const name = sess ? sess.name : 'Guest';
       const sub = sess ? sess.email : 'Not signed in';
-      const avatar = `<div class="pg-avatar flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${sess ? userAvatarHtml(sess, 'font-display text-3xl') : esc((name[0] || 'G').toUpperCase())}</div>`;
+      const avatar = `<div class="pg-avatar-wrap"><div class="pg-avatar flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${sess ? userAvatarHtml(sess, 'font-display text-3xl') : esc((name[0] || 'G').toUpperCase())}</div>${sess ? '<button type="button" class="pg-cam" onclick="profOpenEditor()" aria-label="Change profile picture"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>' : ''}</div>`;
       const stat = (n, l) => `<div><div class="font-display text-2xl text-white">${n}</div><div class="text-xs text-white/45">${l}</div></div>`;
       const bar = s.dist.length
         ? `<div class="pg-bar flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${s.dist.map(d => `<div style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
@@ -7680,7 +7888,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
                 <div class="dcl-eyebrow">Your profile</div>
                 <h1 class="dcl-h dcl-h-sm pg-name-big">${esc(name)}</h1>
                 <p class="pg-sub">${esc(sub)}</p>
-                ${sess ? '<button type="button" onclick="userSignOut()" class="pg-link">Sign out</button> <button type="button" onclick="userDeleteAccount()" class="pg-link" style="margin-left:16px;opacity:.7">Delete my account</button>' : '<button type="button" onclick="openAuthModal()" class="pg-btn pg-btn-sm">Sign in to sync <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>'}
+                ${sess ? '<button type="button" onclick="profOpenEditor()" class="pg-btn pg-btn-sm"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit profile</button><div class="pg-links"><button type="button" onclick="userSignOut()" class="pg-link">Sign out</button> <button type="button" onclick="userDeleteAccount()" class="pg-link" style="margin-left:16px;opacity:.7">Delete my account</button></div>' : '<button type="button" onclick="openAuthModal()" class="pg-btn pg-btn-sm">Sign in to sync <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>'}
               </div>
             </div>
             <div class="dcl-stats dcl-stats-sm" role="group" aria-label="Your numbers"><div><b>${s.movies}</b><span>Movies</span></div><div><b>${s.series}</b><span>Series</span></div><div><b>${s.wantCount}</b><span>Saved</span></div></div>
