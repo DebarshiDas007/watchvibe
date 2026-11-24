@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=34">
+  <link rel="stylesheet" href="/swiss.css?v=35">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -1046,7 +1046,7 @@
       updateRegionUI();
       if (changed || opts.force) {
         if (typeof refreshAvailabilityUi === 'function') refreshAvailabilityUi();
-        if (!opts.silent && typeof refreshViews === 'function') refreshViews();
+        if (!opts.silent && typeof refreshViews === 'function') { if (source === 'ip' && typeof refreshViewsBg === 'function') refreshViewsBg({ feat: true }); else refreshViews(); }   // an automatic country guess must not make the page blink
       }
     }
     async function autoDetectUserRegion() {
@@ -1886,7 +1886,7 @@
         if (label) label.innerText = 'Cached Mode';
       } finally {
         if (icon) icon.classList.remove('fa-spin');
-        refreshViews();
+        if (isSilent) refreshViewsBg(); else refreshViews();   // the silent daily sync must not make the page blink
       }
     }
 
@@ -1994,8 +1994,34 @@
       }
       await loadFreshCatalog();
       HOME.node = null;
+      refreshViewsBg();
+    }
+
+    // ---- Calm start: the home page used to be wiped and rebuilt four times in the first seconds (first draw, the big catalogue arriving,
+    // the daily TMDB sync finishing, today's featured picks arriving), and every rebuild re-created the banner and re-loaded the posters,
+    // which looked like flicker. Background arrivals now ask for ONE redraw through here: it waits (at most ~4.5 s after the page opened) until the
+    // slow pieces have landed, merges everything into a single redraw, and never redraws while the viewer is typing or has scrolled away.
+    const BG = { t: 0, feat: false };
+    function refreshViewsBg(opts) {
+      if (opts && opts.feat) BG.feat = true;
+      clearTimeout(BG.t);
+      BG.t = setTimeout(bgFlush, 250);
+    }
+    function bgFlush() {
+      const onHome = activeTab === 'discover' || activeTab === 'explore';
+      const waiting = onHome && (CAT.state === 'idle' || CAT.state === 'loading' || FEAT.state === 'loading') && performance.now() < 4500;
+      if (waiting) { BG.t = setTimeout(bgFlush, 250); return; }
+      const feat = BG.feat; BG.feat = false;
       const ae = document.activeElement, typing = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
-      if (!typing && (activeTab === 'daily' || (window.scrollY < 100 && (activeTab === 'discover' || activeTab === 'explore')))) refreshViews();
+      if (typing) return;
+      if (activeTab === 'daily') { refreshViews(); return; }
+      if (activeTab === 'discover' && window.homeRow) return;     // a "see all" list is open: leave it as it is
+      if (!onHome) return;
+      if (window.scrollY >= 100 && !(feat && activeTab === 'discover' && FEAT.state !== 'loading')) return;
+      // a redraw over a finished page swaps content silently (no replayed entrance animations); one that replaces the placeholder keeps its reveal
+      const wall = document.getElementById('wvWall');
+      if (!(wall && wall.classList.contains('wvw-skel'))) { document.documentElement.classList.add('wv-calm'); setTimeout(() => document.documentElement.classList.remove('wv-calm'), 1600); }
+      refreshViews();
     }
 
     function openApiSettings() {
@@ -4671,7 +4697,8 @@ function posterCard(item, opts) {
       const heroHtml = heroPool.length ? heroCarouselHtml(heroPool)
         : (FEAT.state === 'loading' ? '<section id="heroSkeleton" class="-mx-4 min-h-[320px] animate-pulse bg-white/[0.03] sm:-mx-6 sm:aspect-[16/8] lg:-mx-9 lg:aspect-[21/8] sm:max-h-[760px]" aria-hidden="true"></section>' : '');
       heroDestroy();
-      const wallSection = wallSetup(heroPool, ottAll, langOk);
+      // while today's picks are on their way, show a same-size placeholder: filling the wall with other films first and swapping them for the real picks a moment later read as flicker
+      const wallSection = (!heroPool.length && FEAT.state === 'loading') ? wallSkeleton() : wallSetup(heroPool, ottAll, langOk);
 
       const starsHtml = `<section id="starsRow" aria-label="Trending stars">${starsInner()}</section>`;
       setTimeout(hydrateStars, 0);
@@ -4743,7 +4770,7 @@ function posterCard(item, opts) {
         const picks = featChoose(j.picks);
         try { localStorage.setItem(FEAT_KEY, JSON.stringify({ day: featDay(), cc, picks })); } catch (e) {}
         FEAT.picks = picks; FEAT.state = 'ready';
-      }).catch(() => { FEAT.state = 'failed'; }).finally(() => { clearTimeout(FEAT.timer); if (typeof activeTab !== 'undefined' && activeTab === 'discover' && !window.homeRow) refreshViews(); });
+      }).catch(() => { FEAT.state = 'failed'; }).finally(() => { clearTimeout(FEAT.timer); if (typeof activeTab !== 'undefined' && activeTab === 'discover' && !window.homeRow) refreshViewsBg({ feat: true }); });
     }
     // the day's picks as page items: the catalogue entry when we have one, otherwise built from the ranking itself
     function featuredItems() {
@@ -5287,6 +5314,12 @@ function posterCard(item, opts) {
       WALL.list = wallList(); WALL.i = 0;
       setTimeout(() => { wallProg(); }, 60);
       return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
+    }
+    function wallSkeleton() {
+      WALL.base = []; WALL.cands = []; WALL.list = []; WALL.i = 0;
+      const cards = Array.from({ length: 6 }, (_, i) => `<div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">${wallPad(i + 1)}</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div>`).join('');
+      const chips = wallChipsHtml().replace(/<button /g, '<button disabled tabindex="-1" ');
+      return `<section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${chips}</div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section>`;
     }
     function wallList() {
       let list;
