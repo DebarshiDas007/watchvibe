@@ -31,7 +31,7 @@
   <meta name="twitter:description" content="Mood-based movie and series picks with IMDb ratings and where to stream.">
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
-  <link rel="stylesheet" href="/tailwind.css">
+  <link rel="stylesheet" href="/tailwind.css?v=b1abe0bbb8">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
@@ -7158,7 +7158,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             ${it.poster ? `<img src="${esc(ps(it.poster, 185))}" alt="" class="h-[72px] w-12 shrink-0 rounded-lg object-cover ring-1 ring-white/10" onerror="this.style.display='none'">` : ''}
             <div class="min-w-0"><div class="text-xs uppercase tracking-[0.14em] text-white/40">${RS.mark ? 'Marking as seen' : 'Your verdict'}</div><h2 id="rsTitle" class="mt-0.5 break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2></div>
           </div>
-          <h3 class="mt-6 text-sm font-medium text-white">How was it?</h3>
+          <h3 class="mt-6 text-sm font-medium text-white">How was it? <span class="text-xs font-normal text-white/40">Tap again to clear.</span></h3>
           <div id="rsTiers" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
           <div class="mt-5 text-xs text-white/40">What best describes it? Pick one. Tap it again to clear.</div>
           <div id="rsFeel" class="mt-2 flex flex-wrap gap-2"></div>
@@ -7193,7 +7193,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       rateSheetCount();
     }
     function rateSheetCount() { const c = document.getElementById('rsCount'); if (!c) return; const n = vsWords(RS.body); c.textContent = `${n} / 500 words`; c.className = 'text-xs ' + (n > 500 ? 'text-rose-300' : 'text-white/35'); }
-    function rateSheetTier(n) { RS.touched = true; RS.tier = n; RS.pop = 't' + n; rateSheetOptions(); }
+    function rateSheetTier(n) { RS.touched = true; RS.tier = RS.tier === n ? 0 : n; if (RS.tier) RS.pop = 't' + n; rateSheetOptions(); }   // one tap selects, tapping the same one again clears it
     function rateSheetFeeling(id) { RS.touched = true; RS.feeling = RS.feeling === id ? '' : id; if (RS.feeling) RS.pop = 'f' + id; rateSheetOptions(); }
     function rateSheetErr(msg) { const e = document.getElementById('rsErr'); if (!e) return; e.textContent = msg || ''; e.classList.toggle('hidden', !msg); }
     function rateSheetClose(instant) {
@@ -7795,7 +7795,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     refreshViews();
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
-  <script src="games.js?v=5" defer></script>
+  <script src="games.js?v=6" defer></script>
   <script src="hover-card.js?v=3" defer></script>
 </body>
 </html>

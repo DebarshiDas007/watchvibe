@@ -37,6 +37,14 @@ def deploy():
     else:
         print('[WARN] node_modules missing; skipping CSS build (run `npm install` once). Using existing tailwind.css.')
 
+    # Put the stylesheet's content hash into every address that points at it, so an old cached copy can never be paired with a newer page.
+    st = subprocess.run([sys.executable, os.path.join(repo_dir, 'scripts', 'stamp_css.py')], text=True,
+                        encoding='utf-8', errors='replace', capture_output=True)
+    print((st.stdout or '').strip())
+    if st.returncode != 0:
+        print('[ERROR] stamping tailwind.css failed:\n' + (st.stderr or ''))
+        sys.exit(st.returncode)
+
     # Load from .env if present
     api_token = os.environ.get('CLOUDFLARE_API_TOKEN')
     account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID')

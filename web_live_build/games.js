@@ -274,6 +274,14 @@ function closeGames() {
   GN.wrap = null; GN.canvas = null; GN.ctx = null;
   if (new URLSearchParams(location.search).get('game')) history.replaceState(null, '', location.pathname);
 }
+// "Leave" inside a room goes back to the Game night page (name, Create a room / Join, the games), not out to the home page; the X there still closes everything
+function gnLeaveRoom() {
+  gnLeave(true);
+  GN.joinCode = ''; GN.wrap = null; GN.canvas = null; GN.ctx = null;
+  if (new URLSearchParams(location.search).get('game')) history.replaceState(null, '', location.pathname);
+  gnRender(true);
+  const r = document.getElementById('gnRoot'); if (r) { const s = r.querySelector('.overflow-y-auto'); if (s) s.scrollTop = 0; }
+}
 function gnCreate() { if (!gnTakeName()) return; let c = ''; for (let i = 0; i < 5; i++) c += GN_ALPHA[gnRand(GN_ALPHA.length)]; gnJoin(c, true); }
 function gnJoinTyped() {
   if (!gnTakeName()) return;
@@ -949,7 +957,7 @@ function gnShellHtml() {
       <button type="button" onclick="gnWhatsApp()" class="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-white/10" aria-label="Invite on WhatsApp"><i class="fa-brands fa-whatsapp text-[13px]"></i><span class="hidden sm:inline">Invite</span></button>
       <div id="gnTop" class="ml-auto flex min-w-0 items-center gap-2 whitespace-nowrap text-sm"></div>
       <button type="button" id="gnMuteBtn" onclick="gnToggleMute()" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/80 hover:bg-white/10" aria-label="Sound on or off"><i class="fa-solid ${gnMuted() ? 'fa-volume-xmark' : 'fa-volume-high'} text-[12px]"></i></button>
-      <button type="button" onclick="closeGames()" class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-rose-500/20" aria-label="Leave the room"><i class="fa-solid fa-right-from-bracket text-[11px]"></i><span class="hidden sm:inline">Leave</span></button>
+      <button type="button" onclick="gnLeaveRoom()" class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs text-white/80 hover:bg-rose-500/20" aria-label="Leave the room"><i class="fa-solid fa-right-from-bracket text-[11px]"></i><span class="hidden sm:inline">Leave</span></button>
     </div>
     <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
       <aside id="gnPlayers" class="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 px-3 py-2 lg:w-60 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:p-3"></aside>

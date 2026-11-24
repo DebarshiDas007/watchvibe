@@ -1,9 +1,9 @@
-const CACHE_NAME = 'watchvibe-cache-v133';
+const CACHE_NAME = 'watchvibe-cache-v134';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './tailwind.css',
+  './tailwind.css?v=b1abe0bbb8',
   './theme.css?v=25',
   './swiss.css?v=35',
   './hover-card.css?v=1',
@@ -108,8 +108,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B2. The daily data file: always the newest from the network, the last saved copy only when offline
-  if (url.pathname === '/catalog_fresh.json') {
+  // B2. The daily data file and all stylesheets and scripts: always the newest from the network (versioned, long-cached files come straight from
+  // the browser's own cache), the last saved copy only when offline. Serving a saved copy first is what once paired a new page with an old stylesheet.
+  if (url.pathname === '/catalog_fresh.json' || /\.(css|js)$/.test(url.pathname)) {
     event.respondWith(
       fetch(req).then((networkRes) => {
         if (networkRes && networkRes.status === 200) {
