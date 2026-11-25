@@ -620,3 +620,6 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - Fix: the Ctrl+Shift+A toast no longer prints the owner's email address.
 - Detail window of an unreleased title now says "Not out yet / Releases <date>" instead of "Not available in <country> right now".
 - Open (not fixed): 17 RLS policies call auth.uid() per row (wrap in (select auth.uid()) before real traffic), 3 foreign keys unindexed, leaked-password protection is off (Supabase dashboard toggle, user), Upcoming/Featured depend on TMDB being reachable.
+
+## Database (25 Nov, no deploy)
+- Migration rls_initplan_and_fk_indexes: 17 RLS policies now use (select auth.uid()) (same rules, evaluated once per query, not per row); added indexes daily_scores(user_id), review_reactions(review_id), review_reports(reporter). Advisor: the 17 initplan warnings and 3 unindexed-key notes are gone. Checked as a stranger account: sees 0 profiles, 0 watchlist rows, 0 votes. Still listed: 3 "multiple permissive policies" warnings (battle_votes, profiles, vibe_ratings; merging them would change who can read what, left alone on purpose) and 3 "unused index" notes for the new indexes (normal until traffic arrives).
