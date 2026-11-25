@@ -93,7 +93,7 @@ export async function onRequestGet(context) {
   const cc = (url.searchParams.get('cc') || 'IN').toUpperCase();
   if (!/^[A-Z]{2}$/.test(cc)) return json({ error: 'bad country' }, 60, 60);
   const day = istDay();
-  const cacheKey = new Request(`${url.origin}/api/featured?cc=${cc}&day=${day}`);
+  const cacheKey = new Request(`${url.origin}/api/featured?cc=${cc}&day=${day}&v=2`);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
   if (!(await allow(context, 'featured', 12))) return tooMany();   // building the pool calls five upstream services
@@ -131,7 +131,8 @@ export async function onRequestGet(context) {
     if ((d.genre_ids || []).some(g => SKIP_GENRES.has(g))) continue;
     const votes = d.vote_count || 0, vote = d.vote_average || 0;
     if (votes >= 100 && vote < 5.5) continue;                                   // well-known and poorly rated: not a "feature"
-    const upcoming = date > today;
+    if (!date || date > today) continue;                                          // Featured shows released titles only: upcoming ones live in /api/upcoming
+    const upcoming = false;
     const age = ageDays(date);
     const wv = wiki.get(norm(title)) || 0;
     const sWiki = wv ? 0.5 + 0.5 * (Math.log10(wv) / Math.log10(maxWiki)) : 0;
@@ -144,7 +145,7 @@ export async function onRequestGet(context) {
   scored.sort((a, b) => b.score - a.score || (b.d.popularity || 0) - (a.d.popularity || 0));
 
   // where it streams in this country: it matters for the ranking (something you can press play on today beats a trailer-only hype)
-  const shortlist = scored.slice(0, 20);
+  const shortlist = scored.slice(0, 24);
   const provs = await Promise.all(shortlist.map(s => T(`/${s.c.type}/${s.c.id}/watch/providers`).then(r => ((r.results || {})[cc] || {}).flatrate || []).catch(() => [])));
   const REGIONAL = cc === 'IN' ? new Set(['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa']) : null;
   shortlist.forEach((s, i) => {
@@ -153,7 +154,8 @@ export async function onRequestGet(context) {
     if (REGIONAL && REGIONAL.has(s.d.original_language)) s.score += 0.08;          // home-language cinema counts extra in India
   });
   shortlist.sort((a, b) => b.score - a.score || (b.d.popularity || 0) - (a.d.popularity || 0));
-  const top = shortlist.slice(0, POOL_SIZE);  const where = COUNTRY[cc] || cc;
+  const top = shortlist.filter(s => s.platform).slice(0, POOL_SIZE);   // only titles you can stream now on a subscription service in this country
+  const where = COUNTRY[cc] || cc;
   const picks = top.map((s, i) => {
     const { c, d } = s;
     const platform = s.platform;

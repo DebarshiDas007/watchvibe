@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=38">
+  <link rel="stylesheet" href="/swiss.css?v=39">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -705,6 +705,7 @@
       <button type="button" onclick="setTopCategory('Movie')" id="top-cat-movie" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Movies</span></button>
       <button type="button" onclick="setTopCategory('Series')" id="top-cat-series" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Series</span></button>
       <button type="button" onclick="setTopCategory('Stand-Up')" id="top-cat-standup" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white"><span>Stand-Up</span></button>
+      <button type="button" onclick="switchTab('upcoming')" id="top-upcoming" class="top-nav-pill hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white lg:inline-flex lg:px-3"><span>Upcoming</span></button>
       <span class="mx-2 hidden h-5 w-px shrink-0 bg-white/15 lg:block" aria-hidden="true"></span>
       <button type="button" onclick="openPartyModal()" id="top-party" class="top-nav-pill hidden lg:inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Watch together" aria-label="Watch together"><i class="fa-solid fa-users-viewfinder text-[13px]"></i><span class="hidden min-[1500px]:inline">Watch together</span></button>
       <button type="button" onclick="switchTab('community')" id="desk-tab-community" class="top-nav-pill inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2.5 py-2 text-[15px] lg:px-3 font-semibold text-white/70 transition hover:bg-white/[0.06] hover:text-white" title="Taste Match" aria-label="Taste Match"><i class="fa-solid fa-heart-pulse text-[13px]"></i><span class="hidden min-[1500px]:inline">Taste Match</span></button>
@@ -3362,7 +3363,8 @@
         'desk-tab-community': activeTab === 'community',
         'desk-tab-watchlist': activeTab === 'watchlist',
         'desk-tab-profile': activeTab === 'profile',
-        'top-daily': activeTab === 'daily'
+        'top-daily': activeTab === 'daily',
+        'top-upcoming': activeTab === 'upcoming'
       };
       // keep each button's own screen-size rules (e.g. "only on big screens"): replacing them made Daily show on tablets and push "More" off the bar
       Object.entries(lit).forEach(([id, on]) => { const b = document.getElementById(id); if (!b) return; if (b.dataset.vis == null) b.dataset.vis = (b.className.match(/(^|\s)(hidden|(sm|md|lg|xl):(hidden|inline-flex))(?=\s|$)/g) || []).map(s => s.trim()).join(' '); b.className = (on ? NAV_ON : NAV_OFF) + (b.dataset.vis ? ' ' + b.dataset.vis : ''); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -4628,7 +4630,7 @@ function posterCard(item, opts) {
       }
       if (gridTitle && activeMood) gridItems = gridItems.filter(m => (getVibePercentages(m)[activeMood] || 0) >= 20);
 
-      const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + '</div>';   // Games is the gamepad button in the header (one option, always visible)
+      const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + `<button type="button" onclick="switchTab('upcoming')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium text-white/65 ring-1 ring-white/15 transition">Upcoming</button></div>`;   // Games is the gamepad button in the header (one option, always visible)
       const selectCls = 'rounded-full bg-white/[0.05] px-3.5 py-2 text-sm text-white/80 ring-1 ring-white/10 outline-none transition hover:bg-white/[0.08] focus:ring-white/30';
       const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
       const toolbar = `
@@ -4723,16 +4725,17 @@ function posterCard(item, opts) {
     // /api/featured ranks movies and series for the viewer's country (trending, JustWatch popularity, new on the big OTT services,
     // Wikipedia attention). The page chooses five from that ranking, never repeats the last two days, and keeps the same five all day.
     const FEAT = { state: 'idle', day: '', cc: '', picks: null, timer: 0 };
-    const FEAT_KEY = 'watchvibe_featured_v1', FEAT_HIST = 'watchvibe_featured_hist_v1';
+    const FEAT_KEY = 'watchvibe_featured_v2', FEAT_HIST = 'watchvibe_featured_hist_v1';
     function featDay() { return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10); }   // the day turns over at midnight India time
     function featLoadStored() {
-      try { const s = JSON.parse(localStorage.getItem(FEAT_KEY) || 'null'); if (s && s.day === featDay() && s.cc === selectedCountry && Array.isArray(s.picks) && s.picks.length >= 3) return s.picks; } catch (e) {}
+      try { const s = JSON.parse(localStorage.getItem(FEAT_KEY) || 'null'); if (s && s.day === featDay() && s.cc === selectedCountry && Array.isArray(s.picks) && s.picks.length >= 3 && s.picks.every(p => !p.upcoming && p.platform)) return s.picks; } catch (e) {}
       return null;
     }
     function featChoose(pool) {
       let hist = {}; try { hist = JSON.parse(localStorage.getItem(FEAT_HIST) || '{}'); } catch (e) {}
       const today = featDay();
       const recent = new Set(Object.entries(hist).filter(([d]) => d !== today).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 2).flatMap(([, ids]) => ids));
+      pool = pool.filter(p => !p.upcoming && p.platform);   // released and streaming now only
       const fresh = pool.filter(p => !recent.has(p.id));
       const src = fresh.length >= 5 ? fresh : pool;                 // a thin day: allow repeats rather than a short banner
       const chosen = [];
@@ -4773,6 +4776,7 @@ function posterCard(item, opts) {
         if (cc !== selectedCountry) return;
         if (!j || !Array.isArray(j.picks) || j.picks.length < 3) throw new Error('empty');
         const picks = featChoose(j.picks);
+        if (picks.length < 3) throw new Error('empty');
         try { localStorage.setItem(FEAT_KEY, JSON.stringify({ day: featDay(), cc, picks })); } catch (e) {}
         FEAT.picks = picks; FEAT.state = 'ready';
       }).catch(() => { FEAT.state = 'failed'; }).finally(() => { clearTimeout(FEAT.timer); if (typeof activeTab !== 'undefined' && activeTab === 'discover' && !window.homeRow) refreshViewsBg({ feat: true }); });
@@ -5100,6 +5104,41 @@ function posterCard(item, opts) {
           <div class="dcl-levels">${cards}</div>
           <div class="dcl-boards">${dcBoardSection()}${dcRecentBox()}</div>
         </div>`;
+    }
+    // ================= Upcoming: titles that are not out yet (own tab, never mixed into Featured) =================
+    const UP = { state: 'idle', day: '', cc: '', picks: [], kind: 'all' };
+    function upLoad() {
+      const day = featDay();
+      if (UP.state === 'loading' || (UP.state === 'ready' && UP.day === day && UP.cc === selectedCountry)) return;
+      if (UP.state === 'failed' && UP.day === day && UP.cc === selectedCountry) return;
+      UP.state = 'loading'; UP.day = day; UP.cc = selectedCountry;
+      const cc = selectedCountry, abort = new AbortController(), timer = setTimeout(() => abort.abort(), 9000);
+      fetch(`/api/upcoming?cc=${encodeURIComponent(cc)}`, { signal: abort.signal }).then(r => r.json()).then(j => {
+        if (!j || !Array.isArray(j.picks)) throw new Error('bad');
+        window.DYNAMIC_MEDIA = window.DYNAMIC_MEDIA || {};
+        UP.picks = j.picks.filter(p => p && /^tmdb-(m|tv)-\d+$/.test(p.id) && /^\d{4}-\d{2}-\d{2}$/.test(p.date || '')).map(p => {
+          const item = { id: p.id, tmdbId: String(p.tmdb), title: String(p.title), type: p.type === 'Series' ? 'Series' : 'Movie', year: String(p.year || ''), genres: Array.isArray(p.genres) ? p.genres.map(String) : [], backdrop: p.backdrop, poster: p.poster, synopsis: String(p.overview || ''), rating: null, totalVotes: 0, language: p.language, dominantVibe: 'must_watch', __up: p.date };
+          if (!window.DYNAMIC_MEDIA[p.id]) window.DYNAMIC_MEDIA[p.id] = item;
+          return item;
+        });
+        UP.state = 'ready';
+      }).catch(() => { UP.state = 'failed'; }).finally(() => { clearTimeout(timer); if (activeTab === 'upcoming') refreshViews(); });
+    }
+    function upWhen(d) {
+      const days = Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(featDay() + 'T00:00:00Z')) / 864e5);
+      const nice = new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+      return { nice, left: days <= 1 ? 'Tomorrow' : days < 14 ? `In ${days} days` : days < 60 ? `In ${Math.round(days / 7)} weeks` : `In ${Math.round(days / 30)} months` };
+    }
+    function setUpKind(k) { UP.kind = k === 'Movie' || k === 'Series' ? k : 'all'; refreshViews(); }
+    function renderUpcoming() {
+      upLoad();
+      const seg = (label, v) => `<button type="button" onclick="setUpKind('${v}')" aria-pressed="${UP.kind === v}" class="wv-seg-b${UP.kind === v ? ' is-on' : ''}">${label}</button>`;
+      const list = UP.picks.filter(m => UP.kind === 'all' || m.type === UP.kind);
+      let body;
+      if (UP.state === 'loading' || UP.state === 'idle') body = '<div class="up-grid" aria-busy="true">' + Array.from({ length: 12 }, () => '<div class="up-sk"><div class="up-sk-p"></div><div class="up-sk-t"></div></div>').join('') + '</div>';
+      else if (!list.length) body = `<div class="up-empty">${UP.state === 'failed' ? 'Could not load upcoming titles right now. Please try again in a moment.' : 'Nothing announced here yet. Check back soon.'}</div>`;
+      else body = '<div class="up-grid">' + list.map(m => { const w = upWhen(m.__up); const gen = (m.genres || [])[0] || ''; return `<button type="button" onclick="openDetails('${esc(m.id)}')" class="up-card group text-left focus:outline-none"><span class="up-poster"><img src="${esc(ps(m.poster))}" alt="${esc(m.title)}" loading="lazy" decoding="async" onerror="handleMediaPosterError(this)"><span class="up-date"><b>${esc(w.nice)}</b><i>${esc(w.left)}</i></span></span><span class="up-t">${esc(m.title)}</span><span class="up-s">${esc([m.type, gen].filter(Boolean).join(' · '))}</span></button>`; }).join('') + '</div>';
+      return `<div class="up-page"><header class="up-head"><p class="up-eyebrow">Not out yet</p><h1 class="up-h">Upcoming</h1><p class="up-sub">Films and series that have not been released yet, soonest first. When one arrives on a streaming service it moves to Featured and Streaming now.</p><div class="wv-seg" role="group" aria-label="Type">${seg('All', 'all')}${seg('Movies', 'Movie')}${seg('Series', 'Series')}</div></header>${body}</div>`;
     }
     const DC_STEP_BACK = '<button type="button" onclick="dcLevels()" class="mb-1 text-sm text-white/50 transition hover:text-white"><i class="fa-solid fa-arrow-left mr-1.5 text-xs"></i>All levels</button>';
     function renderDaily() {
@@ -5849,7 +5888,7 @@ function posterCard(item, opts) {
       m.className = 'fixed z-[55] w-56 overflow-hidden rounded-2xl bg-[#14141A] p-1.5 shadow-2xl ring-1 ring-white/10';
       m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(innerWidth - 232, r.left)) + 'px';
       const item = (icon, label, fn) => `<button type="button" role="menuitem" onclick="closeNavMore(); ${fn}" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"><i class="fa-solid ${icon} w-4 text-center text-[13px] text-white/50"></i>${label}</button>`;
-      m.innerHTML = item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-gamepad', 'Game night', 'openGames()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
+      m.innerHTML = item('fa-clock', 'Upcoming', "switchTab('upcoming')") + item('fa-bolt', 'Daily Challenge', "switchTab('daily')") + item('fa-gamepad', 'Game night', 'openGames()') + item('fa-people-group', 'Watch together', 'openPartyModal()');
       document.body.appendChild(m);
       setTimeout(() => document.addEventListener('click', closeNavMore, { once: true }), 0);
     }
@@ -8195,6 +8234,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         else if (activeTab === 'watchlist') content = renderWatchlist();
         else if (activeTab === 'profile') content = renderProfile();
         else if (activeTab === 'daily') content = renderDaily();
+        else if (activeTab === 'upcoming') content = renderUpcoming();
         viewport.innerHTML = content;
         // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
         viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });

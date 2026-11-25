@@ -605,3 +605,8 @@ Open / next, in the order we discussed:
 
 ## v141 (25 Nov)
 Fix: Edit profile could not save for an account with no row in profiles (1 of 10 accounts). Backfilled the missing row, added ensure_my_profile() (SECURITY DEFINER, authenticated only); peSave calls it when the update changes 0 rows, then retries.
+
+## v142 (25 Nov)
+- Featured (banner + poster wall) now only shows RELEASED titles streaming on a subscription service in the viewer's country: /api/featured skips unreleased titles and titles with no platform (cache key v=2, client key watchvibe_featured_v2, client double-check).
+- New Upcoming tab (nav button from 1024 px, 'More' menu on tablets, chip on phones): /api/upcoming (TMDB, region release dates, next 270 days, cached to India midnight) shows not-yet-released films and series, soonest first, with date and countdown; All/Movies/Series switch.
+- Filter row under the wall no longer pulled up over the mood chips on wide screens; header profile button is round; swiss.css v39.
