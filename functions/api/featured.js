@@ -30,7 +30,8 @@ const json = (body, maxAge, sMaxAge) => new Response(JSON.stringify(body), {
 });
 
 const T = async (path) => {
-  const r = await fetch(`${TMDB}${path}${path.includes('?') ? '&' : '?'}api_key=${TMDB_KEY}`);
+  // answers are the same for every visitor, so the edge keeps them for an hour: the next country built in this data centre reuses them (watch providers, trending, details)
+  const r = await fetch(`${TMDB}${path}${path.includes('?') ? '&' : '?'}api_key=${TMDB_KEY}`, { cf: { cacheTtl: 3600, cacheEverything: true } });
   if (!r.ok) throw new Error('tmdb ' + r.status);
   return r.json();
 };
@@ -62,13 +63,19 @@ async function justWatch(cc) {
 async function wikipediaTop() {
   // most-read English Wikipedia articles of the last two published days; matched to titles below
   const out = new Map();
-  for (const back of [1, 2]) {
+  const p = n => String(n).padStart(2, '0');
+  // both days are asked at the same time (they used to be asked one after the other)
+  const days = await Promise.all([1, 2].map(async back => {
     const d = new Date(Date.now() - back * 864e5);
-    const p = n => String(n).padStart(2, '0');
     try {
-      const r = await fetch(`https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())}`, { headers: { 'User-Agent': 'WatchVibe/1.0 (daily featured picks)' } });
-      if (!r.ok) continue;
-      const j = await r.json();
+      const r = await fetch(`https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())}`, { headers: { 'User-Agent': 'WatchVibe/1.0 (daily featured picks)' }, cf: { cacheTtl: 3600, cacheEverything: true } });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { return null; }
+  }));
+  for (const j of days) {
+    if (!j) continue;
+    try {
       for (const a of j.items[0].articles) {
         const raw = decodeURIComponent(a.article).replace(/_/g, ' ');
         if (/^(Main Page|Special:|Wikipedia:|Portal:|Category:|File:)/.test(raw)) continue;
@@ -96,13 +103,27 @@ export async function onRequestGet(context) {
   const cacheKey = new Request(`${url.origin}/api/featured?cc=${cc}&day=${day}&v=2`);
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(cacheKey); if (hit) return hit; }
+  const t0 = Date.now(), tm = [], mark = n => tm.push(n + ';dur=' + (Date.now() - t0));   // Server-Timing: where the time of a cold build goes
   if (!(await allow(context, 'featured', 12))) return tooMany();   // building the pool calls five upstream services
+  mark('limit');
 
-  const [tDay, tWeek, ott, jw, wiki] = await Promise.all([trending('day'), trending('week'), recentOtt(cc), justWatch(cc), wikipediaTop()]);
+  const timed = (n, p) => p.then(v => { mark(n); return v; });
+  const key = (type, id) => `${type}:${id}`;
+  const tDayP = timed('tday', trending('day')), tWeekP = timed('tweek', trending('week')), jwP = timed('jw', justWatch(cc));
+  // JustWatch gives ids only: the details of the ones trending does not already cover are asked for as soon as both answers are in, while the
+  // slower per-country "new on streaming" search is still running (this used to start only after everything else had finished)
+  const jwDetailsP = Promise.all([jwP, tDayP, tWeekP]).then(async ([jw, d, w]) => {
+    const seen = new Set([...d, ...w].map(x => key(x.media_type, x.id)));
+    const unknown = jw.filter(x => !seen.has(key(x.type, x.id))).slice(0, 14);
+    const fetched = await Promise.all(unknown.map(x => T(`/${x.type}/${x.id}`).then(r => ({ ...r, genre_ids: (r.genres || []).map(g => g.id) })).catch(() => null)));
+    mark('details');
+    return { jw, unknown, fetched };
+  });
+  const [tDay, tWeek, ott, wiki, jwD] = await Promise.all([tDayP, tWeekP, timed('ott', recentOtt(cc)), timed('wiki', wikipediaTop()), jwDetailsP]);
+  const { jw, unknown, fetched } = jwD;
 
   // pool of candidates keyed by type:id
   const pool = new Map();
-  const key = (type, id) => `${type}:${id}`;
   const put = (x, type) => {
     const k = key(type, x.id);
     if (!pool.has(k)) pool.set(k, { type, id: x.id, d: x, day: -1, week: -1, ott: -1, jw: -1 });
@@ -112,10 +133,7 @@ export async function onRequestGet(context) {
   tWeek.slice(0, 20).forEach((x, i) => { put(x, x.media_type).week = i; });
   ott.movies.forEach((x, i) => { put(x, 'movie').ott = i; });
   ott.tv.forEach((x, i) => { put(x, 'tv').ott = i; });
-  // JustWatch gives ids only: fetch details for the ones we have not seen yet (capped)
   const jwRank = new Map(jw.map((x, i) => [key(x.type, x.id), i]));
-  const unknown = jw.filter(x => !pool.has(key(x.type, x.id))).slice(0, 10);
-  const fetched = await Promise.all(unknown.map(x => T(`/${x.type}/${x.id}`).then(d => ({ ...d, genre_ids: (d.genres || []).map(g => g.id) })).catch(() => null)));
   fetched.forEach((d, i) => { if (d) put(d, unknown[i].type); });
   for (const [k, c] of pool) c.jw = jwRank.has(k) ? jwRank.get(k) : -1;
 
@@ -147,6 +165,7 @@ export async function onRequestGet(context) {
   // where it streams in this country: it matters for the ranking (something you can press play on today beats a trailer-only hype)
   const shortlist = scored.slice(0, 24);
   const provs = await Promise.all(shortlist.map(s => T(`/${s.c.type}/${s.c.id}/watch/providers`).then(r => ((r.results || {})[cc] || {}).flatrate || []).catch(() => [])));
+  mark('providers');
   const REGIONAL = cc === 'IN' ? new Set(['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa']) : null;
   shortlist.forEach((s, i) => {
     s.platform = (provs[i][0] && provs[i][0].provider_name) || null;
@@ -183,6 +202,7 @@ export async function onRequestGet(context) {
 
   const body = { day, cc, generatedAt: new Date().toISOString(), sources: { trendingDay: tDay.length, trendingWeek: tWeek.length, ottMovies: ott.movies.length, ottTv: ott.tv.length, justWatch: jw.length, wikipedia: wiki.size }, picks };
   const res = picks.length ? json(body, 600, secondsToIstMidnight()) : json(body, 30, 30);
+  res.headers.set('Server-Timing', tm.join(', '));
   if (cache && picks.length && context.waitUntil) context.waitUntil(cache.put(cacheKey, res.clone()));
   return res;
 }

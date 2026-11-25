@@ -31,12 +31,20 @@
   <meta name="twitter:description" content="Mood-based movie and series picks with IMDb ratings and where to stream.">
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
-  <link rel="stylesheet" href="/tailwind.css?v=5c6ac08c47">
+  <link rel="preconnect" href="https://image.tmdb.org">
+<link rel="stylesheet" href="/tailwind.css?v=5c6ac08c47">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-600.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-700.woff2">
+  <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
   <link rel="stylesheet" href="/swiss.css?v=40">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
+  <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
+  <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
@@ -4773,7 +4781,7 @@ function posterCard(item, opts) {
       FEAT.state = 'loading'; FEAT.day = day; FEAT.cc = selectedCountry; FEAT.picks = null;
       const cc = selectedCountry;
       const abort = new AbortController(); clearTimeout(FEAT.timer);
-      FEAT.timer = setTimeout(() => abort.abort(), 6000);
+      FEAT.timer = setTimeout(() => abort.abort(), 4000);   // a slow first lookup of the day must not hold the page on the placeholder for long
       fetch(`/api/featured?cc=${encodeURIComponent(cc)}`, { signal: abort.signal }).then(r => r.json()).then(j => {
         if (cc !== selectedCountry) return;
         if (!j || !Array.isArray(j.picks) || j.picks.length < 3) throw new Error('empty');
@@ -5313,7 +5321,7 @@ function posterCard(item, opts) {
       const name = esc(item.title);
       const st = fallbackTitleLook(item);
       const logoCls = 'max-h-[clamp(72px,16vw,130px)] lg:max-h-[clamp(120px,10vw,200px)] max-w-[min(100%,460px)] lg:max-w-[min(100%,620px)] object-contain object-left drop-shadow-[0_2px_14px_rgba(0,0,0,0.6)]';
-      if (ex && ex.logo) return `<img src="${esc(ex.logo)}" alt="" decoding="async" ${i === 0 ? '' : 'loading="lazy"'} class="${logoCls}"><span data-t class="sr-only">${name}</span>`;
+      if (ex && ex.logo) return `<img src="${esc(ex.logo)}" alt="" decoding="async" ${i === 0 ? 'loading="eager"' : 'loading="lazy"'} class="${logoCls}"><span data-t class="sr-only">${name}</span>`;
       const hide = (!ex && extrasKeyOf(item)) ? ' opacity-0' : '';
       return `<span data-t class="block break-words font-display text-4xl leading-[1.1] text-white sm:text-5xl ${st.cls}${hide}" style="${st.style}">${name}</span>`;
     }
@@ -5331,7 +5339,7 @@ function posterCard(item, opts) {
       const cert = certBadgeHtml(certFor(EXTRAS.cache.get(extrasKeyOf(item)), selectedCountry));
       return `
         <div class="hero-slide relative col-start-1 row-start-1 flex min-h-[320px] cursor-pointer items-end sm:min-h-0 ${i === HERO.idx ? '' : 'pointer-events-none opacity-0'}" data-slide="${i}" ${i === HERO.idx ? '' : 'aria-hidden="true"'} role="button" tabindex="${i === HERO.idx ? 0 : -1}" aria-label="Open ${esc(item.title)}" onclick="openDetails('${esc(item.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetails('${esc(item.id)}')}">
-          <img src="${esc(item.backdrop)}" alt="" ${i === 0 ? '' : 'loading="lazy"'} class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
+          <img src="${esc(item.backdrop)}" alt="" ${i === 0 ? 'loading="eager"' : 'loading="lazy"'} class="absolute inset-0 h-full w-full object-cover" onerror="this.style.display='none'">
           <div id="heroSlot${i}" class="absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-500"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/50 to-transparent"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0B0F]/85 via-[#0B0B0F]/30 to-transparent"></div>
@@ -5402,7 +5410,7 @@ function posterCard(item, opts) {
       if (!list.length) return `<div class="wvw-empty">Nothing fits that tonight.<button type="button" class="wv-btn wv-btn-g" data-wall="reset"><span>Clear the mood</span></button></div>`;
       const cards = list.map((m, i) => {
         const gen = ((m.genres || []).find(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g))) || '';
-        return `<button type="button" class="wvw-pc${i === WALL.i ? ' on' : ''}" style="--i:${Math.min(i, 9)}" data-wi="${i}" data-id="${esc(m.id)}" aria-label="${esc(m.title)}, number ${i + 1}"><span class="wvw-nn" aria-hidden="true">${wallPad(i + 1)}</span><span class="wvw-ph"><img src="${esc(ps(m.poster))}" alt="" ${i < 3 ? '' : 'loading="lazy"'} decoding="async" onerror="handleMediaPosterError(this)"></span><span class="wvw-t">${esc(m.title)}</span><span class="wvw-s">${esc([m.year, gen].filter(Boolean).join(' · '))}</span></button>`;
+        return `<button type="button" class="wvw-pc${i === WALL.i ? ' on' : ''}" style="--i:${Math.min(i, 9)}" data-wi="${i}" data-id="${esc(m.id)}" aria-label="${esc(m.title)}, number ${i + 1}"><span class="wvw-nn" aria-hidden="true">${wallPad(i + 1)}</span><span class="wvw-ph"><img src="${esc(ps(m.poster))}" alt="" ${i < 6 ? (i < 2 ? 'loading="eager" fetchpriority="high"' : 'loading="eager"') : 'loading="lazy"'} decoding="async" onerror="handleMediaPosterError(this)"></span><span class="wvw-t">${esc(m.title)}</span><span class="wvw-s">${esc([m.year, gen].filter(Boolean).join(' · '))}</span></button>`;
       }).join('');
       return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
     }
