@@ -1,55 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <title>WatchVibe Admin</title>
+  <title>WatchVibe Admin Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#0B0B0F">
-  <link rel="stylesheet" href="/tailwind.css?v=5dda15c352">
-  <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
+  <meta name="theme-color" content="#0e0e0d">
+  <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;}catch(e){}</script>
   <script src="/vendor/supabase/supabase.js"></script>
   <style>
-    body { background: #0B0B0F; color: #fff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    @keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-    .rise { animation: rise .4s cubic-bezier(.22,1,.36,1) both; }
-    .bar { transition: width .6s cubic-bezier(.22,1,.36,1); }
-    table { border-collapse: collapse; }
-    @media (prefers-reduced-motion: reduce) { .rise, .bar { animation: none; transition: none; } }
+    @font-face { font-family: 'Switzer'; font-weight: 400; font-display: swap; src: url(/vendor/fonts/switzer-400.woff2) format('woff2'); }
+    @font-face { font-family: 'Switzer'; font-weight: 500; font-display: swap; src: url(/vendor/fonts/switzer-500.woff2) format('woff2'); }
+    @font-face { font-family: 'Switzer'; font-weight: 600; font-display: swap; src: url(/vendor/fonts/switzer-600.woff2) format('woff2'); }
+    @font-face { font-family: 'Switzer'; font-weight: 700; font-display: swap; src: url(/vendor/fonts/switzer-700.woff2) format('woff2'); }
+    @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: swap; src: url(/vendor/fonts/plex-mono-400.ttf) format('truetype'); }
+    @font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: swap; src: url(/vendor/fonts/plex-mono-500.ttf) format('truetype'); }
+    :root {
+      --sans: 'Switzer', Inter, system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+      --bg: #0e0e0d; --surface: #181817; --line: #2e2e2c; --line-strong: #4a4a46; --text: #f3f3ee; --text-2: #b4b4ac; --muted: #94948c;
+      --accent: #6c84ff; --ink: #0d0d0d; --wash: rgba(243,243,238,.06); --wash-2: rgba(243,243,238,.14);
+      --good: #3ecf8e; --bad: #ff6b6b; --warn: #e8b13a; color-scheme: dark;
+    }
+    html[data-theme="light"] {
+      --bg: #f4f4f0; --surface: #ffffff; --line: #d4d4cd; --line-strong: #a6a69e; --text: #0d0d0d; --text-2: #4a4a44; --muted: #66665f;
+      --accent: #1d3dff; --ink: #ffffff; --wash: rgba(13,13,13,.05); --wash-2: rgba(13,13,13,.14);
+      --good: #0a7f4f; --bad: #c62828; --warn: #9a6b00; color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; overflow-x: hidden; }
+    a { color: inherit; }
+    button, select, input { font: inherit; color: inherit; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 0 clamp(16px, 3vw, 40px); }
+    .mono, .eyebrow, th, .tab, .btn, .chip { font-family: var(--mono); }
+    .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+
+    header.top { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    .bar-row-top { display: flex; align-items: center; gap: 14px; min-height: 60px; flex-wrap: wrap; padding-block: 8px; }
+    .brand { font-weight: 700; letter-spacing: -.02em; font-size: 17px; text-decoration: none; }
+    .brand b { color: var(--accent); font-weight: 700; }
+    .tag { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 6px 8px; border: 1px solid var(--line-strong); color: var(--text-2); }
+    .sp { flex: 1; }
+    .btn, select.btn { height: 36px; padding: 0 14px; background: transparent; border: 1px solid var(--line-strong); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; border-radius: 0; }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .btn.primary:hover { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+    .btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+    .btn.danger:hover { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+    .btn.sm { height: 30px; padding: 0 10px; font-size: 11px; }
+    select.btn { padding-right: 8px; text-transform: none; }
+    select.btn option { background: var(--surface); color: var(--text); }
+    .btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible, .rowbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    nav.tabs { display: flex; flex-wrap: wrap; gap: 0 22px; }
+    .tab { background: none; border: 0; padding: 12px 0 11px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; position: relative; }
+    .tab:hover { color: var(--text); }
+    .tab[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); }
+    .tab i { font-style: normal; background: var(--bad); color: #fff; font-size: 10px; padding: 1px 5px; margin-left: 6px; letter-spacing: 0; }
+
+    @media (max-width: 640px) { header.top { position: static; } .btn-site { display: none; } .bar-row-top { gap: 8px; } .tag { display: none; } nav.tabs { gap: 0 16px; } }
+    main { padding-block: 28px 80px; }
+    h1.page { font-size: clamp(30px, 3.4vw, 52px); font-weight: 700; letter-spacing: -.035em; line-height: 1.02; margin: 6px 0 4px; }
+    .lede { color: var(--text-2); font-size: 14px; margin: 0 0 24px; max-width: 70ch; }
+    .grid { display: grid; gap: 16px; margin-top: 16px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+    @media (max-width: 960px) { .g3, .g21 { grid-template-columns: minmax(0, 1fr); } .g2 { grid-template-columns: minmax(0, 1fr); } }
+    .card { border: 1px solid var(--line); padding: 20px; min-width: 0; }
+    .card h2 { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 0; }
+    .card .sub { font-size: 12.5px; color: var(--text-2); margin: 4px 0 0; }
+    .card .body { margin-top: 18px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 16px; }
+    .kpi { background: var(--bg); padding: 16px 18px 18px; min-width: 0; }
+    .kpi .v { font-size: clamp(28px, 2.6vw, 38px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; margin-top: 10px; font-variant-numeric: tabular-nums; }
+    .kpi .s { font: 400 12px/1.4 var(--mono); color: var(--muted); margin-top: 6px; }
+    .d-up { color: var(--good); } .d-down { color: var(--bad); } .d-flat { color: var(--muted); }
+    .live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .live > div { background: var(--bg); padding: 16px 18px; }
+    .live .v { font-size: 30px; font-weight: 700; letter-spacing: -.03em; margin-top: 6px; display: flex; align-items: center; gap: 10px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; flex: none; }
+    .dot.off { background: var(--muted); animation: none; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 60%, transparent) } 100% { box-shadow: 0 0 0 10px transparent } }
+    @media (max-width: 640px) { .live { grid-template-columns: minmax(0, 1fr); } }
+    .attn { list-style: none; margin: 0; padding: 0; }
+    .attn li { border-top: 1px solid var(--line); }
+    .attn li:first-child { border-top: 0; }
+    .attn button { width: 100%; display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: baseline; text-align: left; background: none; border: 0; padding: 12px 0; cursor: pointer; }
+    .attn button:hover .al { color: var(--accent); }
+    .attn .n { font: 500 22px/1 var(--sans); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .attn .n.bad { color: var(--bad); } .attn .n.warn { color: var(--warn); }
+    .attn .al { font-weight: 600; font-size: 14px; } .attn .ah { font-size: 12.5px; color: var(--text-2); margin-top: 2px; font-weight: 400; display: block; }
+    .attn .go { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .ok { color: var(--good); font-weight: 600; font-size: 14px; padding: 6px 0; }
+    .br { margin-bottom: 14px; } .br:last-child { margin-bottom: 0; }
+    .br .l { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 6px; }
+    .br .l span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .br .l span:last-child { font: 400 12px var(--mono); color: var(--text-2); flex: none; }
+    .tr { height: 6px; background: var(--wash-2); } .tr > i { display: block; height: 100%; background: var(--accent); }
+    .tr.good > i { background: var(--good); } .tr.warn > i { background: var(--warn); }
+    .tw { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 10.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); padding: 0 12px 10px 0; white-space: nowrap; }
+    td { padding: 10px 12px 10px 0; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+    th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; }
+    td.nw { white-space: nowrap; color: var(--text-2); }
+    .rowbtn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-weight: 600; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+    .rowbtn:hover { color: var(--accent); text-decoration-color: var(--accent); }
+    .empty { color: var(--muted); font-size: 13px; padding: 14px 0; }
+    .note { border: 1px solid var(--line-strong); padding: 12px 16px; font-size: 13.5px; color: var(--text-2); margin-top: 16px; }
+    .chip { display: inline-block; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; padding: 3px 7px; border: 1px solid var(--line-strong); color: var(--text-2); white-space: nowrap; }
+    .chip.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 55%, transparent); } .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); } .chip.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 55%, transparent); } .chip.acc { color: var(--accent); border-color: var(--accent); }
+    svg.chart { width: 100%; height: auto; display: block; } svg.chart text { font: 400 11px var(--mono); fill: var(--muted); }
+    .legend { display: flex; gap: 16px; font: 400 11px var(--mono); color: var(--text-2); margin-top: 10px; flex-wrap: wrap; } .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+    .heat { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; } .heat.w { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .heat > div { height: 34px; background: var(--accent); position: relative; } .heat.w > div { height: 44px; }
+    .hl { display: flex; justify-content: space-between; font: 400 10.5px var(--mono); color: var(--muted); margin-top: 6px; }
+    .feed { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow-y: auto; }
+    .feed li { display: grid; grid-template-columns: 74px 128px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+    .feed li:first-child { border-top: 0; } .feed .t { font: 400 11.5px var(--mono); color: var(--muted); } .feed .w { overflow-wrap: anywhere; } .feed .c { font: 400 11px var(--mono); color: var(--muted); white-space: nowrap; }
+    @media (max-width: 640px) { .feed li { grid-template-columns: 60px minmax(0, 1fr); } .feed .c { display: none; } .feed .w { grid-column: 1 / -1; } }
+    .tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+    input.in { height: 36px; padding: 0 12px; background: transparent; border: 1px solid var(--line-strong); border-radius: 0; font-size: 14px; min-width: 0; flex: 1 1 220px; max-width: 420px; }
+    input.in::placeholder { color: var(--muted); }
+    .rev { border: 1px solid var(--line); padding: 16px 18px; margin-top: 12px; }
+    .rev .meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font: 400 12px var(--mono); color: var(--text-2); }
+    .rev .hd { font-weight: 700; font-size: 17px; letter-spacing: -.01em; margin: 10px 0 0; overflow-wrap: anywhere; }
+    .rev .bd { color: var(--text-2); font-size: 14px; line-height: 1.55; margin: 6px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+    .rev .acts { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .rev.hidden { opacity: .72; }
+    #drawer { position: fixed; inset: 0 0 0 auto; width: min(460px, 100vw); background: var(--bg); border-left: 1px solid var(--line-strong); z-index: 60; overflow-y: auto; padding: 24px; transform: translateX(100%); transition: transform .25s; visibility: hidden; }
+    #drawer.open { transform: none; visibility: visible; }
+    #scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 55; display: none; } #scrim.open { display: block; }
+    #drawer h3 { font-size: 26px; font-weight: 700; letter-spacing: -.03em; margin: 8px 0 2px; overflow-wrap: anywhere; }
+    dl.kv { margin: 18px 0 0; } dl.kv > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13.5px; } dl.kv dt { color: var(--text-2); } dl.kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .gate { max-width: 460px; margin: 12vh auto 0; border: 1px solid var(--line-strong); padding: 32px; }
+    .gate h1 { font-size: 30px; font-weight: 700; letter-spacing: -.03em; margin: 8px 0 10px; } .gate p { color: var(--text-2); font-size: 14.5px; line-height: 1.55; margin: 0 0 22px; }
+    .skel { height: 120px; border: 1px solid var(--line); margin-top: 16px; background: linear-gradient(90deg, transparent, var(--wash), transparent); background-size: 200% 100%; animation: sh 1.4s infinite; } @keyframes sh { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+    #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--text); color: var(--bg); padding: 12px 18px; font: 500 12px var(--mono); letter-spacing: .04em; opacity: 0; pointer-events: none; transition: .2s; z-index: 80; max-width: calc(100vw - 32px); }
+    #toast.on { opacity: 1; transform: translate(-50%, 0); }
+    .keys { font: 400 11px var(--mono); color: var(--muted); margin-top: 40px; }
+    @media (prefers-reduced-motion: reduce) { .dot, .skel { animation: none; } #drawer, #toast { transition: none; } }
   </style>
 </head>
 <body>
-  <header class="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0B0B0F]/85 backdrop-blur-xl">
-    <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-8">
-      <a href="/" class="select-none font-display text-[15px] font-medium text-white" style="letter-spacing:.02em">WATCH<span style="color:#D6502F">VIBE</span></a>
-      <span class="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-purple-200 ring-1 ring-purple-400/30">ADMIN</span>
-      <div class="ml-auto flex items-center gap-2.5">
-        <select id="range" class="rounded-full bg-white/[0.05] px-3.5 py-1.5 text-[13px] text-white ring-1 ring-white/10 focus:outline-none focus:ring-white/30" aria-label="Date range">
-          <option value="7" class="bg-[#14141A]">Last 7 days</option>
-          <option value="30" class="bg-[#14141A]" selected>Last 30 days</option>
-          <option value="90" class="bg-[#14141A]">Last 90 days</option>
-          <option value="365" class="bg-[#14141A]">Last 12 months</option>
-        </select>
-        <button id="refresh" type="button" class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.05] text-white/70 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white" aria-label="Refresh"><i class="fa-solid fa-rotate text-xs"></i></button>
-        <a href="/" class="hidden rounded-full px-4 py-1.5 text-[13px] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white sm:block">Back to site</a>
+  <header class="top">
+    <div class="wrap">
+      <div class="bar-row-top">
+        <a href="/" class="brand">Watch<b>Vibe</b></a><span class="tag">Admin Studio</span>
+        <span class="sp"></span>
+        <select id="range" class="btn" aria-label="Date range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select>
+        <button id="refresh" type="button" class="btn" title="Refresh (R)">Refresh</button>
+        <button id="theme" type="button" class="btn" aria-label="Switch light and dark">Theme</button>
+        <a href="/" class="btn btn-site">Site</a>
       </div>
+      <nav id="tabs" class="tabs" aria-label="Sections"></nav>
     </div>
-    <nav id="tabs" class="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 sm:px-8" aria-label="Sections"></nav>
   </header>
-
-  <main id="app" class="mx-auto max-w-7xl px-4 py-8 sm:px-8"></main>
+  <main class="wrap" id="app" aria-live="polite"></main>
+  <div id="scrim"></div>
+  <aside id="drawer" aria-label="User details" aria-hidden="true"></aside>
+  <div id="toast" role="status"></div>
 
 <script>
 (() => {
   const SUPABASE_URL = 'https://lbtuikgpgcgrizijfiyl.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxidHVpa2dwZ2Nncml6aWpmaXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NjQxMzgsImV4cCI6MjExMDM0MDEzOH0.y7PrOnBUjIBnT6N2vnOV9qkGgcKX1F_epMqBMoPKejU';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
-  const TABS = [['overview', 'Overview'], ['users', 'Users'], ['content', 'Content health'], ['reviews', 'Reviews'], ['streaming', 'Streaming'], ['system', 'System']];
-  const TIER_NAMES = { t1: 'Absolute Cinema', t2: 'Standing Ovation', t3: 'Paisa Vasool', t4: 'Worth a Watch', t5: 'Timepass', t6: 'Left at Interval' };
+  const TABS = [['home', 'Home'], ['audience', 'Audience'], ['content', 'Content'], ['community', 'Community'], ['users', 'Users'], ['features', 'Features'], ['streaming', 'Streaming'], ['system', 'System']];
+  const TIER = { 1: 'Absolute Cinema', 2: 'Standing Ovation', 3: 'Paisa Vasool', 4: 'Worth a Watch', 5: 'Timepass', 6: 'Left at Interval' };
+  const TYPE = { visit: 'Visit', title_open: 'Opened a title', search: 'Search', ott_click: 'Streaming click', trailer_play: 'Trailer played', trailer_fail: 'Trailer failed', poster_fail: 'Poster failed', avail_none: 'Not available', watchlist_add: 'Saved to list', vibe_vote: 'Verdict', mood: 'Mood request', actor_open: 'Actor page', signup: 'Sign-up', login: 'Sign-in', js_error: 'Error', region_change: 'Region change', game_room: 'Game room', game_start: 'Game started', game_conn: 'Game connect', daily_done: 'Daily finished' };
+  const BADTYPES = { js_error: 1, trailer_fail: 1, poster_fail: 1, avail_none: 1 };
+  const ACTION = { review_delete: 'Deleted a review', review_hide: 'Hid a review', review_restore: 'Restored a review', purge_events: 'Purged old events' };
   const app = document.getElementById('app');
-  const state = { tab: (location.hash || '#overview').slice(1), days: 30, cache: {}, userFilter: '', userSort: 'created', revFilter: 'reported', armed: null };
-  if (!TABS.some(t => t[0] === state.tab)) state.tab = 'overview';
+  const $ = id => document.getElementById(id);
+  const state = { tab: (location.hash || '#home').slice(1), days: 30, cache: {}, userFilter: '', userSort: 'created', userShow: 'all', revFilter: 'reported', revText: '', armed: null, attn: 0, me: null };
+  if (!TABS.some(t => t[0] === state.tab)) state.tab = 'home';
 
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = n => Number(n || 0).toLocaleString('en-US');
@@ -58,41 +181,58 @@
   const ago = iso => { if (!iso) return 'never'; const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); if (s < 90) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; };
   const bytes = b => { b = Number(b || 0); return b > 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB'; };
   const cname = cc => { try { return cc && cc !== '??' ? new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) : 'Unknown'; } catch (e) { return cc; } };
+  const tierName = k => TIER[k] || ('Tier ' + k);
+  const toast = t => { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 3200); };
 
-  const card = (inner, cls) => `<section class="rise rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06] ${cls || ''}">${inner}</section>`;
-  const h = (t, sub) => `<div class="mb-4"><h2 class="font-display text-lg font-medium text-white">${esc(t)}</h2>${sub ? `<p class="mt-0.5 text-xs text-white/40">${esc(sub)}</p>` : ''}</div>`;
-  const kpi = (label, value, sub) => `<div class="rise rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]"><div class="text-[11px] uppercase tracking-wider text-white/40">${esc(label)}</div><div class="mt-1.5 font-display text-3xl font-medium text-white">${esc(value)}</div>${sub ? `<div class="mt-1 text-xs text-white/40">${esc(sub)}</div>` : ''}</div>`;
-  const empty = t => `<div class="py-6 text-center text-sm text-white/35">${esc(t)}</div>`;
-  const note = t => `<div class="rounded-2xl bg-purple-500/[0.07] px-4 py-3 text-sm text-purple-100/80 ring-1 ring-purple-400/20">${t}</div>`;
-
-  function bars(list, label, valueKey, opts) {
-    opts = opts || {};
-    list = list || [];
+  // ---------------------------------------------------------------- building blocks
+  const C = (eyebrow, h, sub, body, cls) => `<section class="card ${cls || ''}"><div class="eyebrow">${esc(eyebrow)}</div><h2>${esc(h)}</h2>${sub ? `<p class="sub">${esc(sub)}</p>` : ''}<div class="body">${body}</div></section>`;
+  const head = (h, lede) => `<div class="eyebrow">${esc(TABS.find(t => t[0] === state.tab)[1])}</div><h1 class="page">${esc(h)}</h1>${lede ? `<p class="lede">${esc(lede)}</p>` : ''}`;
+  const empty = t => `<div class="empty">${esc(t)}</div>`;
+  const note = t => `<div class="note">${t}</div>`;
+  const kpi = (label, value, sub, d) => `<div class="kpi"><div class="eyebrow">${esc(label)}</div><div class="v">${esc(value)}</div><div class="s">${d || ''}${d && sub ? ' ' : ''}${esc(sub || '')}</div></div>`;
+  function delta(cur, prev, invert) {
+    cur = Number(cur) || 0; prev = Number(prev) || 0;
+    if (!cur && !prev) return '<span class="d-flat">no change</span>';
+    if (!prev) return '<span class="d-up">new</span>';
+    const p = Math.round((cur - prev) / prev * 100);
+    if (!p) return '<span class="d-flat">same</span>';
+    const up = p > 0, good = invert ? !up : up;
+    return `<span class="${good ? 'd-up' : 'd-down'}">${up ? '▲' : '▼'} ${Math.abs(p)}%</span>`;
+  }
+  function bars(list, label, key, o) {
+    o = o || {}; list = list || [];
     if (!list.length) return empty('No data yet.');
-    const max = Math.max(...list.map(x => Number(x[valueKey]) || 0), 1);
-    const total = list.reduce((a, x) => a + (Number(x[valueKey]) || 0), 0) || 1;
-    return `<div class="space-y-3">${list.map(x => {
-      const v = Number(x[valueKey]) || 0;
-      return `<div><div class="mb-1 flex items-baseline justify-between gap-3 text-[13px]"><span class="min-w-0 truncate text-white/85">${esc(label(x))}</span><span class="shrink-0 tabular-nums text-white/50">${num(v)}${opts.share ? ` · ${pct(v, total)}%` : ''}</span></div><div class="h-1.5 overflow-hidden rounded-full bg-white/[0.06]"><div class="bar h-full rounded-full ${opts.color || 'bg-purple-400'}" style="width:${Math.max(2, Math.round(v / max * 100))}%"></div></div></div>`;
-    }).join('')}</div>`;
+    const max = Math.max(...list.map(x => Number(x[key]) || 0), 1), tot = list.reduce((a, x) => a + (Number(x[key]) || 0), 0) || 1;
+    return list.map(x => { const v = Number(x[key]) || 0; return `<div class="br"><div class="l"><span>${esc(label(x))}</span><span>${num(v)}${o.share ? ' · ' + pct(v, tot) + '%' : ''}</span></div><div class="tr ${o.tone || ''}"><i style="width:${Math.max(2, Math.round(v / max * 100))}%"></i></div></div>`; }).join('');
   }
   function table(cols, rows, emptyMsg) {
-    if (!rows.length) return empty(emptyMsg || 'Nothing here yet.');
-    return `<div class="overflow-x-auto"><table class="w-full text-left text-[13px]"><thead><tr class="text-[11px] uppercase tracking-wider text-white/35">${cols.map(c => `<th class="whitespace-nowrap pb-2 pr-4 font-medium ${c.r ? 'text-right' : ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr class="border-t border-white/[0.05]">${cols.map(c => `<td class="py-2.5 pr-4 align-top ${c.r ? 'text-right tabular-nums' : ''} ${c.cls || 'text-white/80'}">${c.html ? c.html(r) : esc(c.v(r))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    if (!rows || !rows.length) return empty(emptyMsg || 'Nothing here yet.');
+    return `<div class="tw"><table><thead><tr>${cols.map(c => `<th class="${c.r ? 'r' : ''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c.r ? 'r' : ''} ${c.nw ? 'nw' : ''}">${c.html ? c.html(r) : esc(c.v(r))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
-  function dailyChart(daily) {
+  function barChart(daily, a, b, labelA, labelB) {
     if (!daily || !daily.length) return empty('No data yet.');
-    const W = 640, H = 150, pad = 4, n = daily.length, bw = Math.max(2, (W - pad * 2) / n - 2);
-    const max = Math.max(...daily.map(d => d.visitors), 1);
-    const bs = daily.map((d, i) => { const bh = Math.round((d.visitors / max) * (H - 28)); const x = pad + i * ((W - pad * 2) / n); return `<rect x="${x.toFixed(1)}" y="${H - 18 - bh}" width="${bw.toFixed(1)}" height="${Math.max(bh, d.visitors ? 2 : 0)}" rx="2" fill="#a78bfa" fill-opacity="${d.visitors ? .85 : .15}"><title>${esc(d.d)}: ${d.visitors} visitors, ${d.visits} visits</title></rect>`; }).join('');
-    const first = daily[0].d, last = daily[daily.length - 1].d;
-    return `<svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="Visitors per day"><line x1="0" x2="${W}" y1="${H - 18}" y2="${H - 18}" stroke="#fff" stroke-opacity=".08"/>${bs}<text x="${pad}" y="${H - 3}" fill="#fff" fill-opacity=".35" font-size="11">${esc(first)}</text><text x="${W - pad}" y="${H - 3}" fill="#fff" fill-opacity=".35" font-size="11" text-anchor="end">${esc(last)}</text><text x="${W - pad}" y="12" fill="#fff" fill-opacity=".35" font-size="11" text-anchor="end">peak ${max}</text></svg>`;
+    const W = 760, H = 190, padB = 22, padT = 16, n = daily.length, slot = W / n, bw = Math.max(2, slot - (n > 120 ? 0.5 : 2));
+    const max = Math.max(...daily.map(d => (d[a] || 0) + (b ? (d[b] || 0) : 0)), 1);
+    const bs = daily.map((d, i) => {
+      const va = d[a] || 0, vb = b ? (d[b] || 0) : 0, ha = Math.round(va / max * (H - padB - padT)), hb = Math.round(vb / max * (H - padB - padT)), x = (i * slot).toFixed(1);
+      const tip = `<title>${esc(d.d)}: ${va}${b ? ' ' + labelA + ', ' + vb + ' ' + labelB : ' ' + labelA}</title>`;
+      return `<g>${tip}<rect x="${x}" y="${H - padB - ha}" width="${bw.toFixed(1)}" height="${Math.max(va ? 2 : 0, ha)}" fill="var(--accent)"/>${b ? `<rect x="${x}" y="${H - padB - ha - hb}" width="${bw.toFixed(1)}" height="${hb}" fill="var(--text-2)" fill-opacity=".45"/>` : ''}</g>`;
+    }).join('');
+    const mid = daily[Math.floor(n / 2)].d;
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(labelA)} per day"><line x1="0" x2="${W}" y1="${H - padB}" y2="${H - padB}" stroke="var(--line-strong)"/><text x="0" y="${H - 5}">${esc(daily[0].d)}</text><text x="${W / 2}" y="${H - 5}" text-anchor="middle">${esc(mid)}</text><text x="${W}" y="${H - 5}" text-anchor="end">${esc(daily[n - 1].d)}</text><text x="${W}" y="10" text-anchor="end">peak ${max}</text>${bs}</svg>` +
+      (b ? `<div class="legend"><span><i style="background:var(--accent)"></i>${esc(labelA)}</span><span><i style="background:var(--text-2);opacity:.5"></i>${esc(labelB)}</span></div>` : '');
   }
   function funnel(f) {
     const steps = [['Visited', f.visit], ['Opened a title', f.title_open], ['Played a trailer', f.trailer], ['Clicked a streaming link', f.ott], ['Signed up or in', f.account]];
     const top = Math.max(f.visit || 0, 1);
-    return `<div class="space-y-3">${steps.map(([l, v], i) => `<div><div class="mb-1 flex items-baseline justify-between text-[13px]"><span class="text-white/85">${esc(l)}</span><span class="tabular-nums text-white/50">${num(v)}${i ? ` · ${pct(v, steps[i - 1][1])}% of previous` : ''}</span></div><div class="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div class="bar h-full rounded-full bg-emerald-400/80" style="width:${Math.max(v ? 2 : 0, Math.round((v || 0) / top * 100))}%"></div></div></div>`).join('')}</div>`;
+    return steps.map(([l, v], i) => `<div class="br"><div class="l"><span>${esc(l)}</span><span>${num(v)}${i ? ' · ' + pct(v, steps[i - 1][1]) + '% of previous' : ''}</span></div><div class="tr good"><i style="width:${Math.max(v ? 2 : 0, Math.round((v || 0) / top * 100))}%"></i></div></div>`).join('');
   }
+  function heat(list, key, valKey, cls) {
+    const max = Math.max(...list.map(x => x[valKey]), 1);
+    return `<div class="heat ${cls || ''}">${list.map(x => `<div style="opacity:${(0.1 + 0.9 * x[valKey] / max).toFixed(2)}" title="${esc(cls ? WD[x[key]] : (x[key] + ':00'))}: ${x[valKey]} visitors"></div>`).join('')}</div>`;
+  }
+  const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const tierBars = list => bars((list || []).map(x => ({ k: tierName(x.k), n: x.n })), x => x.k, 'n', { share: true });
 
   // ---------------------------------------------------------------- data
   async function rpc(name, args) {
@@ -100,215 +240,308 @@
     if (error) { const e = new Error(error.message || 'Request failed'); e.code = error.code; throw e; }
     return data;
   }
+  const LOADERS = {
+    home: () => rpc('admin_home', { p_days: state.days }), growth: () => rpc('admin_growth', { p_days: state.days }), overview: () => rpc('admin_overview', { p_days: state.days }),
+    content: () => rpc('admin_content', { p_days: state.days }), features: () => rpc('admin_features', { p_days: state.days }), streaming: () => rpc('admin_streaming', { p_days: state.days }),
+    users: () => rpc('admin_users'), system: () => rpc('admin_system'), audit: () => rpc('admin_audit_log', { p_limit: 60 }), reviews: () => rpc('admin_reviews', { p_status: state.revFilter })
+  };
   async function load(kind, force) {
     const key = kind + ':' + state.days + ':' + state.revFilter;
     if (!force && state.cache[key]) return state.cache[key];
-    const d = kind === 'users' ? await rpc('admin_users') : kind === 'system' ? await rpc('admin_system') : kind === 'reviews' ? await rpc('admin_reviews', { p_status: state.revFilter }) : await rpc('admin_' + kind, { p_days: state.days });
-    state.cache[key] = d; return d;
+    return (state.cache[key] = await LOADERS[kind]());
   }
 
   // ---------------------------------------------------------------- views
-  async function viewOverview(force) {
-    const [o, u] = await Promise.all([load('overview', force), load('users', force)]);
-    const none = !o.visitors;
-    return `
-      ${none ? note('No visitor data yet. Tracking is live from this deploy, so numbers appear as people use the site. <span class="text-white/50">Your own browsing is not counted.</span>') : ''}
-      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        ${kpi('Visitors', num(o.visitors), num(o.new_visitors) + ' new')}
-        ${kpi('Visits', num(o.visits), num(o.pageviews) + ' screen views')}
-        ${kpi('Titles opened', num(o.title_opens), num(o.searches) + ' searches')}
-        ${kpi('Streaming clicks', num(o.ott_clicks), 'outbound to services')}
-        ${kpi('Accounts', num(u.total), num(u.new_7d) + ' new this week')}
-        ${kpi('Sign-ups', num(o.signups), num(o.logins) + ' sign-ins')}
-        ${kpi('Returning', num(Math.max(0, o.visitors - o.new_visitors)), 'seen before this period')}
-        ${kpi('Errors', num(o.errors), 'JavaScript errors')}
+  async function viewHome(force) {
+    const [o, g] = await Promise.all([load('home', force), load('growth', force)]);
+    const c = o.cur, p = o.prev, a = o.attention, d = o.days;
+    const quiet = o.newest_event ? (Date.now() - new Date(o.newest_event).getTime()) / 3600000 : 999;
+    const items = [
+      [a.reported_reviews, 'bad', 'Reviews reported by readers', 'Read them and hide or keep.', 'community'],
+      [a.errors_24h, 'bad', 'Site errors in the last 24 hours', 'A visitor hit a JavaScript error.', 'system'],
+      [a.poster_fail_7d, 'warn', 'Posters that failed to load (7 days)', 'Replace the image for these titles.', 'content'],
+      [a.trailer_fail_7d, 'warn', 'Trailers that would not play (7 days)', 'Check the video link.', 'content'],
+      [a.zero_search_7d, 'warn', 'Searches with no answer (7 days)', 'People want titles we cannot find.', 'content'],
+      [a.unverified_users, 'warn', 'Accounts that never verified an email', 'Often typos or abandoned sign-ups.', 'users']
+    ].filter(x => x[0] > 0);
+    if (quiet > 6) items.unshift([Math.round(quiet), 'bad', 'Hours since the last tracked event', 'Tracking may be broken, or it is just quiet.', 'system']);
+    state.attn = items.filter(x => x[1] === 'bad').length;
+    const attn = items.length ? `<ul class="attn">${items.map(x => `<li><button type="button" data-go="${x[4]}"><span class="n ${x[1]}">${num(x[0])}</span><span><span class="al">${esc(x[2])}</span><span class="ah">${esc(x[3])}</span></span><span class="go">Open</span></button></li>`).join('')}</ul>` : '<div class="ok">All clear. Nothing needs you right now.</div>';
+    const K = [
+      ['Visitors', c.visitors, p.visitors, 'unique people'], ['Visits', c.visits, p.visits, 'sessions'], ['Titles opened', c.title_opens, p.title_opens, ''], ['Trailers played', c.trailers, p.trailers, ''],
+      ['Saved to lists', c.saves, p.saves, ''], ['Streaming clicks', c.ott, p.ott, 'to services'], ['Searches', c.searches, p.searches, ''], ['New accounts', c.accounts, p.accounts, ''],
+      ['Verdicts', c.verdicts, p.verdicts, ''], ['Reviews', c.reviews, p.reviews, ''], ['Errors', c.errors, p.errors, 'JavaScript', true]
+    ];
+    return head('Today at a glance', 'Live activity, what needs attention, and how this period compares with the one before it.') + `
+      <div class="live">
+        <div><div class="eyebrow">Active now</div><div class="v"><span class="dot ${o.live_30m ? '' : 'off'}"></span>${num(o.live_30m)}</div><div class="s mono" style="font-size:12px;color:var(--muted);margin-top:4px">visitors in the last 30 min</div></div>
+        <div><div class="eyebrow">Last 24 hours</div><div class="v">${num(o.live_24h)}</div><div class="s mono" style="font-size:12px;color:var(--muted);margin-top:4px">visitors</div></div>
+        <div><div class="eyebrow">Last event</div><div class="v" style="font-size:24px;margin-top:10px">${esc(ago(o.newest_event))}</div><div class="s mono" style="font-size:12px;color:var(--muted);margin-top:4px">your own browsing is not counted</div></div>
       </div>
-      <div class="mt-6 grid gap-4 lg:grid-cols-3">
-        ${card(h('Visitors per day', 'Unique visitors, by day') + dailyChart(o.daily), 'lg:col-span-2')}
-        ${card(h('Journey', 'Share of visitors reaching each step') + funnel(o.funnel))}
+      <div class="grid g21">
+        ${C('Needs attention', 'Your inbox', 'Tap a line to go straight to it.', attn)}
+        ${C('Audience', 'Visitors per day', 'New and returning, last ' + d + ' days.', barChart((g.daily || []).map(x => ({ d: x.d, new: x.new, ret: Math.max(0, x.visitors - x.new) })), 'new', 'ret', 'new', 'returning'))}
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        ${card(h('Countries') + bars(o.countries, x => cname(x.k), 'n', { share: true }))}
-        ${card(h('Devices') + bars(o.devices, x => x.k, 'n', { share: true, color: 'bg-sky-400' }) + '<div class="mt-6"></div>' + h('Browsers') + bars(o.browsers, x => x.k, 'n', { share: true, color: 'bg-sky-400' }))}
-        ${card(h('Where visitors come from') + bars(o.referrers, x => x.k, 'n', { color: 'bg-amber-400' }))}
-      </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        ${card(h('Most opened titles') + table([{ h: 'Title', html: r => esc(r.t || r.id) }, { h: 'Opens', r: 1, v: r => num(r.n) }, { h: 'Visitors', r: 1, v: r => num(r.v) }], o.top_titles))}
-        ${card(h('Top searches', 'Zero results means we could not answer them') + table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }, { h: 'No results', r: 1, v: r => r.zero ? num(r.zero) : '-' }], o.top_searches))}
-      </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        ${card(h('Searches with no results', 'Titles or people people want that are missing') + table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.zero_searches, 'No empty searches. Nice.'))}
-        ${card(h('Mood picker requests', 'What people ask the AI Vibe Matcher for') + table([{ h: 'Request', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.moods))}
+      <div class="kpis">${K.map(k => kpi(k[0], num(k[1]), (k[3] ? k[3] + ' · ' : '') + 'vs previous ' + d + ' d', delta(k[1], k[2], k[4]))).join('')}</div>
+      <div class="grid g2">
+        ${C('Live', 'Activity feed', 'The latest actions on the site, newest first. Refreshes by itself every minute.', o.feed.length ? `<ul class="feed">${o.feed.map(f => `<li><span class="t">${esc(ago(f.ts))}</span><span><span class="chip ${BADTYPES[f.type] ? 'bad' : ''}">${esc(TYPE[f.type] || f.type)}</span></span><span class="w">${esc(f.what)}</span><span class="c">${esc(f.cc)} · ${esc(f.device || '')}</span></li>`).join('')}</ul>` : empty('No activity yet.'))}
+        ${C('Funnel', 'Daily rhythm', 'Visitors by hour of the day, India time. Brighter is busier.', heat(g.by_hour, 'h', 'n') + '<div class="hl"><span>12 am</span><span>6 am</span><span>12 pm</span><span>6 pm</span><span>11 pm</span></div><div style="margin-top:22px"></div>' + heat(g.by_weekday, 'w', 'n', 'w') + '<div class="hl">' + WD.map(x => `<span>${x}</span>`).join('') + '</div>')}
       </div>`;
+  }
+
+  async function viewAudience(force) {
+    const [g, o] = await Promise.all([load('growth', force), load('overview', force)]);
+    const co = g.cohort || { size: 0, returned: 0, returned_7d: 0 };
+    const stick = g.mau ? Math.round(g.dau / g.mau * 100) : 0;
+    const daily = (g.daily || []).map(x => ({ d: x.d, new: x.new, ret: Math.max(0, x.visitors - x.new), accounts: x.accounts }));
+    return head('Who is using WatchVibe', 'Reach, loyalty and where people come from. Built from anonymous visitor ids, never from names or emails.') + `
+      <div class="kpis">
+        ${kpi('Daily visitors', num(g.dau), 'last 24 h')}${kpi('Weekly visitors', num(g.wau), 'last 7 days')}${kpi('Monthly visitors', num(g.mau), 'last 30 days')}${kpi('Stickiness', stick + '%', 'daily ÷ monthly')}
+        ${kpi('Came back', pct(co.returned, co.size) + '%', num(co.returned) + ' of ' + num(co.size) + ' new visitors')}${kpi('Back within a week', pct(co.returned_7d, co.size) + '%', num(co.returned_7d) + ' people')}${kpi('Accounts', num(g.accounts_total), num(o.signups) + ' sign-ups in period')}
+      </div>
+      <div class="grid g21">
+        ${C('Trend', 'New and returning visitors', 'Every bar is one day.', barChart(daily, 'new', 'ret', 'new', 'returning'))}
+        ${C('Loyalty', 'Days each visitor was active', '', bars(g.days_active, x => x.k, 'n', { share: true }))}
+      </div>
+      <div class="grid g2">
+        ${C('Funnel', 'Journey', 'Share of visitors reaching each step.', funnel(o.funnel))}
+        ${C('Sign-ups', 'How people join', '', bars(g.providers, x => x.k, 'n', { share: true }) + '<div style="margin-top:22px"></div>' + barChart((g.daily || []).map(x => ({ d: x.d, accounts: x.accounts })), 'accounts', null, 'new accounts'))}
+      </div>
+      <div class="grid g3">
+        ${C('Geography', 'Countries', '', bars(o.countries, x => cname(x.k), 'n', { share: true }))}
+        ${C('Devices', 'Devices and browsers', '', bars(o.devices, x => x.k, 'n', { share: true }) + '<div style="margin-top:22px"></div>' + bars(o.browsers, x => x.k, 'n', { share: true }))}
+        ${C('Sources', 'Where visitors come from', '', bars(o.referrers, x => x.k, 'n', { share: true }))}
+      </div>`;
+  }
+
+  async function viewContent(force) {
+    const [c, o] = await Promise.all([load('content', force), load('overview', force)]);
+    const ti = r => esc(r.t || r.id);
+    const played = c.trailers.played, failed = c.trailers.failed;
+    return head('How the catalogue performs', 'What people open and save, what is broken, and what they look for that we do not have.') + `
+      <div class="kpis">${kpi('Trailers played', num(played))}${kpi('Trailers failed', num(failed), pct(failed, played + failed) + '% of attempts')}${kpi('Poster failures', num((c.poster_fail || []).reduce((a, x) => a + x.n, 0)))}${kpi('Not streamable', num((c.avail_none || []).reduce((a, x) => a + x.n, 0)), 'title and country views')}${kpi('Searches', num(o.searches))}</div>
+      <div class="grid g2">
+        ${C('Popular', 'Most opened', '', table([{ h: 'Title', html: ti }, { h: 'Opens', r: 1, v: r => num(r.n) }, { h: 'Visitors', r: 1, v: r => num(r.v) }], o.top_titles))}
+        ${C('Popular', 'Most saved to lists', '', table([{ h: 'Title', html: ti }, { h: 'Saves', r: 1, v: r => num(r.n) }], c.top_saved))}
+        ${C('Gaps', 'Searches with no result', 'Add these titles or people to the catalogue.', table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.zero_searches, 'No empty searches.'))}
+        ${C('Demand', 'Top searches', '', table([{ h: 'Search', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }, { h: 'No result', r: 1, v: r => r.zero ? num(r.zero) : '-' }], o.top_searches))}
+        ${C('Broken', 'Posters that failed to load', 'Fix or replace these.', table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.poster_fail, 'No broken posters reported.'))}
+        ${C('Broken', 'Trailers that would not play', '', table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.trailer_fail, 'No trailer failures reported.'))}
+        ${C('Availability', 'Not available to watch', 'Opened where nothing streams, rents or sells.', table([{ h: 'Title', html: ti }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Times', r: 1, v: r => num(r.n) }], c.avail_none, 'Nothing reported.'))}
+        ${C('Moods', 'What people ask the Vibe Matcher', '', table([{ h: 'Request', v: r => r.q }, { h: 'Times', r: 1, v: r => num(r.n) }], o.moods))}
+      </div>`;
+  }
+
+  async function viewCommunity(force) {
+    const [r, f] = await Promise.all([load('reviews', force), load('features', force)]);
+    const q = state.revText.trim().toLowerCase();
+    const items = (r.items || []).filter(x => !q || [x.title_name, x.author_name, x.headline, x.body].some(s => String(s || '').toLowerCase().includes(q)));
+    const opt = (v, l) => `<option value="${v}" ${state.revFilter === v ? 'selected' : ''}>${l}</option>`;
+    const cards = items.map(x => `<div class="rev ${x.status === 'hidden' ? 'hidden' : ''}">
+        <div class="meta"><b style="color:var(--text);font-family:var(--sans)">${esc(x.title_name)}</b><span>by ${esc(x.author_name)}</span><span>${esc(when(x.created_at))}</span>
+          ${x.reports ? `<span class="chip bad">${x.reports} ${x.reports === 1 ? 'report' : 'reports'}</span>` : ''}${x.status === 'hidden' ? '<span class="chip warn">Hidden</span>' : ''}${x.spoiler ? '<span class="chip">Spoiler</span>' : ''}${x.felt ? `<span class="chip acc">${x.felt} felt this</span>` : ''}</div>
+        <p class="hd">${esc(x.headline)}</p>${x.body ? `<p class="bd">${esc(x.body.length > 700 ? x.body.slice(0, 700) + '…' : x.body)}</p>` : ''}
+        <div class="acts"><button type="button" class="btn sm" data-act="${x.status === 'hidden' ? 'show' : 'hide'}" data-id="${esc(x.id)}">${x.status === 'hidden' ? 'Restore' : 'Hide'}</button>
+        <button type="button" class="btn sm danger" data-act="del" data-id="${esc(x.id)}">${state.armed === x.id ? 'Click again to delete' : 'Delete'}</button></div></div>`).join('');
+    return head('Verdicts and reviews', 'How people rate what they watch, and the moderation queue for what they write.') + `
+      <div class="kpis">${kpi('Verdicts', num(r.votes))}${kpi('Reviews', num(r.reviews))}${kpi('Reported', num(r.reported), 'need a look')}${kpi('Hidden', num(r.hidden))}</div>
+      <div class="grid g21">
+        ${C('Activity', 'Verdicts and reviews per day', '', barChart((f.community_daily || []).map(x => ({ d: x.d, verdicts: x.verdicts, reviews: x.reviews })), 'verdicts', 'reviews', 'verdicts', 'reviews'))}
+        ${C('Sentiment', 'How people felt', 'Verdicts given in this period.', tierBars(f.verdict_tiers))}
+      </div>
+      <div class="grid g2">${C('Popular', 'Most rated titles', '', table([{ h: 'Title', v: x => x.t }, { h: 'Verdicts', r: 1, v: x => num(x.n) }, { h: 'Average tier', r: 1, v: x => x.avg_tier }], f.top_voted, 'No verdicts in this period.'))}
+        ${C('Moderation', 'Review queue', 'A review hides itself once 3 different people report it. Hiding can be undone; deleting cannot. Every action is written to the audit log.',
+          `<div class="tools" style="margin-top:0"><select id="revFilter" class="btn" aria-label="Filter reviews">${opt('reported', 'Reported')}${opt('all', 'All reviews')}${opt('hidden', 'Hidden')}${opt('visible', 'Visible')}</select><input id="revText" class="in" type="search" placeholder="Search title, author or text" value="${esc(state.revText)}"></div>`)}
+      </div>
+      <div>${cards || `<div class="card" style="margin-top:12px">${empty(state.revFilter === 'reported' ? 'No reported reviews. All quiet.' : 'No reviews match.')}</div>`}</div>`;
   }
 
   async function viewUsers(force) {
     const u = await load('users', force);
     const f = state.userFilter.trim().toLowerCase();
-    let rows = (u.users || []).filter(x => !f || (x.email || '').toLowerCase().includes(f) || (x.name || '').toLowerCase().includes(f));
+    let rows = (u.users || []).filter(x => (!f || (x.email || '').toLowerCase().includes(f) || (x.name || '').toLowerCase().includes(f)) && (state.userShow === 'all' || (state.userShow === 'verified' ? x.verified : !x.verified)));
     const key = { created: 'created_at', login: 'last_sign_in_at', watchlist: 'watchlist' }[state.userSort] || 'created_at';
     rows = rows.slice().sort((a, b) => key === 'watchlist' ? (b.watchlist || 0) - (a.watchlist || 0) : String(b[key] || '').localeCompare(String(a[key] || '')));
-    window.__adminUserRows = rows;
-    return `
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        ${kpi('Accounts', num(u.total))}${kpi('Verified', num(u.verified), pct(u.verified, u.total) + '%')}${kpi('New, 7 days', num(u.new_7d))}${kpi('New, 30 days', num(u.new_30d))}
+    window.__rows = rows;
+    const sel = (id, cur, o) => `<select id="${id}" class="btn">${o.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    return head('Accounts', 'Everyone who signed up. Open a row to see what they did on the site.') + `
+      <div class="kpis">${kpi('Accounts', num(u.total))}${kpi('Verified', num(u.verified), pct(u.verified, u.total) + '%')}${kpi('New, 7 days', num(u.new_7d))}${kpi('New, 30 days', num(u.new_30d))}</div>
+      <div class="grid g21">
+        ${C('Directory', 'People', num(rows.length) + ' shown. Deleting or blocking an account needs a secure server function and is not enabled.',
+          `<div class="tools" style="margin-top:0"><input id="userFilter" class="in" type="search" placeholder="Search name or email" value="${esc(state.userFilter)}">${sel('userSort', state.userSort, [['created', 'Newest first'], ['login', 'Last sign-in'], ['watchlist', 'Biggest watchlist']])}${sel('userShow', state.userShow, [['all', 'Everyone'], ['verified', 'Verified'], ['unverified', 'Not verified']])}<button id="csv" type="button" class="btn">Export CSV</button></div>`)}
+        ${C('Method', 'Sign-in method', '', bars(u.by_provider, x => x.k, 'n', { share: true }))}
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        ${card(h('Sign-in method') + bars(u.by_provider, x => x.k, 'n', { share: true }))}
-        ${card(`<div class="flex flex-wrap items-center gap-3"><input id="userFilter" type="search" value="${esc(state.userFilter)}" placeholder="Search name or email" class="min-w-[12rem] flex-1 rounded-full bg-white/[0.05] px-4 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30"><select id="userSort" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none"><option value="created" class="bg-[#14141A]" ${state.userSort === 'created' ? 'selected' : ''}>Newest first</option><option value="login" class="bg-[#14141A]" ${state.userSort === 'login' ? 'selected' : ''}>Last sign-in</option><option value="watchlist" class="bg-[#14141A]" ${state.userSort === 'watchlist' ? 'selected' : ''}>Biggest watchlist</option></select><button id="csv" type="button" class="cursor-pointer rounded-full px-4 py-2 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">Export CSV</button></div><p class="mt-3 text-xs text-white/35">${num(rows.length)} shown. Deleting or blocking an account needs a secure server function and is not enabled yet.</p>`, 'lg:col-span-2')}
-      </div>
-      <div class="mt-4">${card(table([
-        { h: 'Name', html: r => `<span class="text-white">${esc(r.name || '-')}</span>` },
-        { h: 'Email', v: r => r.email },
-        { h: 'Method', v: r => r.provider },
-        { h: 'Joined', v: r => when(r.created_at), cls: 'whitespace-nowrap text-white/60' },
-        { h: 'Last sign-in', v: r => ago(r.last_sign_in_at), cls: 'whitespace-nowrap text-white/60' },
-        { h: 'Verified', v: r => r.verified ? 'Yes' : 'No' },
-        { h: 'Icon', v: r => r.icon || '-' },
-        { h: 'Watchlist', r: 1, v: r => num(r.watchlist) },
-        { h: 'Watched', r: 1, v: r => num(r.watched) }
-      ], rows, 'No accounts match.'))}</div>`;
+      <div class="card" style="margin-top:16px">${table([
+        { h: 'Name', html: r => `<button type="button" class="rowbtn" data-user="${esc(r.id)}">${esc(r.name || r.email || 'Unnamed')}</button>` },
+        { h: 'Email', v: r => r.email }, { h: 'Method', v: r => r.provider }, { h: 'Joined', v: r => when(r.created_at), nw: 1 }, { h: 'Last sign-in', v: r => ago(r.last_sign_in_at), nw: 1 },
+        { h: 'Verified', html: r => r.verified ? '<span class="chip good">Yes</span>' : '<span class="chip warn">No</span>' }, { h: 'Watchlist', r: 1, v: r => num(r.watchlist) }, { h: 'Watched', r: 1, v: r => num(r.watched) }
+      ], rows, 'No accounts match.')}</div>`;
   }
 
-  async function viewContent(force) {
-    const c = await load('content', force);
-    const played = c.trailers.played, failed = c.trailers.failed;
-    const ti = r => `<span class="text-white/85">${esc(r.t || r.id)}</span>`;
-    return `
-      ${note('Content health comes from what real visitors hit: broken posters, trailers that would not play, and titles with no streaming option in their country. A title shows up here only after someone ran into it.')}
-      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        ${kpi('Trailers played', num(played))}${kpi('Trailers failed', num(failed), pct(failed, played + failed) + '% of attempts')}${kpi('Poster failures', num((c.poster_fail || []).reduce((a, x) => a + x.n, 0)))}${kpi('Not streamable', num((c.avail_none || []).reduce((a, x) => a + x.n, 0)), 'title and country views')}
+  async function viewFeatures(force) {
+    const f = await load('features', force);
+    const used = Object.fromEntries((f.usage || []).map(x => [x.k, x]));
+    const NAMES = { title_open: 'Open a title', trailer_play: 'Play a trailer', actor_open: 'Open an actor page', vibe_vote: 'Give a verdict', watchlist_add: 'Save to a list', search: 'Search', ott_click: 'Click a streaming link', region_change: 'Change region', daily_done: 'Finish the Daily Challenge', mood: 'Use the Vibe Matcher', game_room: 'Open a game room', game_start: 'Start a game' };
+    const rows = Object.keys(NAMES).map(k => ({ name: NAMES[k], n: (used[k] || {}).n || 0, v: (used[k] || {}).v || 0 })).sort((a, b) => b.v - a.v);
+    const lb = f.leaderboard || {};
+    return head('Which features get used', 'Everything people can do, ranked by how many different visitors tried it. Features near the bottom are candidates to improve or drop.') + `
+      <div class="kpis">${kpi('Game rooms opened', num(f.rooms))}${kpi('Games started', num((f.games || []).reduce((a, x) => a + x.n, 0)))}${kpi('Daily plays', num(f.daily_plays))}${kpi('Leaderboard players', num(lb.players), num(lb.rows) + ' scores saved')}</div>
+      <div class="grid g21">
+        ${C('Ranking', 'Feature usage', 'Visitors who used each feature in this period.', table([{ h: 'Feature', v: r => r.name }, { h: 'Visitors', r: 1, v: r => num(r.v) }, { h: 'Times', r: 1, v: r => num(r.n) }], rows))}
+        ${C('Game night', 'Games', 'Draw the Movie, Movie Fibber and Who is the Impostor.', table([{ h: 'Game', v: r => r.k }, { h: 'Started', r: 1, v: r => num(r.n) }, { h: 'Avg players', r: 1, v: r => r.players }], f.games, 'No games started yet.'))}
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        ${card(h('Most opened') + table([{ h: 'Title', html: ti }, { h: 'Opens', r: 1, v: r => num(r.n) }], c.top_opened))}
-        ${card(h('Most saved to watchlists') + table([{ h: 'Title', html: ti }, { h: 'Saves', r: 1, v: r => num(r.n) }], c.top_saved))}
-        ${card(h('Posters that failed to load', 'Fix or replace these') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.poster_fail, 'No broken posters reported.'))}
-        ${card(h('Trailers that would not play') + table([{ h: 'Title', html: ti }, { h: 'Times', r: 1, v: r => num(r.n) }], c.trailer_fail, 'No trailer failures reported.'))}
-        ${card(h('Not available to watch', 'Visitors opened these where nothing streams, rents or sells') + table([{ h: 'Title', html: ti }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Times', r: 1, v: r => num(r.n) }], c.avail_none, 'Nothing reported.'))}
-        ${card(h('Verdicts given') + bars(c.vibes, x => TIER_NAMES[x.k] || x.k.replace(/_/g, ' '), 'n', { share: true }) + '<div class="mt-6"></div>' + h('Actor pages opened') + bars(c.actors, x => x.k, 'n', { color: 'bg-sky-400' }))}
+      <div class="grid g2">
+        ${C('Daily Challenge', 'Levels played', 'Average score per level.', table([{ h: 'Level', v: r => r.k }, { h: 'Plays', r: 1, v: r => num(r.n) }, { h: 'Avg score', r: 1, v: r => num(r.avg_score) }], f.daily_levels, 'No Daily Challenge plays yet.'))}
+        ${C('Leaderboard', 'Latest saved scores', 'Scores from signed-in players.', table([{ h: 'Day', v: r => r.day, nw: 1 }, { h: 'Player', v: r => r.name }, { h: 'Level', v: r => r.level }, { h: 'Score', r: 1, v: r => num(r.score) }], lb.recent, 'No saved scores yet.'))}
       </div>`;
-  }
-
-  async function viewReviews(force) {
-    const r = await load('reviews', force);
-    const opt = (v, l) => `<option value="${v}" class="bg-[#14141A]" ${state.revFilter === v ? 'selected' : ''}>${l}</option>`;
-    const badge = (t, cls) => `<span class="rounded-full px-2.5 py-0.5 text-[11px] ${cls}">${esc(t)}</span>`;
-    const items = r.items || [];
-    const cards = items.map(x => `<div class="rise rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-        <div class="flex flex-wrap items-center gap-2 text-[12px] text-white/45"><span class="text-white/80">${esc(x.title_name)}</span><span>by ${esc(x.author_name)}</span><span>${esc(when(x.created_at))}</span>
-          ${x.reports ? badge(x.reports + (x.reports === 1 ? ' report' : ' reports'), 'bg-rose-500/15 text-rose-200') : ''}${x.status === 'hidden' ? badge('Hidden', 'bg-amber-500/15 text-amber-200') : ''}${x.spoiler ? badge('Spoiler', 'bg-white/10 text-white/60') : ''}${x.felt ? badge(x.felt + ' felt this', 'bg-purple-500/15 text-purple-200') : ''}</div>
-        <p class="mt-2 break-words text-[15px] font-medium text-white">${esc(x.headline)}</p>
-        ${x.body ? `<p class="mt-1 whitespace-pre-line break-words text-[13px] leading-relaxed text-white/60">${esc(x.body.length > 700 ? x.body.slice(0, 700) + '…' : x.body)}</p>` : ''}
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" data-act="${x.status === 'hidden' ? 'show' : 'hide'}" data-id="${esc(x.id)}" class="cursor-pointer rounded-full px-4 py-1.5 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">${x.status === 'hidden' ? 'Restore' : 'Hide'}</button>
-          <button type="button" data-act="del" data-id="${esc(x.id)}" class="cursor-pointer rounded-full px-4 py-1.5 text-[13px] text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/10">${state.armed === x.id ? 'Click again to delete' : 'Delete'}</button>
-        </div></div>`).join('');
-    return `
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">${kpi('Verdicts', num(r.votes))}${kpi('Reviews', num(r.reviews))}${kpi('Reported', num(r.reported), 'need a look')}${kpi('Hidden', num(r.hidden))}</div>
-      <div class="mt-4 flex flex-wrap items-center gap-3"><select id="revFilter" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none" aria-label="Filter reviews">${opt('reported', 'Reported')}${opt('all', 'All reviews')}${opt('hidden', 'Hidden')}${opt('visible', 'Visible')}</select>
-        <p class="text-xs text-white/35">A review is hidden automatically once 3 different people report it. Hiding is reversible; deleting is not.</p></div>
-      <div class="mt-4 space-y-3">${cards || card(empty(state.revFilter === 'reported' ? 'No reported reviews. All quiet.' : 'No reviews here yet.'))}</div>`;
   }
 
   async function viewStreaming(force) {
     const s = await load('streaming', force);
-    return `
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        ${kpi('Streaming clicks', num(s.total), 'in this period')}
-        ${kpi('Services clicked', num((s.by_service || []).length))}
-        ${kpi('Countries', num((s.by_region || []).length))}
-        ${kpi('No-option views', num((s.unavailable_by_region || []).reduce((a, x) => a + x.n, 0)), 'title not watchable locally')}
+    return head('Streaming clicks', 'Where people go to watch, and where nothing is available to them.') + `
+      <div class="kpis">${kpi('Streaming clicks', num(s.total), 'in this period')}${kpi('Services', num((s.by_service || []).length))}${kpi('Countries', num((s.by_region || []).length))}${kpi('No-option views', num((s.unavailable_by_region || []).reduce((a, x) => a + x.n, 0)))}</div>
+      <div class="grid g2">
+        ${C('Services', 'Clicks by service', '', bars(s.by_service, x => x.k, 'n', { share: true }))}
+        ${C('Regions', 'Clicks by country', '', bars(s.by_region, x => cname(x.k), 'n', { share: true }))}
+        ${C('Detail', 'Service by country', '', table([{ h: 'Service', v: r => r.svc }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.matrix))}
+        ${C('Titles', 'Where people go to watch', '', table([{ h: 'Title', html: r => esc(r.t || r.id) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.top_titles))}
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        ${card(h('Clicks by service') + bars(s.by_service, x => x.k, 'n', { share: true, color: 'bg-rose-400' }))}
-        ${card(h('Clicks by country') + bars(s.by_region, x => cname(x.k), 'n', { share: true, color: 'bg-rose-400' }))}
-        ${card(h('Service by country') + table([{ h: 'Service', v: r => r.svc }, { h: 'Country', v: r => cname(r.cc) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.matrix))}
-        ${card(h('Titles people go to watch') + table([{ h: 'Title', html: r => esc(r.t || r.id) }, { h: 'Clicks', r: 1, v: r => num(r.n) }], s.top_titles))}
-        ${card(h('Countries with the most "not available" views') + bars(s.unavailable_by_region, x => cname(x.k), 'n', { color: 'bg-amber-400' }), 'lg:col-span-2')}
-      </div>`;
+      <div class="grid">${C('Gaps', 'Countries with the most “not available” views', 'Where the catalogue shows nothing to watch.', bars(s.unavailable_by_region, x => cname(x.k), 'n', { tone: 'warn' }))}</div>`;
+  }
+
+  async function health() {
+    const checks = [['Home page', '/'], ['App file', '/sw.js'], ['Extra catalogue', '/catalog_extra.json', 'HEAD'], ['Featured today', '/api/featured?cc=IN'], ['Upcoming', '/api/upcoming?cc=IN'], ['Missing page returns 404', '/__no_such_page__', 'GET', 404]];
+    const out = await Promise.all(checks.map(async ([name, url, method, want]) => {
+      const t0 = performance.now();
+      try { const r = await fetch(url, { method: method || 'GET', cache: 'no-store' }); return { name, ok: r.status === (want || 200), code: r.status, ms: Math.round(performance.now() - t0) }; }
+      catch (e) { return { name, ok: false, code: 'failed', ms: Math.round(performance.now() - t0) }; }
+    }));
+    const t0 = performance.now(); let dbOk = true; try { await rpc('is_admin'); } catch (e) { dbOk = false; }
+    out.push({ name: 'Database', ok: dbOk, code: dbOk ? 200 : 'failed', ms: Math.round(performance.now() - t0) });
+    return out;
   }
 
   async function viewSystem(force) {
-    const s = await load('system', force);
+    const [s, au] = await Promise.all([load('system', force), load('audit', force)]);
     let version = 'unknown';
     try { const t = await (await fetch('/sw.js', { cache: 'no-store' })).text(); const m = /watchvibe-cache-(v\d+)/.exec(t); if (m) version = m[1]; } catch (e) {}
     const age = s.newest_event ? (Date.now() - new Date(s.newest_event).getTime()) / 3600000 : null;
-    const live = age !== null && age < 24;
-    return `
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        ${kpi('Events stored', num(s.events_total), 'since ' + (s.oldest_event ? when(s.oldest_event) : 'start'))}
-        ${kpi('Events, last 24 h', num(s.events_24h), live ? 'tracking is live' : 'no recent events')}
-        ${kpi('Errors, last 24 h', num(s.errors_24h))}
-        ${kpi('App version', version, 'service worker cache')}
+    return head('Health, housekeeping and audit', 'Is everything up, how full is the database, and what has been changed from this page.') + `
+      <div class="kpis">${kpi('App version', version, 'service worker cache')}${kpi('Events, 24 h', num(s.events_24h), age !== null && age < 24 ? 'tracking is live' : 'no recent events')}${kpi('Errors, 24 h', num(s.errors_24h))}${kpi('Database', bytes(s.database_bytes), 'of 500 MB free plan')}</div>
+      <div class="grid g2">
+        ${C('Checks', 'Is it all working?', 'Live checks from this browser.', '<div id="healthBox">' + empty('Running checks…') + '</div><div class="tools"><button type="button" class="btn sm" id="rehealth">Run again</button></div>')}
+        ${C('Storage', 'Housekeeping', 'The events table holds ' + bytes(s.events_table_bytes) + ' (' + num(s.events_total) + ' events since ' + (s.oldest_event ? when(s.oldest_event) : 'start') + '). Delete old analytics to save space.',
+          `<div class="tools" style="margin-top:0"><select id="purgeDays" class="btn"><option value="90">Older than 90 days</option><option value="180">Older than 180 days</option><option value="365">Older than 1 year</option></select><button id="purge" type="button" class="btn danger">Delete old events</button></div><p id="purgeMsg" class="sub" role="status"></p>`)}
+        ${C('Access', 'Admins', 'The admin list lives in the database (table admins). Only a verified email on that list gets in.', (s.admins || []).map(e => `<div style="padding:6px 0;font-size:14px">${esc(e)}</div>`).join(''))}
+        ${C('Errors', 'Recent site errors', 'JavaScript errors visitors hit.', table([{ h: 'When', v: r => ago(r.ts), nw: 1 }, { h: 'Message', v: r => r.m }, { h: 'Where', v: r => r.w }, { h: 'Country', v: r => cname(r.cc) }], s.recent_errors, 'No errors reported.'))}
       </div>
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        ${card(h('Storage') + `<dl class="space-y-2 text-[13px]"><div class="flex justify-between"><dt class="text-white/50">Database size</dt><dd class="text-white/85">${bytes(s.database_bytes)}</dd></div><div class="flex justify-between"><dt class="text-white/50">Events table</dt><dd class="text-white/85">${bytes(s.events_table_bytes)}</dd></div><div class="flex justify-between"><dt class="text-white/50">Latest event</dt><dd class="text-white/85">${esc(ago(s.newest_event))}</dd></div></dl><p class="mt-3 text-xs text-white/35">The free Supabase plan includes 500 MB of database space. Old events can be deleted below.</p>`)}
-        ${card(h('Housekeeping', 'Delete old analytics events to save space') + `<div class="flex flex-wrap items-center gap-3"><select id="purgeDays" class="rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white ring-1 ring-white/10 focus:outline-none"><option value="90" class="bg-[#14141A]">Older than 90 days</option><option value="180" class="bg-[#14141A]">Older than 180 days</option><option value="365" class="bg-[#14141A]">Older than 1 year</option></select><button id="purge" type="button" class="cursor-pointer rounded-full px-4 py-2 text-[13px] text-rose-200 ring-1 ring-rose-400/30 transition hover:bg-rose-500/10">Delete old events</button></div><p id="purgeMsg" class="mt-3 text-xs text-white/40" role="status"></p>`)}
-        ${card(h('Admins') + (s.admins || []).map(e => `<div class="text-[13px] text-white/80">${esc(e)}</div>`).join('') + '<p class="mt-3 text-xs text-white/35">The admin list lives in the database (table admins). Add or remove people there.</p>')}
-        ${card(h('Recent site errors', 'JavaScript errors visitors hit') + table([{ h: 'When', v: r => ago(r.ts), cls: 'whitespace-nowrap text-white/60' }, { h: 'Message', v: r => r.m }, { h: 'Where', v: r => r.w }, { h: 'Country', v: r => cname(r.cc) }], s.recent_errors, 'No errors reported.'))}
-      </div>
-      <div class="mt-4">${card(h('Privacy') + '<p class="text-[13px] leading-relaxed text-white/55">Analytics store no emails, names or IP addresses, only a random anonymous visitor id, country, device type, browser and what was clicked. Visitors with Do Not Track or Global Privacy Control turned on are not tracked, and neither is the admin.</p>')}</div>`;
+      <div class="grid">${C('Audit log', 'What was changed from this page', 'Hides, restores, deletions and purges. Kept in the database; it cannot be edited from here.', table([{ h: 'When', v: r => when(r.ts), nw: 1 }, { h: 'Who', v: r => r.admin_email }, { h: 'Action', html: r => `<span class="chip">${esc(ACTION[r.action] || r.action)}</span>` }, { h: 'Detail', v: r => (r.detail || r.target || '') }], au, 'Nothing has been changed yet.'))}</div>
+      <div class="grid">${C('Privacy', 'What is stored about visitors', '', '<p style="margin:0;font-size:14px;line-height:1.6;color:var(--text-2)">Analytics store no emails, names or IP addresses: only a random anonymous visitor id, country, device type, browser and what was clicked. Visitors with Do Not Track or Global Privacy Control are not tracked, and neither is the admin.</p>')}</div>`;
   }
 
-  const VIEWS = { overview: viewOverview, users: viewUsers, content: viewContent, reviews: viewReviews, streaming: viewStreaming, system: viewSystem };
+  const VIEWS = { home: viewHome, audience: viewAudience, content: viewContent, community: viewCommunity, users: viewUsers, features: viewFeatures, streaming: viewStreaming, system: viewSystem };
 
+  // ---------------------------------------------------------------- shell
   function drawTabs() {
-    document.getElementById('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" data-tab="${id}" class="cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ${state.tab === id ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'}">${label}</button>`).join('');
+    $('tabs').innerHTML = TABS.map(([id, label]) => `<button type="button" class="tab" data-tab="${id}" ${state.tab === id ? 'aria-current="page"' : ''}>${esc(label)}${id === 'home' && state.attn ? `<i>${state.attn}</i>` : ''}</button>`).join('');
   }
   function gate(title, body, action) {
-    app.innerHTML = `<div class="mx-auto mt-16 max-w-md rounded-3xl bg-white/[0.03] p-8 text-center ring-1 ring-white/[0.07]"><h1 class="font-display text-2xl font-medium">${esc(title)}</h1><p class="mt-3 text-sm leading-relaxed text-white/55">${body}</p>${action || ''}</div>`;
+    app.innerHTML = `<div class="gate"><div class="eyebrow">Admin Studio</div><h1>${esc(title)}</h1><p>${body}</p>${action || ''}</div>`;
   }
-  async function render(force) {
+  let renderToken = 0;
+  async function render(force, quiet) {
+    const my = ++renderToken;
     drawTabs();
-    app.innerHTML = '<div class="space-y-3"><div class="h-24 animate-pulse rounded-2xl bg-white/[0.04]"></div><div class="h-64 animate-pulse rounded-2xl bg-white/[0.04]"></div></div>';
+    if (!quiet) app.innerHTML = '<div class="skel"></div><div class="skel" style="height:260px"></div><div class="skel"></div>';
     try {
       const html = await VIEWS[state.tab](force);
-      app.innerHTML = html;
+      if (my !== renderToken) return;
+      const y = quiet ? window.scrollY : 0;
+      app.innerHTML = html; drawTabs(); if (quiet) window.scrollTo(0, y);
       bindView();
     } catch (e) {
-      if (e.code === '42501' || /not authorized/i.test(e.message)) gate('Admin access only', 'This account is not on the admin list.', '<a href="/" class="mt-6 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Back to WatchVibe</a>');
-      else if (e.code === 'PGRST202' || /function .* does not exist|Could not find the function/i.test(e.message)) gate('Database not set up', 'The analytics functions are missing in Supabase. Run <code class="text-white/80">supabase/admin_analytics.sql</code> in the SQL editor, then refresh.');
-      else gate('Could not load', esc(e.message || 'Unknown error') + '<br><br><button id="retry" type="button" class="cursor-pointer rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Try again</button>');
-      const r = document.getElementById('retry'); if (r) r.onclick = () => render(true);
+      if (my !== renderToken) return;
+      if (e.code === '42501' || /not authorized/i.test(e.message)) gate('Admin access only', 'This account is not on the admin list.', '<a href="/" class="btn primary">Back to WatchVibe</a>');
+      else if (e.code === 'PGRST202' || /Could not find the function/i.test(e.message)) gate('Database not set up', 'A report function is missing in Supabase. Run <b>supabase/admin_studio_v2.sql</b> in the SQL editor, then refresh.');
+      else gate('Could not load', esc(e.message || 'Unknown error') + '<br><br><button id="retry" type="button" class="btn primary">Try again</button>');
+      const r = $('retry'); if (r) r.onclick = () => render(true);
     }
   }
+  function go(tab) { state.tab = tab; state.armed = null; history.replaceState(null, '', '#' + tab); window.scrollTo(0, 0); render(false); }
+
   function bindView() {
-    const uf = document.getElementById('userFilter');
-    if (uf) uf.oninput = () => { state.userFilter = uf.value; clearTimeout(window.__uft); window.__uft = setTimeout(async () => { const pos = uf.selectionStart; await render(false); const n = document.getElementById('userFilter'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); };
-    const us = document.getElementById('userSort'); if (us) us.onchange = () => { state.userSort = us.value; render(false); };
-    const rf = document.getElementById('revFilter'); if (rf) rf.onchange = () => { state.revFilter = rf.value; state.armed = null; render(false); };
-    document.querySelectorAll('[data-act]').forEach(b => b.onclick = async () => {
-      const id = b.dataset.id, act = b.dataset.act;
-      try {
-        if (act === 'del') { if (state.armed !== id) { state.armed = id; b.textContent = 'Click again to delete'; return; } await rpc('admin_review_delete', { p_id: id }); }
-        else await rpc('admin_review_status', { p_id: id, p_status: act === 'hide' ? 'hidden' : 'visible' });
-        state.armed = null; state.cache = {}; render(true);
-      } catch (e) { alert('Could not update: ' + e.message); }
-    });
-    const csv = document.getElementById('csv');
+    const uf = $('userFilter');
+    if (uf) uf.oninput = () => { state.userFilter = uf.value; clearTimeout(window.__t); window.__t = setTimeout(async () => { const pos = uf.selectionStart; await render(false, true); const n = $('userFilter'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); };
+    const rt = $('revText');
+    if (rt) rt.oninput = () => { state.revText = rt.value; clearTimeout(window.__t); window.__t = setTimeout(async () => { const pos = rt.selectionStart; await render(false, true); const n = $('revText'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); };
+    [['userSort', 'userSort'], ['userShow', 'userShow']].forEach(([id, k]) => { const el = $(id); if (el) el.onchange = () => { state[k] = el.value; render(false, true); }; });
+    const rf = $('revFilter'); if (rf) rf.onchange = () => { state.revFilter = rf.value; state.armed = null; render(false); };
+    const csv = $('csv');
     if (csv) csv.onclick = () => {
       const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/^([=+\-@])/, "'$1") + '"';
-      const head = ['name', 'email', 'method', 'joined', 'last_sign_in', 'verified', 'icon', 'watchlist', 'watched'];
-      const lines = [head.join(',')].concat((window.__adminUserRows || []).map(r => [r.name, r.email, r.provider, r.created_at, r.last_sign_in_at, r.verified, r.icon, r.watchlist, r.watched].map(q).join(',')));
+      const head = ['name', 'email', 'method', 'joined', 'last_sign_in', 'verified', 'watchlist', 'watched'];
+      const lines = [head.join(',')].concat((window.__rows || []).map(r => [r.name, r.email, r.provider, r.created_at, r.last_sign_in_at, r.verified, r.watchlist, r.watched].map(q).join(',')));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'watchvibe_users_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
     };
-    const purge = document.getElementById('purge');
+    const purge = $('purge');
     if (purge) purge.onclick = async () => {
-      const days = Number(document.getElementById('purgeDays').value); const msg = document.getElementById('purgeMsg');
+      const days = Number($('purgeDays').value), msg = $('purgeMsg');
       if (!confirm('Permanently delete analytics events older than ' + days + ' days? This cannot be undone.')) return;
       msg.textContent = 'Deleting…';
       try { const n = await rpc('admin_purge_events', { p_days: days }); msg.textContent = 'Deleted ' + num(n) + ' events.'; state.cache = {}; } catch (e) { msg.textContent = 'Could not delete: ' + e.message; }
     };
+    const hb = $('healthBox');
+    if (hb) { const run = async () => { hb.innerHTML = empty('Running checks…'); const r = await health(); if ($('healthBox') !== hb) return; hb.innerHTML = table([{ h: 'Check', v: x => x.name }, { h: 'Status', html: x => `<span class="chip ${x.ok ? 'good' : 'bad'}">${x.ok ? 'OK' : 'Problem'}</span> <span class="mono" style="font-size:11px;color:var(--muted)">${esc(x.code)}</span>` }, { h: 'Time', r: 1, v: x => x.ms + ' ms' }], r); }; run(); const b = $('rehealth'); if (b) b.onclick = run; }
   }
 
-  document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; history.replaceState(null, '', '#' + state.tab); render(false); });
-  document.getElementById('range').addEventListener('change', e => { state.days = Number(e.target.value); render(false); });
-  document.getElementById('refresh').addEventListener('click', () => { state.cache = {}; render(true); });
+  // ---------------------------------------------------------------- one delegated handler (no text from the database ever goes into an onclick string)
+  document.addEventListener('click', async e => {
+    const t = e.target.closest('[data-tab],[data-go],[data-act],[data-user]'); if (!t) return;
+    if (t.dataset.tab) return go(t.dataset.tab);
+    if (t.dataset.go) return go(t.dataset.go);
+    if (t.dataset.user) return openUser(t.dataset.user);
+    const id = t.dataset.id, act = t.dataset.act;
+    try {
+      if (act === 'del') { if (state.armed !== id) { state.armed = id; t.textContent = 'Click again to delete'; return; } await rpc('admin_review_delete', { p_id: id }); toast('Review deleted.'); }
+      else { await rpc('admin_review_status', { p_id: id, p_status: act === 'hide' ? 'hidden' : 'visible' }); toast(act === 'hide' ? 'Review hidden.' : 'Review restored.'); }
+      state.armed = null; state.cache = {}; render(true, true);
+    } catch (err) { toast('Could not update: ' + err.message); }
+  });
+  async function openUser(id) {
+    const dr = $('drawer'); dr.innerHTML = '<div class="eyebrow">Loading…</div>'; dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false'); $('scrim').classList.add('open');
+    try {
+      const u = await rpc('admin_user_detail', { p_id: id });
+      dr.innerHTML = `<button type="button" class="btn sm" id="closeDrawer">Close (Esc)</button><div class="eyebrow" style="margin-top:22px">Account</div><h3>${esc(u.name || u.email || 'Unnamed')}</h3><div class="mono" style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${esc(u.email || '')}</div>
+        <dl class="kv"><div><dt>Joined</dt><dd>${esc(when(u.created_at))}</dd></div><div><dt>Last sign-in</dt><dd>${esc(ago(u.last_sign_in_at))}</dd></div><div><dt>Method</dt><dd>${esc(u.provider)}</dd></div><div><dt>Email verified</dt><dd>${u.verified ? 'Yes' : 'No'}</dd></div>
+        <div><dt>Verdicts given</dt><dd>${num(u.verdicts)}</dd></div><div><dt>Reviews written</dt><dd>${num(u.reviews)}</dd></div><div><dt>Reports on their reviews</dt><dd>${num(u.reports_on_their_reviews)}</dd></div><div><dt>Reports they made</dt><dd>${num(u.reports_made)}</dd></div>
+        <div><dt>Daily Challenge plays</dt><dd>${num(u.daily_plays)}${u.daily_best != null ? ' · best ' + num(u.daily_best) : ''}</dd></div></dl>
+        <div class="eyebrow" style="margin-top:26px">Latest reviews</div>${(u.recent_reviews || []).length ? u.recent_reviews.map(r => `<div class="rev ${r.status === 'hidden' ? 'hidden' : ''}" style="margin-top:8px"><div class="meta"><b style="color:var(--text);font-family:var(--sans)">${esc(r.title_name)}</b><span>${esc(when(r.created_at))}</span>${r.status === 'hidden' ? '<span class="chip warn">Hidden</span>' : ''}</div><p class="hd" style="font-size:15px">${esc(r.headline)}</p></div>`).join('') : empty('No reviews written.')}`;
+      $('closeDrawer').onclick = closeDrawer;
+    } catch (err) { dr.innerHTML = `<button type="button" class="btn sm" id="closeDrawer">Close</button><p>${esc(err.message)}</p>`; $('closeDrawer').onclick = closeDrawer; }
+  }
+  function closeDrawer() { $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden', 'true'); $('scrim').classList.remove('open'); }
+  $('scrim').addEventListener('click', closeDrawer);
+  $('range').addEventListener('change', e => { state.days = Number(e.target.value); render(false); });
+  $('refresh').addEventListener('click', () => { state.cache = {}; render(true); });
+  $('theme').addEventListener('click', () => { const t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = t; try { localStorage.setItem('wv_theme', t); } catch (e) {} });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeDrawer();
+    if (e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement || {}).tagName)) return;
+    if (e.key >= '1' && e.key <= String(TABS.length)) go(TABS[Number(e.key) - 1][0]);
+    else if (e.key === 'r' || e.key === 'R') { state.cache = {}; render(true); }
+    else if (e.key === '/' && $('userFilter')) { e.preventDefault(); $('userFilter').focus(); }
+  });
+  // the home screen keeps itself fresh while it is open and visible
+  setInterval(() => { if (state.tab === 'home' && !document.hidden && state.me) { delete state.cache['home:' + state.days + ':' + state.revFilter]; render(false, true); } }, 60000);
 
   (async function start() {
     drawTabs();
     const { data } = await sb.auth.getSession();
-    if (!data || !data.session) { gate('Sign in first', 'Sign in on WatchVibe with the admin account, then come back to this page.', '<a href="/" class="mt-6 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black">Go to WatchVibe</a>'); return; }
+    if (!data || !data.session) { gate('Sign in first', 'Sign in on WatchVibe with the admin account, then come back to this page.', '<a href="/" class="btn primary">Go to WatchVibe</a>'); return; }
+    let ok = false; try { ok = await rpc('is_admin'); } catch (e) {}
+    if (!ok) { gate('Admin access only', 'This account is not on the admin list.', '<a href="/" class="btn primary">Back to WatchVibe</a>'); return; }
+    state.me = true;
+    $('range').value = String(state.days);
     render(false);
   })();
 })();
