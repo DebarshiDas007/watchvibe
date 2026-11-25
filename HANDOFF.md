@@ -632,3 +632,5 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - Access: the page asks the database (is_admin) before showing anything; signed-out or non-admin accounts see only a message. Text from visitors is escaped everywhere; actions use data-* attributes and one delegated handler.
 - Database (supabase/admin_studio_v2.sql, applied as migration admin_studio_v2): new admin_home, admin_growth, admin_features, admin_user_detail, admin_audit_log, table admin_audit (admin-only read). admin_review_delete, admin_review_status and admin_purge_events now write to the audit log. All new functions check is_admin() and are not callable by anon.
 - Not verified: the page with a real signed-in admin session (tested with sample data at 375/768/1440; real calls tested in SQL as the admin). Moderation buttons not clicked against the real database.
+## v147 (26 Nov): Search Console verification
+- Added web_live_build/google0b053ecff67d9b4d.html (Google Search Console ownership file for https://watchvibe-b92.pages.dev/). Do not delete it or the property loses verification. Cache v147. Re-do on the new domain when it is chosen.
