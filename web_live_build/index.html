@@ -675,7 +675,7 @@
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
         e.preventDefault();
         if (isSuperAdmin()) openAdminStudio();
-        else showToast('🔒 Admin Studio is restricted to dasdebarshi1234@gmail.com');
+        else showToast('🔒 Admin Studio is restricted.');
       }
     });
 
@@ -6711,7 +6711,14 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const isTv = item.type === 'Series';
       const logo = (e, cls) => e.logo ? `<img src="https://image.tmdb.org/t/p/w92${esc(e.logo)}" alt="" loading="lazy" decoding="async" class="${cls}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} dmx-logo-fb',textContent:${JSON.stringify(String(e.name || '?').slice(0, 1))}}))">` : `<span class="${cls} dmx-logo-fb">${esc(String(e.name || '?').slice(0, 1))}</span>`;
       const href = e => esc(buildProviderLink(e.raws[0], item.title, isTv, cc, av.link));
-      if (!stream.length && !rent.length) { box.innerHTML = `<div class="dmx-tile dmx-tile-none"><small>Where to watch</small><b>Not available in ${esc(regionName(cc))} right now</b></div>`; return; }
+      if (!stream.length && !rent.length) {
+        const upDate = item.__up || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[item.id] && window.DYNAMIC_MEDIA[item.id].__up);
+        const notOut = upDate && /^\d{4}-\d{2}-\d{2}$/.test(upDate) && upDate > featDay();
+        box.innerHTML = notOut
+          ? `<div class="dmx-tile dmx-tile-none"><small>Not out yet</small><b>Releases ${esc(upWhen(upDate).nice)}</b></div>`
+          : `<div class="dmx-tile dmx-tile-none"><small>Where to watch</small><b>Not available in ${esc(regionName(cc))} right now</b></div>`;
+        return;
+      }
       const tiles = stream.map((e, i) => `<a href="${href(e)}" target="_blank" rel="noopener noreferrer" data-ott="${esc(e.name)}" class="dmx-tile has-logo${i === 0 ? ' is-first' : ''}">${logo(e, 'dmx-logo')}<span class="dmx-tt"><small>${esc(kindLine(e))}</small><b>${esc(e.name)}</b></span><span class="dmx-go" aria-hidden="true"><i class="fa-solid fa-arrow-up-right-from-square"></i></span></a>`).join('');
       const rentRow = rent.length ? `<div class="dmx-rent"><span class="dmx-rent-l">${stream.length ? 'Also to rent or buy' : 'Rent or buy'}</span>${rent.map(e => `<a href="${href(e)}" target="_blank" rel="noopener noreferrer" data-ott="${esc(e.name)}" class="dmx-chip">${logo(e, 'dmx-chip-logo')}<span>${esc(e.name)}</span><em>${esc(kindsLabel(e))}</em></a>`).join('')}</div>` : '';
       box.innerHTML = tiles + rentRow;

@@ -613,3 +613,10 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 
 ## v143 (25 Nov)
 - First-open jitter: the poster-wall placeholder was built by JavaScript inside the 2.6 MB inline script, so a first visit (nothing cached) showed only the header and an empty page until the whole file had downloaded and parsed, then everything popped in at once (measured on the live site: first paint 4.2 s, layout shift 0.78). The same placeholder is now plain HTML in #mainViewport (id bootSkel), painted before the script arrives and replaced in place by the app; skipped when the address has a #hash. Warm loads and the app's own redraw are unchanged (layout shift 0 at 390 and 1440).
+
+## v144 (25 Nov): pre-domain check, first fixes
+- Full check run (tabs, film window, search, watchlist, rate sheet, Daily Challenge, games lobby at 375/768/1440; live APIs, headers, sitemap, robots, console and failed requests on the live site; Supabase advisors; admin RPC guards): no sideways scroll, no console errors, no failed requests, all 9 admin_* functions check is_admin().
+- Fix: unknown addresses (/nope, /film/not-a-page) returned the whole app with status 200 (soft 404 for Google). Added web_live_build/404.html (noindex, links home and to the best-of lists); Cloudflare Pages now answers 404.
+- Fix: the Ctrl+Shift+A toast no longer prints the owner's email address.
+- Detail window of an unreleased title now says "Not out yet / Releases <date>" instead of "Not available in <country> right now".
+- Open (not fixed): 17 RLS policies call auth.uid() per row (wrap in (select auth.uid()) before real traffic), 3 foreign keys unindexed, leaked-password protection is off (Supabase dashboard toggle, user), Upcoming/Featured depend on TMDB being reachable.
