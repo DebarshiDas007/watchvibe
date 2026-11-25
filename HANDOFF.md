@@ -588,3 +588,16 @@ Open / next, in the order we discussed:
 - Rating burst: choosing the top verdict ("Absolute Cinema") sends 9 stars from the button (`rateBurst`).
 - All motion is transform/opacity only and skipped for prefers-reduced-motion (`wvCalm()`). swiss.css v38, cache v137.
 - Tested: sweep clean at 375/768/1440, overlays/banners fit at all widths, reduce-motion path, count-up and milestone logic, taste numbers, share PNG (106 KB), watchlist detection with a stubbed availability. Not tested: real phone touch, a real 7-day streak over days, Web Share on a phone.
+
+## v138 - SEO foundation: crawlable film pages, lists, sitemaps (25 Nov 2026)
+- The app is a single-page app, so search engines saw almost nothing per film. Now `scripts/build_seo.mjs` (run by deploy.py before every deploy, followed by `scripts/check_seo.mjs`; a failed check stops the deploy) generates, from the catalogue data:
+  - `/film/<id>` one plain-HTML page per film/series with at least 100 votes or in the built-in list (6,553 pages): unique title + description, canonical, Open Graph/Twitter, `Movie`/`TVSeries` + `BreadcrumbList` JSON-LD, lead sentence built only from real fields (a missing fact is left out), synopsis, facts, "More like this" (8 real matches: shared genres, same director, shared cast, language, year; a mild cap on how often one film is linked), a button into the app (`/#film=<id>`). No scripts, no rating markup in JSON-LD (our rating is a blend of TMDB votes, so it is shown as text only).
+  - `/best/<hub>` + `/best` lists: Best movies / series / stand-up, by genre (>= 40 films) and by language (>= 40 films); top 60 by audience rating with rank numbers; ItemList JSON-LD.
+  - `sitemap.xml` (index) + `sitemap-main.xml` + `sitemap-films-N.xml` (5,000 URLs each), `robots.txt`.
+  - styling `web_live_build/seo.css` (hashed in the link, immutable cache).
+- Generated files are git-ignored (`film/`, `best/`, `sitemap*.xml`); the daily refresh task deploys through deploy.py so the pages follow the catalogue and today's ratings.
+- App: `#film=<id>` opens that film's window (`openFilmFromHash`, also for extra-catalogue films after they load; invalid ids are ignored); footer + `<noscript>` link to the lists so crawlers find them.
+- THE SITE ADDRESS lives in `scripts/seo.config.json` (`siteUrl`). When a domain is bought: change it there, change the same address in index.html head (canonical, og:url, og:image, twitter:image, JSON-LD), privacy.html/terms.html if they mention it, add the redirect from pages.dev, deploy. Submit `https://<domain>/sitemap.xml` in Search Console (owner signs in).
+- Cloudflare Pages limit: 20,000 files per deploy; now about 6,700.
+- Tested: 6,595 pages pass check_seo (titles/descriptions unique and within length, canonical = own address, one h1, valid JSON-LD, no leftovers, every internal link and sitemap URL has a file), list + film pages at 375/1440 (no sideways scroll), deep link, sweep clean at 375/768/1440. Not verified yet: Google actually indexing (needs the domain + Search Console), Pages "clean URL" behaviour of /film/<id> is checked live after deploy.
+- v139: Cloudflare redirects `/best` to `/best/`, so the lists index now uses `/best/` everywhere (canonical, sitemap, breadcrumbs, internal links, footer); `check_seo` fails any link or sitemap entry that uses `/best`. Cache v139.

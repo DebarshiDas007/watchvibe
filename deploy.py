@@ -45,6 +45,18 @@ def deploy():
         print('[ERROR] stamping tailwind.css failed:\n' + (st.stderr or ''))
         sys.exit(st.returncode)
 
+    # Build the crawlable film pages, "best of" lists, sitemaps and robots.txt from the catalogue, and check them. A failed check stops the deploy.
+    node_cmd = os.path.join(tools_dir, 'node.exe') if tools_dir and os.path.exists(os.path.join(tools_dir, 'node.exe')) else shutil.which('node')
+    if not node_cmd:
+        print('[ERROR] node not found (needed to build the SEO pages).')
+        sys.exit(1)
+    for script in ('build_seo.mjs', 'check_seo.mjs'):
+        r = subprocess.run([node_cmd, os.path.join(repo_dir, 'scripts', script)], cwd=repo_dir, text=True, encoding='utf-8', errors='replace', capture_output=True)
+        print((r.stdout or '').strip())
+        if r.returncode != 0:
+            print('[ERROR] ' + script + ' failed:\n' + (r.stderr or ''))
+            sys.exit(r.returncode)
+
     # Load from .env if present
     api_token = os.environ.get('CLOUDFLARE_API_TOKEN')
     account_id = os.environ.get('CLOUDFLARE_ACCOUNT_ID')

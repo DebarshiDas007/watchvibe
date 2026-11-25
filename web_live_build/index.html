@@ -694,7 +694,7 @@
 
 </head>
 <body class="min-h-screen text-slate-100 antialiased selection:bg-purple-500 selection:text-white flex flex-col">
-    <noscript><div style="padding:24px;max-width:640px;margin:0 auto;font-family:sans-serif"><h1>WatchVibe: find what to watch by vibe</h1><p>WatchVibe suggests movies and series that fit your mood, shows IMDb ratings and where each title streams in your country, and keeps a watchlist of what you want to see. Please turn on JavaScript to use it.</p></div></noscript>
+    <noscript><div style="padding:24px;max-width:640px;margin:0 auto;font-family:sans-serif"><h1>WatchVibe: find what to watch by vibe</h1><p>WatchVibe suggests movies and series that fit your mood, shows IMDb ratings and where each title streams in your country, and keeps a watchlist of what you want to see. Please turn on JavaScript to use it.</p><p>Browse without JavaScript: <a href="/best/">best movies and series</a>, <a href="/best/movies">top movies</a>, <a href="/best/series">top TV series</a>, <a href="/best/hindi-movies">Hindi movies</a>, <a href="/best/bengali-movies">Bengali movies</a>.</p></div></noscript>
 
     <!-- TOP HEADER: wordmark, category tabs, search, profile -->
   <header class="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-[#0B0B0F]/95 px-4 sm:gap-3 sm:px-6 lg:gap-6 lg:px-8">
@@ -1999,6 +1999,7 @@
       await loadFreshCatalog();
       HOME.node = null;
       refreshViewsBg();
+      try { openFilmFromHash(); } catch (e) {}
       setTimeout(() => { try { wlnBackground(); } catch (e) {} }, 3500);   // quietly checks what is streaming from the saved films
     }
 
@@ -5854,7 +5855,7 @@ function posterCard(item, opts) {
 
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a><a href="/terms" class="hover:text-white/70">Terms</a></div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a><a href="/terms" class="hover:text-white/70">Terms</a><a href="/best/" class="hover:text-white/70">Best movies</a><a href="/best/series" class="hover:text-white/70">Series</a><a href="/best/hindi-movies" class="hover:text-white/70">Hindi</a><a href="/best/bengali-movies" class="hover:text-white/70">Bengali</a></div>
         <p class="mt-2 max-w-2xl">Film and TV data and images are provided by TMDB. WatchVibe uses the TMDB API but is not endorsed or certified by TMDB.</p>
       </footer>`;
     }
@@ -8237,6 +8238,14 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       }
     });
 
+    // A film page (/film/<id>, built for search engines) sends people here as /#film=<id>: open that film's window. Films from the extra catalogue open once it has loaded.
+    function openFilmFromHash() {
+      const m = /^#film=([a-z0-9-]{3,120})$/.exec(location.hash || ''); if (!m) return false;
+      const id = m[1]; if (!mediaDatabase.some(x => x.id === id)) return false;
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      openDetails(id); return true;
+    }
+
     // Initialize
     initSupabase();
     handleAuthCallbackErrors();
@@ -8246,6 +8255,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     loadUserWatchlistStore(false);
     syncUserDataFromSupabaseCloud();
     refreshViews();
+    try { openFilmFromHash(); } catch (e) {}
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
   <script src="games.js?v=6" defer></script>
