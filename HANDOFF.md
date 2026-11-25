@@ -602,3 +602,6 @@ Open / next, in the order we discussed:
 - Tested: 6,595 pages pass check_seo (titles/descriptions unique and within length, canonical = own address, one h1, valid JSON-LD, no leftovers, every internal link and sitemap URL has a file), list + film pages at 375/1440 (no sideways scroll), deep link, sweep clean at 375/768/1440. Not verified yet: Google actually indexing (needs the domain + Search Console), Pages "clean URL" behaviour of /film/<id> is checked live after deploy.
 - v139: Cloudflare redirects `/best` to `/best/`, so the lists index now uses `/best/` everywhere (canonical, sitemap, breadcrumbs, internal links, footer); `check_seo` fails any link or sitemap entry that uses `/best`. Cache v139.
 - v140: rating burst fix found while preparing the demo: the stars faded out in ~200 ms because the transform easing also drove opacity. Opacity now has its own animation (visible while flying, fades at the end). Cache v140.
+
+## v141 (25 Nov)
+Fix: Edit profile could not save for an account with no row in profiles (1 of 10 accounts). Backfilled the missing row, added ensure_my_profile() (SECURITY DEFINER, authenticated only); peSave calls it when the update changes 0 rows, then retries.

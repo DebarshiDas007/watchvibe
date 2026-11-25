@@ -8084,7 +8084,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       PE.busy = true; const btn = document.getElementById('peSave'); if (btn) btn.disabled = true; peErr('');
       try {
         patch.updated_at = new Date().toISOString();
-        const { data, error } = await sbc().from('profiles').update(patch).eq('id', s.id).select('id');
+        let { data, error } = await sbc().from('profiles').update(patch).eq('id', s.id).select('id');
+        if (!error && (!data || !data.length)) {   // account without a profile row: create it, then save again
+          await sbc().rpc('ensure_my_profile');
+          ({ data, error } = await sbc().from('profiles').update(patch).eq('id', s.id).select('id'));
+        }
         if (error || !data || !data.length) throw error || new Error('no profile row');
         const rec = { n: 'display_name' in patch ? nm : old.n, p: 'photo' in patch ? patch.photo : old.p };
         profStore(s.id, rec);
