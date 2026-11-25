@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=39">
+  <link rel="stylesheet" href="/swiss.css?v=40">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -6431,7 +6431,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
 
     function vibeSectionSkeleton() {
-      return `<h3 class="font-display text-lg font-medium text-white">How did it feel?</h3>
+      return `<div class="vs-eye">Verdicts</div><h3 class="font-display text-lg font-medium text-white vs-h">How did it feel?</h3>
         <div id="vsSummary" class="mt-4"><div id="vsCommunity"></div><div id="vsMine" class="mt-6"></div></div>
         <div id="vsRevHead" class="mt-10"></div>
         <div id="vsForm"></div>
@@ -6476,11 +6476,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       else if (!s) html += '<p class="text-sm text-white/40">Loading what people felt…</p>';
       else if (total < VS_MIN_PUBLIC) html += `<p class="text-sm text-white/50">${total ? `${total} ${total === 1 ? 'person has' : 'people have'} shared a verdict so far.` : 'Be the first to share how it felt.'}</p>`;
       else {
-        html += `<div class="space-y-2.5">${TIERS.map((tr, i) => { const c = s.tiers[i] || 0, p = vsPct(c, total);
-          return `<div class="flex items-center gap-3 text-[13px]" title="${c} ${c === 1 ? 'verdict' : 'verdicts'}"><span class="w-32 shrink-0 truncate sm:w-36 ${i === 0 ? 'text-amber-200' : 'text-white/65'}">${i === 0 ? vsStar : ''}${esc(tr.label)}</span><div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]"><div class="h-full rounded-full transition-all duration-500" style="width:${p}%;background:${tr.color}"></div></div><span class="w-10 shrink-0 text-right text-white/45">${p}%</span></div>`; }).join('')}</div>
-          <p class="mt-3 text-xs text-white/35">Based on ${total.toLocaleString()} verdicts</p>`;
+        html += `<div class="space-y-2.5 vs-bars">${TIERS.map((tr, i) => { const c = s.tiers[i] || 0, p = vsPct(c, total);
+          return `<div class="flex items-center gap-3 text-[13px] vs-bar-row" title="${c} ${c === 1 ? 'verdict' : 'verdicts'}"><span class="w-32 shrink-0 truncate sm:w-36 ${i === 0 ? 'text-amber-200' : 'text-white/65'}">${i === 0 ? vsStar : ''}${esc(tr.label)}</span><div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07] vs-track"><div class="h-full rounded-full transition-all duration-500" style="width:${p}%;background:${tr.color}"></div></div><span class="w-10 shrink-0 text-right text-white/45">${p}%</span></div>`; }).join('')}</div>
+          <p class="mt-3 text-xs text-white/35 vs-hint">Based on ${total.toLocaleString()} verdicts</p>`;
         const feel = FEELINGS.map(f => [f, s.feelings && s.feelings[f.id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
-        if (feel.length) html += `<div class="mt-4 flex flex-wrap gap-2">${feel.map(([f, c]) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] text-white/75 ring-1 ring-white/10"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)} <span class="text-white/40">${vsPct(c, total)}%</span></span>`).join('')}</div>`;
+        if (feel.length) html += `<div class="mt-4 flex flex-wrap gap-2">${feel.map(([f, c]) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] text-white/75 ring-1 ring-white/10 vs-feel vs-feel-ro"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)} <span class="text-white/40">${vsPct(c, total)}%</span></span>`).join('')}</div>`;
       }
       box.innerHTML = html;
     }
@@ -6490,15 +6490,15 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const pop = VS.pop; VS.pop = null;      // the pop animation plays once, only for the option that was just tapped
       const check = '<i class="fa-solid fa-check vs-check ml-auto text-[11px]"></i>';
       const tierBtn = tr => { const sel = mine && mine.tier === tr.n;
-        return `<button type="button" onclick="vsSetTier(${tr.n})" aria-pressed="${!!sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 'tier:' + tr.n ? 'vs-pop' : ''}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; };
+        return `<button type="button" onclick="vsSetTier(${tr.n})" aria-pressed="${!!sel}" class="vs-opt vs-tier rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 'tier:' + tr.n ? 'vs-pop' : ''}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; };
       const cur = mine && (mine.feelings || [])[0];
       const feelBtn = f => { const sel = cur === f.id;
-        return `<button type="button" onclick="vsToggleFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'feel:' + f.id ? 'vs-pop' : ''}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; };
+        return `<button type="button" onclick="vsToggleFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt vs-feel inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'feel:' + f.id ? 'vs-pop' : ''}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; };
       const same = mine && total >= VS_MIN_PUBLIC ? vsPct(s.tiers[mine.tier - 1] || 0, total) : null;
-      box.innerHTML = `<div class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] sm:p-5">
-          <div class="flex items-center justify-between gap-3"><div class="text-sm font-medium text-white">Your verdict</div>${mine ? '<button type="button" onclick="vsRemoveVote()" class="text-xs text-white/45 transition hover:text-white">Remove</button>' : ''}</div>
+      box.innerHTML = `<div class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] sm:p-5 vs-card">
+          <div class="flex items-center justify-between gap-3"><div class="text-sm font-medium text-white vs-card-h">Your verdict</div>${mine ? '<button type="button" onclick="vsRemoveVote()" class="text-xs text-white/45 transition hover:text-white vs-link">Remove</button>' : ''}</div>
           <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">${TIERS.map(tierBtn).join('')}</div>
-          <div class="mt-4 text-xs text-white/40">What best describes it? Pick one. Tap it again to clear.</div>
+          <div class="mt-4 text-xs text-white/40 vs-hint">What best describes it? Pick one. Tap it again to clear.</div>
           <div class="mt-2 flex flex-wrap gap-2">${FEELINGS.map(feelBtn).join('')}</div>
           ${same !== null ? `<p class="mt-3 text-xs text-white/50">You and ${same}% of viewers chose ${esc(TIERS[mine.tier - 1].label)}.</p>` : ''}
           ${!currentAuthUser ? '<p class="mt-3 text-xs text-white/45">Sign in to save your verdict and write a review.</p>' : ''}
@@ -6564,10 +6564,10 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const box = vsEl('vsRevHead'); if (!box) return;
       const total = VS.reviews ? VS.reviews.total : 0;
       box.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3">
-          <h3 class="font-display text-lg font-medium text-white">What people felt <span class="ml-1 text-sm font-normal text-white/40">${total}</span></h3>
+          <div><div class="vs-eye">Reviews</div><h3 class="font-display text-lg font-medium text-white vs-h">What people felt <span class="ml-1 text-sm font-normal text-white/40 vs-count">${total}</span></h3></div>
           <div class="flex items-center gap-2">
-            ${total > 1 ? `<select onchange="vsSort(this.value)" class="rounded-full bg-white/[0.05] px-3 py-1.5 text-[13px] text-white/80 ring-1 ring-white/10 focus:outline-none" aria-label="Sort reviews"><option value="felt" class="bg-[#14141A]" ${VS.sort === 'felt' ? 'selected' : ''}>Most felt</option><option value="new" class="bg-[#14141A]" ${VS.sort === 'new' ? 'selected' : ''}>Newest</option></select>` : ''}
-            <button type="button" onclick="vsToggleForm()" class="rounded-full bg-white px-4 py-1.5 text-[13px] font-semibold text-black transition hover:bg-white/90">${VS.mine ? (VS.formOpen ? 'Close' : 'Edit your review') : (VS.formOpen ? 'Close' : 'Write a review')}</button>
+            ${total > 1 ? `<select onchange="vsSort(this.value)" class="rounded-full bg-white/[0.05] px-3 py-1.5 text-[13px] text-white/80 ring-1 ring-white/10 focus:outline-none vs-sel" aria-label="Sort reviews"><option value="felt" class="bg-[#14141A]" ${VS.sort === 'felt' ? 'selected' : ''}>Most felt</option><option value="new" class="bg-[#14141A]" ${VS.sort === 'new' ? 'selected' : ''}>Newest</option></select>` : ''}
+            <button type="button" onclick="vsToggleForm()" class="rounded-full bg-white px-4 py-1.5 text-[13px] font-semibold text-black transition hover:bg-white/90 vs-btn">${VS.mine ? (VS.formOpen ? 'Close' : 'Edit your review') : (VS.formOpen ? 'Close' : 'Write a review')}</button>
           </div></div>`;
     }
     function vsReviewHtml(r) {
@@ -6582,7 +6582,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         ? `<button type="button" onclick="vsReveal('${esc(r.id)}')" class="mt-3 rounded-xl bg-white/[0.04] px-4 py-3 text-left text-[13px] text-white/60 ring-1 ring-white/10 transition hover:bg-white/[0.07]"><i class="fa-solid fa-eye-slash mr-2 text-xs"></i>Contains spoilers. Tap to read.</button>`
         : `<p class="mt-3 break-words text-[15px] font-medium leading-snug text-white">${esc(r.headline)}</p>${r.body ? `<p id="rb-${esc(r.id)}" class="mt-1.5 break-words text-[14px] leading-relaxed text-white/70 ${long ? 'line-clamp-4' : ''}">${esc(r.body).replace(/\n/g, '<br>')}</p>${long ? `<button type="button" onclick="vsExpand('${esc(r.id)}', this)" class="mt-1 text-xs text-white/50 underline underline-offset-2 hover:text-white">Read more</button>` : ''}` : ''}`;
       const reported = VS.reported.has(r.id);
-      return `<article class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
+      return `<article class="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06] vs-rev">
           <div class="flex items-center gap-3">${avatar}<div class="min-w-0 flex-1"><div class="truncate text-[13px] font-medium text-white">${esc(r.author_name)}${r.mine ? ' <span class="ml-1 text-[11px] font-normal text-white/40">(you)</span>' : ''}</div><div class="text-[11px] text-white/35">${esc(vsAgo(r.created_at))}</div></div></div>
           ${chips ? `<div class="mt-3 flex flex-wrap gap-1.5">${chips}</div>` : ''}
           ${text}
@@ -6598,8 +6598,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const rv = VS.reviews;
       if (!sbc()) { box.innerHTML = ''; return; }
       if (!rv) { box.innerHTML = '<div class="h-20 animate-pulse rounded-2xl bg-white/[0.04]"></div>'; if (more) more.innerHTML = ''; return; }
-      box.innerHTML = rv.items.length ? rv.items.map(vsReviewHtml).join('') : '<p class="rounded-2xl bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45 ring-1 ring-white/[0.06]">No reviews yet. Tell people how it made you feel.</p>';
-      if (more) more.innerHTML = rv.items.length < rv.total ? '<button type="button" onclick="vsLoadMore()" class="w-full rounded-full py-2.5 text-[13px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white">Show more reviews</button>' : '';
+      box.innerHTML = rv.items.length ? rv.items.map(vsReviewHtml).join('') : '<p class="rounded-2xl bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45 ring-1 ring-white/[0.06] vs-empty">No reviews yet. Tell people how it made you feel.</p>';
+      if (more) more.innerHTML = rv.items.length < rv.total ? '<button type="button" onclick="vsLoadMore()" class="w-full rounded-full py-2.5 text-[13px] text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.06] hover:text-white vs-btn-g">Show more reviews</button>' : '';
     }
     async function vsSort(v) { VS.sort = v === 'new' ? 'new' : 'felt'; VS.reviews = null; vsRenderList(); VS.reviews = await vsLoadReviews(VS.key, VS.sort, 0); vsRenderHead(); vsRenderList(); }
     async function vsLoadMore() {
@@ -7460,11 +7460,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <button type="button" onclick="rateSheetClose()" aria-label="Close" class="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-white/60 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>
           <div class="flex items-center gap-4 pr-10">
             ${it.poster ? `<img src="${esc(ps(it.poster, 185))}" alt="" class="h-[72px] w-12 shrink-0 rounded-lg object-cover ring-1 ring-white/10" onerror="this.style.display='none'">` : ''}
-            <div class="min-w-0"><div class="text-xs uppercase tracking-[0.14em] text-white/40">${RS.mark ? 'Marking as seen' : 'Your verdict'}</div><h2 id="rsTitle" class="mt-0.5 break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2></div>
+            <div class="min-w-0"><div class="text-xs uppercase tracking-[0.14em] text-white/40 vs-eye">${RS.mark ? 'Marking as seen' : 'Your verdict'}</div><h2 id="rsTitle" class="mt-0.5 break-words font-display text-2xl font-medium leading-tight text-white">${esc(it.title)}</h2></div>
           </div>
           <h3 class="mt-6 text-sm font-medium text-white">How was it? <span class="text-xs font-normal text-white/40">Tap again to clear.</span></h3>
           <div id="rsTiers" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
-          <div class="mt-5 text-xs text-white/40">What best describes it? Pick one. Tap it again to clear.</div>
+          <div class="mt-5 text-xs text-white/40 vs-hint">What best describes it? Pick one. Tap it again to clear.</div>
           <div id="rsFeel" class="mt-2 flex flex-wrap gap-2"></div>
           <label for="rsHeadline" class="mt-6 block text-[13px] font-medium text-white/80">In a few words <span class="font-normal text-white/35">(optional)</span></label>
           <input id="rsHeadline" type="text" maxlength="140" value="${esc(RS.headline)}" oninput="RS.headline=this.value;RS.touched=true" placeholder="e.g. I walked out silent, then cried in the car" class="mt-2 w-full rounded-xl bg-white/[0.05] px-4 py-3 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/30">
@@ -7483,9 +7483,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const tiers = document.getElementById('rsTiers'), feel = document.getElementById('rsFeel'); if (!tiers || !feel) return;
       const check = '<i class="fa-solid fa-check vs-check ml-auto text-[11px]"></i>';
       tiers.innerHTML = TIERS.map(tr => { const sel = RS.tier === tr.n;
-        return `<button type="button" onclick="rateSheetTier(${tr.n})" aria-pressed="${sel}" class="vs-opt rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 't' + tr.n ? 'vs-pop' : 'vs-still'}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; }).join('');
+        return `<button type="button" onclick="rateSheetTier(${tr.n})" aria-pressed="${sel}" class="vs-opt vs-tier rounded-xl px-3 py-2.5 text-left ring-1 ${sel ? 'ring-2' : 'ring-white/[0.12] hover:bg-white/[0.06]'} ${pop === 't' + tr.n ? 'vs-pop' : 'vs-still'}" style="--c:${tr.color};${sel ? `background:${tr.color}22;--tw-ring-color:${tr.color}` : ''}"><span class="flex items-center gap-2 text-[13px] font-medium ${sel ? 'text-white' : 'text-white/80'}">${tr.n === 1 ? vsStar : `<span class="h-2 w-2 rounded-full" style="background:${tr.color}"></span>`}${esc(tr.label)}${sel ? check : ''}</span><span class="mt-0.5 block text-[11px] ${sel ? 'text-white/60' : 'text-white/40'}">${esc(tr.hint)}</span></button>`; }).join('');
       feel.innerHTML = FEELINGS.map(f => { const sel = RS.feeling === f.id;
-        return `<button type="button" onclick="rateSheetFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'f' + f.id ? 'vs-pop' : 'vs-still'}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; }).join('');
+        return `<button type="button" onclick="rateSheetFeeling('${f.id}')" aria-pressed="${sel}" class="vs-opt vs-feel inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] ring-1 ${sel ? 'text-white ring-2' : 'text-white/75 ring-white/[0.12] hover:bg-white/[0.07]'} ${pop === 'f' + f.id ? 'vs-pop' : 'vs-still'}" style="--c:${f.color};${sel ? `background:${f.color}26;--tw-ring-color:${f.color}` : ''}"><span class="h-1.5 w-1.5 rounded-full" style="background:${f.color}"></span>${esc(f.label)}${sel ? '<i class="fa-solid fa-check vs-check text-[10px]"></i>' : ''}</button>`; }).join('');
     }
     function rateSheetMore() {
       const box = document.getElementById('rsMore'); if (!box) return;

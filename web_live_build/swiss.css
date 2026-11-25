@@ -846,3 +846,58 @@ a.dmx-tile.is-first .dmx-logo-fb { color: #0b0b0b; background: rgba(0,0,0,.12); 
 .up-sk-t { height: 12px; width: 70%; margin-top: 12px; background: var(--elev); }
 @media (max-width: 520px) { .up-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; } }
 @media (min-width: 1024px) and (max-width: 1599px) { #topCategoryNavBar .top-nav-pill { padding-left: 8px; padding-right: 8px; } }
+
+/* ---- verdicts: "How did it feel?", reviews and the rate sheet in the Swiss look (square, hairlines, mono labels, bold headings) ---- */
+.vs-eye { font: 500 12px/1.4 var(--wv-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--text-2); margin-bottom: 6px; }
+h3.vs-h { font: 800 clamp(26px, 2.4vw, 38px)/1 var(--wv-head) !important; letter-spacing: -.045em; color: var(--text) !important; margin: 0; }
+.vs-count { font: 500 13px var(--wv-mono) !important; color: var(--text-2) !important; vertical-align: .55em; margin-left: 8px; }
+.vs-card, #vsForm > div, .vs-rev, .vs-empty { background: transparent !important; border: 1px solid var(--line-strong); border-radius: 0 !important; box-shadow: none !important; }
+.vs-empty { color: var(--text-2) !important; font: 500 12px var(--wv-mono); text-transform: uppercase; letter-spacing: .04em; }
+.vs-card-h { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .05em; color: var(--text-2) !important; }
+.vs-hint { font: 500 11px/1.5 var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2) !important; }
+.vs-link { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; color: var(--accent) !important; }
+.vs-tier { border-radius: 0 !important; background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong) !important; transition: box-shadow .2s, background-color .2s, transform .18s; }
+.vs-tier:hover { box-shadow: inset 0 0 0 1px var(--text) !important; background: var(--wash); }
+.vs-tier[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--c) !important; background: color-mix(in srgb, var(--c) 16%, transparent) !important; }
+.vs-tier > span:first-child { font: 600 14px var(--wv-sans) !important; letter-spacing: -.01em; color: var(--text) !important; }
+.vs-tier > span:last-child { font: 500 11px/1.35 var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .02em; color: var(--text-2) !important; }
+.vs-tier span[style*="background"], .vs-feel span[style*="background"] { border-radius: 0 !important; }
+.vs-feel { border-radius: 0 !important; background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong) !important; font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .03em; color: var(--text) !important; transition: box-shadow .2s, background-color .2s, transform .18s; }
+button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; background: var(--wash); }
+.vs-feel[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--c) !important; background: color-mix(in srgb, var(--c) 16%, transparent) !important; }
+.vs-feel .text-white\/40 { color: var(--text-2) !important; }
+.vs-bar-row > span { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .02em; color: var(--text) !important; }
+.vs-bar-row > span:last-child { color: var(--text-2) !important; }
+.vs-track { border-radius: 0 !important; height: 6px !important; background: var(--line) !important; }
+.vs-track > div { border-radius: 0 !important; }
+.vs-btn { border-radius: 0 !important; height: 38px; padding: 0 16px !important; background: var(--text) !important; color: var(--bg) !important; border: 1px solid var(--text); font: 600 14px var(--wv-sans) !important; transition: background-color .2s, color .2s, border-color .2s; }
+.vs-btn:hover { background: var(--accent) !important; border-color: var(--accent); color: var(--ink) !important; }
+.vs-btn-g { border-radius: 0 !important; height: 44px; border: 1px solid var(--text); background: transparent; color: var(--text) !important; font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .04em; box-shadow: none !important; }
+.vs-btn-g:hover { background: var(--text) !important; color: var(--bg) !important; }
+.vs-sel { border-radius: 0 !important; height: 38px; background: transparent !important; border: 1px solid var(--text); box-shadow: none !important; color: var(--text) !important; font: 500 12px var(--wv-mono) !important; text-transform: uppercase; padding: 0 10px !important; }
+.vs-sel option { background: var(--bg); }
+#vsList .rounded-full:not(.h-8):not(img) { border-radius: 0 !important; }
+.vs-rev p.font-medium { font: 700 17px/1.2 var(--wv-head); letter-spacing: -.02em; color: var(--text); }
+.vs-rev .text-\[11px\] { font-family: var(--wv-mono); text-transform: uppercase; letter-spacing: .03em; }
+.vs-rev button[aria-pressed] { border-radius: 0 !important; box-shadow: none !important; border: 1px solid var(--line-strong); background: transparent !important; font: 500 11px var(--wv-mono); text-transform: uppercase; color: var(--text) !important; }
+.vs-rev button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent) !important; }
+#vsForm label, #rateSheet label { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2) !important; }
+#vsForm label span, #rateSheet label span { font-family: var(--wv-mono); color: var(--muted) !important; }
+#vsForm :is(input[type="text"], textarea), #rateSheet :is(input[type="text"], textarea) { border-radius: 0 !important; background: transparent !important; border: 1px solid var(--line-strong); box-shadow: none !important; color: var(--text); font: 500 16px/1.5 var(--wv-sans); }
+#vsForm :is(input[type="text"], textarea):focus, #rateSheet :is(input[type="text"], textarea):focus { border-color: var(--text); outline: none; box-shadow: none !important; }
+#vsForm ::placeholder, #rateSheet ::placeholder { color: var(--muted); opacity: 1; }
+#vsForm input[type="checkbox"], #rateSheet input[type="checkbox"] { accent-color: var(--accent); }
+#vsPost, #rsSave { height: 46px; padding: 0 26px !important; border-radius: 0 !important; background: var(--text) !important; color: var(--bg) !important; border: 1px solid var(--text); font: 600 15px var(--wv-sans) !important; transition: background-color .2s, color .2s, border-color .2s; }
+#vsPost:hover:not(:disabled), #rsSave:hover:not(:disabled) { background: var(--accent) !important; border-color: var(--accent); color: var(--ink) !important; }
+#vsForm button:not(#vsPost):not([onclick*="vsDeleteReview"]), #rateSheet button.rounded-full:not(#rsSave):not([aria-label="Close"]):not(.vs-opt) { height: 46px; padding: 0 20px !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; border: 1px solid var(--text); color: var(--text) !important; font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .04em; }
+#vsForm button:not(#vsPost):not([onclick*="vsDeleteReview"]):hover, #rateSheet button.rounded-full:not(#rsSave):not([aria-label="Close"]):not(.vs-opt):hover { background: var(--text) !important; color: var(--bg) !important; }
+#vsForm button[onclick*="vsDeleteReview"] { font: 500 12px var(--wv-mono); text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; }
+#vsFormErr, #rsErr { border-radius: 0 !important; box-shadow: none !important; background: transparent !important; border: 1px solid #ff6b6b; color: #ff8a8a !important; font: 500 12px/1.5 var(--wv-mono); text-transform: uppercase; }
+#rateSheet .rs-card { background: var(--bg) !important; }
+#rateSheet button[aria-label="Close"] { border-radius: 0 !important; background: transparent !important; box-shadow: none !important; border: 1px solid var(--text); color: var(--text) !important; }
+#rateSheet button[aria-label="Close"]:hover { background: var(--text) !important; color: var(--bg) !important; }
+#rateSheet img { border-radius: 0 !important; box-shadow: none !important; }
+#rsTitle { font: 800 clamp(26px, 3vw, 36px)/1 var(--wv-head) !important; letter-spacing: -.045em; color: var(--text) !important; text-transform: none; }
+#rateSheet h3 { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .05em; color: var(--text) !important; }
+#rateSheet h3 span { color: var(--text-2) !important; }
+#rateSheet #rsMore button { font: 500 12px var(--wv-mono); text-transform: uppercase; letter-spacing: .04em; color: var(--accent) !important; text-decoration-color: var(--accent); }

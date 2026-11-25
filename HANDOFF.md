@@ -623,3 +623,6 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 
 ## Database (25 Nov, no deploy)
 - Migration rls_initplan_and_fk_indexes: 17 RLS policies now use (select auth.uid()) (same rules, evaluated once per query, not per row); added indexes daily_scores(user_id), review_reactions(review_id), review_reports(reporter). Advisor: the 17 initplan warnings and 3 unindexed-key notes are gone. Checked as a stranger account: sees 0 profiles, 0 watchlist rows, 0 votes. Still listed: 3 "multiple permissive policies" warnings (battle_votes, profiles, vibe_ratings; merging them would change who can read what, left alone on purpose) and 3 "unused index" notes for the new indexes (normal until traffic arrives).
+
+## v145 (25 Nov)
+- Verdict screens aligned to the Swiss look: the rate sheet (Your verdict / How was it?) and, in the film window, How did it feel? (verdict tiles, community bars, review form), What people felt (review cards, sort, Write a review). Square corners, hairline borders, mono uppercase labels, bold Cabinet Grotesk headings, square buttons and inputs, same as Daily and Profile. Hooks: .vs-* classes + #vsForm/#rateSheet scoping in swiss.css (v40). Behaviour and markup logic unchanged.
