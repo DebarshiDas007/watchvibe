@@ -610,3 +610,6 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - Featured (banner + poster wall) now only shows RELEASED titles streaming on a subscription service in the viewer's country: /api/featured skips unreleased titles and titles with no platform (cache key v=2, client key watchvibe_featured_v2, client double-check).
 - New Upcoming tab (nav button from 1024 px, 'More' menu on tablets, chip on phones): /api/upcoming (TMDB, region release dates, next 270 days, cached to India midnight) shows not-yet-released films and series, soonest first, with date and countdown; All/Movies/Series switch.
 - Filter row under the wall no longer pulled up over the mood chips on wide screens; header profile button is round; swiss.css v39.
+
+## v143 (25 Nov)
+- First-open jitter: the poster-wall placeholder was built by JavaScript inside the 2.6 MB inline script, so a first visit (nothing cached) showed only the header and an empty page until the whole file had downloaded and parsed, then everything popped in at once (measured on the live site: first paint 4.2 s, layout shift 0.78). The same placeholder is now plain HTML in #mainViewport (id bootSkel), painted before the script arrives and replaced in place by the app; skipped when the address has a #hash. Warm loads and the app's own redraw are unchanged (layout shift 0 at 390 and 1440).
