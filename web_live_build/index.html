@@ -35,7 +35,7 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=37">
+  <link rel="stylesheet" href="/swiss.css?v=38">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
@@ -1999,6 +1999,7 @@
       await loadFreshCatalog();
       HOME.node = null;
       refreshViewsBg();
+      setTimeout(() => { try { wlnBackground(); } catch (e) {} }, 3500);   // quietly checks what is streaming from the saved films
     }
 
     // ---- Calm start: the home page used to be wiped and rebuilt four times in the first seconds (first draw, the big catalogue arriving,
@@ -4578,7 +4579,7 @@ function posterCard(item, opts) {
         const k = el.dataset.lazy, H = buildHomeRows(), r = H.byKey[k];
         const html = k === 'genres' ? genreTilesHtml(H.tiles) : k === 'daily' ? dailyCardHtml() : k === 'games' ? gamesCardHtml() : (r && r.items ? homeRowSection(r.t, r.s, r.items, `setHomeRow('${r.k}')`, r.fmt) : '');
         const wrap = document.createElement('div'); wrap.innerHTML = html; const node = wrap.firstElementChild;
-        if (node) { el.replaceWith(node); node.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; }); node.querySelectorAll('.row-scroll').forEach(shelfArrows); } else el.remove();
+        if (node) { el.replaceWith(node); node.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; }); node.querySelectorAll('.row-scroll').forEach(shelfArrows); setTimeout(streakAnimateAll, 150); setTimeout(revealInit, 80); } else el.remove();
       };
       if (!els.length) return;
       if (!('IntersectionObserver' in window)) { els.forEach(fill); return; }
@@ -4923,11 +4924,12 @@ function posterCard(item, opts) {
     function dcFinish(s) {
       if (s.counted) return;
       s.counted = true;
-      const st = dcStats(), day = featDay();
-      if (st.lastPlay !== day) { st.streak = (st.lastPlay === dcYesterday(day)) ? st.streak + 1 : 1; st.best = Math.max(st.best, st.streak); st.played++; st.lastPlay = day; }
+      const st = dcStats(), day = featDay(), firstToday = st.lastPlay !== day;
+      if (firstToday) { st.streak = (st.lastPlay === dcYesterday(day)) ? st.streak + 1 : 1; st.best = Math.max(st.best, st.streak); st.played++; st.lastPlay = day; }
       st.rounds++; st.bestBy[s.level] = Math.max(st.bestBy[s.level] || 0, s.score);
       st.recent = [...st.recent.filter(r => !(r.day === day && r.level === s.level)), { day, level: s.level, score: s.score }].slice(-9);
       dcSave('wv_daily_stats_v4', st); dcSaveState(s);
+      if (firstToday) setTimeout(() => streakCelebrate(st.streak), 1100);   // a banner when today's first level is done and the streak grows
     }
     function dcLimit(spec, s) { return DC_LEVEL[s.level].sec * 1000; }
     // the clock lives in the saved state, so reloading the page does not give extra time
@@ -5240,17 +5242,22 @@ function posterCard(item, opts) {
     function dailyCardHtml() {
       const streak = dcStreakNow();
       const LV = { easy: '#7BD4A0', medium: '#E9A23B', hard: '#E4736A' };
+      const stt = dcStats(), playedToday = stt.lastPlay === featDay(), lvl = streakLevel(streak), nx = streakNext(streak), seen = streakSeen();
+      const badgeN = (seen != null && seen < streak) ? seen : streak;   // starts at the number last seen and counts up to today's
+      const streakBadge = streak ? `<span class="wvb-streak lv${lvl}" title="${streak}-day streak"><i class="fa-solid fa-fire" aria-hidden="true"></i><b data-to="${streak}">${badgeN}</b><em>day streak</em></span>` : '';
+      const eyebrow = (streak && !playedToday) ? `<span class="wvb-nudge"><i aria-hidden="true"></i>Play today to keep your ${streak}-day streak</span>` : 'Daily challenge &middot; new every day';
+      const goal = streak && nx ? ` ${nx - streak} more day${nx - streak === 1 ? '' : 's'} to a ${nx}-day streak.` : '';
       const cells = DC_LEVELS.map(l => { const s = dcStateOf(l), c = DC_LEVEL[l]; const txt = !s ? '0/' + DC_ROUND : s.finished ? s.score + ' pts' : (s.cur + 1) + '/' + DC_ROUND; const pct = !s ? 0 : s.finished ? 100 : Math.round(100 * (s.cur || 0) / DC_ROUND); return `<div class="wvb-lv" style="--p:${pct}%;--lc:${LV[l] || 'var(--accent)'}"><span>${esc(c.label)}</span><b>${esc(txt)}</b><i></i></div>`; }).join('');
       return `
         <section class="wvb wvb-daily" aria-label="Daily Challenge">
           <div class="wvb-no" aria-hidden="true">${esc(String(dcNumber()))}</div>
           <div class="wvb-body">
-            <div class="wvb-eyebrow">Daily challenge &middot; new every day${streak ? ` &middot; ${streak}-day streak` : ''}</div>
+            <div class="wvb-top"><div class="wvb-eyebrow">${eyebrow}</div>${streakBadge}</div>
             <h2 class="wvb-h">Guess the film.</h2>
-            <p class="wvb-p">3 levels, 20 questions each. Everyone gets the same ones today.</p>
+            <p class="wvb-p">3 levels, 20 questions each. Everyone gets the same ones today.${esc(goal)}</p>
             <div class="wvb-levels" role="group" aria-label="Your progress today">${cells}</div>
           </div>
-          <button type="button" onclick="DC.level = null; switchTab('daily')" class="wvb-cta">Play now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+          <button type="button" onclick="DC.level = null; switchTab('daily')" class="wvb-cta">${streak && !playedToday ? 'Keep my streak' : 'Play now'} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </section>`;
     }
 
@@ -5335,18 +5342,18 @@ function posterCard(item, opts) {
       const chips = wallChipsHtml().replace(/<button /g, '<button disabled tabindex="-1" ');
       return `<section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${chips}</div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section>`;
     }
-    function wallList() {
+    function wallList(limit) {
       let list;
       if (WALL.mood) {
         const mo = AI_MOODS.find(x => x.id === WALL.mood);
         list = mo ? WALL.cands.map(m => { const g = genresFromNames(m.genres || []), v = m.totalVotes || 0, pop = clamp01(Math.log10(v + 10) / 6.5); return { m, s: aiMoodFit(mo, m, g, pop, v) * (0.6 + 0.4 * clamp01((Number(m.rating) - 5.5) / 3.5)) }; }).filter(x => x.s >= 0.12).sort((a, b) => b.s - a.s).map(x => x.m) : WALL.base.slice();
       } else list = WALL.base.slice();
       if (WALL.under) list = list.filter(m => { const r = parseRuntimeMinutes(m.duration); return r > 0 && r <= 120; });
-      return list.slice(0, 14);
+      return list.slice(0, limit || 14);
     }
     function wallChipsHtml() {
       const chip = (label, on, attr) => `<button type="button" ${attr} aria-pressed="${on}" class="wv-chip${on ? ' is-on' : ''}">${esc(label)}</button>`;
-      return AI_MOODS.map(mo => chip(mo.label, WALL.mood === mo.id, `data-wmood="${esc(mo.id)}"`)).join('') + chip('Under 2h', WALL.under, 'data-wunder="1"');
+      return '<button type="button" data-wall="pick" class="wv-chip wvw-pickbtn"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> Pick for me tonight</button>' + AI_MOODS.map(mo => chip(mo.label, WALL.mood === mo.id, `data-wmood="${esc(mo.id)}"`)).join('') + chip('Under 2h', WALL.under, 'data-wunder="1"');
     }
     function wallBodyHtml() {
       const list = WALL.list;
@@ -5374,6 +5381,7 @@ function posterCard(item, opts) {
       const now = document.getElementById('wvwNow'); if (!now) return;
       now.innerHTML = wallNowHtml();
       if (full) { const ch = document.getElementById('wvwChips'), body = document.getElementById('wvwBody'); if (ch) ch.innerHTML = wallChipsHtml(); if (body) body.innerHTML = wallBodyHtml(); wallProg(); }
+      wallTint();
     }
     function wallShow(i) {
       if (i === WALL.i || i < 0 || i >= WALL.list.length) return;
@@ -5395,7 +5403,8 @@ function posterCard(item, opts) {
       if (t.dataset.wunder) { WALL.under = !WALL.under; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
       if (t.classList.contains('wvw-pc')) { openDetails(t.dataset.id); return; }
       const m = WALL.list[WALL.i], a = t.dataset.wall;
-      if (a === 'prev') wallStep(-1); else if (a === 'next') wallStep(1);
+      if (a === 'pick') tonightPick(false);
+      else if (a === 'prev') wallStep(-1); else if (a === 'next') wallStep(1);
       else if (a === 'reset') { WALL.mood = ''; WALL.under = false; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); }
       else if (a === 'seeall' && WALL.mood) toggleAiMood(WALL.mood);
       else if ((a === 'open' || a === 'trailer') && m) openDetails(m.id);   // the title window starts the trailer on its own
@@ -5420,6 +5429,224 @@ function posterCard(item, opts) {
       wallProg();
       if (s._t) return; s._t = requestAnimationFrame(() => { s._t = 0; const cs = s.querySelectorAll('.wvw-pc'); let k = 0, best = 1e9; cs.forEach((c, n) => { const d = Math.abs(c.offsetLeft - s.offsetLeft - s.scrollLeft); if (d < best) { best = d; k = n; } }); wallShow(k); });
     }, true);
+    // ================= Moments that bring people back: Tonight's pick, the streak, the taste reveal =================
+    // Motion rules: only movement and fade (no blur or resizing of big areas), and everything is skipped for "reduce motion".
+    const wvCalm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    // ---- Tonight's pick: one film for tonight from your mood, your taste, your watchlist and the day. Same pick all day (until you ask for another one).
+    const PICK = { order: [], i: 0, key: '', busy: false };
+    const pickHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+    function pickPool() {
+      const watched = new Set((userWatchedHistory || []).map(h => h.id));
+      let list = WALL.mood ? wallList(80) : (WALL.cands && WALL.cands.length ? WALL.cands : mediaDatabase.filter(m => m.poster && (m.totalVotes || 0) >= 300 && Number(m.rating) >= 6.5));
+      if (WALL.under && !WALL.mood) list = list.filter(m => { const r = parseRuntimeMinutes(m.duration); return r > 0 && r <= 120; });
+      return list.filter(m => m && m.poster && m.title && m.id && !watched.has(m.id));
+    }
+    function pickRank() {
+      const want = new Set(userWatchlistIds || []), taste = {};
+      getProfileStats().dist.forEach(d => { taste[d.id] = d.pct / 100; });
+      const seed = [featDay(), currentUserSession ? currentUserSession.id : 'guest', WALL.mood || '', WALL.under ? 'u' : ''].join('|');
+      PICK.key = seed;
+      return pickPool().map(m => ({ m, s: 0.55 * clamp01((Number(m.rating) - 6) / 3) + 0.2 * (taste[m.dominantVibe] || 0) + (want.has(m.id) ? 0.35 : 0) + 0.15 * clamp01(Math.log10((m.totalVotes || 0) + 10) / 5.5) + 0.3 * pickHash(seed + '|' + m.id) }))
+        .sort((a, b) => b.s - a.s).slice(0, 30).map(x => x.m);
+    }
+    function pickWhy(m) {
+      const mo = WALL.mood && AI_MOODS.find(x => x.id === WALL.mood);
+      if (mo) return `Matches your mood: ${mo.label}`;
+      if ((userWatchlistIds || []).includes(m.id)) return 'From your watchlist';
+      const top = getProfileStats().dist[0];
+      if (top && top.id === m.dominantVibe && VIBES[top.id]) return `Fits your taste: ${VIBES[top.id].label}`;
+      return 'Well rated and loved by audiences';
+    }
+    function tonightPick(again) {
+      if (PICK.busy) return;
+      if (!again || !PICK.order.length) { PICK.order = pickRank(); PICK.i = 0; }
+      else PICK.i = (PICK.i + 1) % PICK.order.length;
+      if (!PICK.order.length) { showToast('Nothing fits that tonight. Try clearing the mood.'); return; }
+      pickRender();
+    }
+    function pickClose() { const o = document.getElementById('pickOv'); PICK.busy = false; if (o) o.remove(); document.documentElement.style.overflow = ''; }
+    function pickCur() { return PICK.order[PICK.i]; }
+    function pickRender() {
+      const m = pickCur(); if (!m) return;
+      let ov = document.getElementById('pickOv');
+      if (!ov) { ov = document.createElement('div'); ov.id = 'pickOv'; ov.className = 'pk-ov'; ov.onclick = e => { if (e.target === ov) pickClose(); }; document.body.appendChild(ov); document.documentElement.style.overflow = 'hidden'; }
+      // the reel: filler posters, and the pick lands in the middle of the last stretch
+      const L = 22, rng = pickHash, pool = pickPool().filter(x => x.id !== m.id);
+      const fillers = Array.from({ length: L + 3 }, (_, k) => pool.length ? pool[Math.floor(rng(PICK.key + '|r' + PICK.i + '|' + k) * pool.length)] : m);
+      const cards = fillers.map((f, k) => { const cur = k === L ? m : f; return `<span class="pk-c${k === L ? ' is-win' : ''}"><img src="${esc(ps(cur.poster, 185))}" alt="" decoding="async" onerror="this.style.visibility='hidden'"></span>`; }).join('');
+      const mo = WALL.mood && AI_MOODS.find(x => x.id === WALL.mood);
+      const gens = (m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ');
+      const inWl = wlHas(m.id);
+      ov.innerHTML = `<div class="pk-card" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
+        <button type="button" class="pk-x" onclick="pickClose()" aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div class="pk-eyebrow">Tonight's pick${mo ? ' &middot; ' + esc(mo.label) : ''}</div>
+        <div class="pk-reel" aria-hidden="true"><div class="pk-track" id="pkTrack">${cards}</div><i class="pk-mark"></i></div>
+        <div class="pk-res" id="pkRes" aria-live="polite">
+          <div class="pk-why">${esc(pickWhy(m))}</div>
+          <h2 id="pkTitle" class="pk-title">${esc(m.title)}</h2>
+          <p class="pk-meta">${esc([m.year, gens, m.duration].filter(Boolean).join('  ·  '))}</p>
+          ${m.synopsis ? `<p class="pk-syn">${esc(m.synopsis)}</p>` : ''}
+          <div class="pk-acts">
+            <button type="button" class="pk-btn pk-primary" id="pkOpen" onclick="pickOpen()"><i class="fa-solid fa-play" aria-hidden="true"></i> Open film</button>
+            <button type="button" class="pk-btn" id="pkWl" onclick="pickWatchlist()" aria-pressed="${inWl}"><i class="fa-solid ${inWl ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i> ${inWl ? 'In watchlist' : 'Watchlist'}</button>
+            <button type="button" class="pk-btn" onclick="tonightPick(true)"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> Another one</button>
+          </div>
+        </div></div>`;
+      const track = document.getElementById('pkTrack'), reel = ov.querySelector('.pk-reel'), res = document.getElementById('pkRes');
+      const cw = track.firstElementChild.offsetWidth, gap = parseFloat(getComputedStyle(track).columnGap) || 12;
+      const endX = reel.clientWidth / 2 - (L * (cw + gap) + cw / 2), startX = reel.clientWidth / 2 - cw / 2;
+      const land = () => { track.style.transform = `translate3d(${endX}px,0,0)`; ov.classList.add('is-landed'); PICK.busy = false; const b = document.getElementById('pkOpen'); if (b) b.focus({ preventScroll: true }); };
+      if (wvCalm() || !track.animate) { land(); return; }
+      PICK.busy = true; ov.classList.remove('is-landed'); track.style.transform = `translate3d(${startX}px,0,0)`;
+      const a = track.animate([{ transform: `translate3d(${startX}px,0,0)` }, { transform: `translate3d(${endX}px,0,0)` }], { duration: 2300, easing: 'cubic-bezier(.12,.62,.16,1)', fill: 'forwards' });
+      a.onfinish = land; a.oncancel = () => { PICK.busy = false; };
+    }
+    function pickOpen() { const m = pickCur(); if (!m) return; pickClose(); openDetails(m.id); }
+    function pickWatchlist() { const m = pickCur(); if (!m) return; toggleWatchlist(m.id); const on = wlHas(m.id), b = document.getElementById('pkWl'); if (b) { b.setAttribute('aria-pressed', on); b.innerHTML = `<i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i> ${on ? 'In watchlist' : 'Watchlist'}`; } }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('pickOv')) pickClose(); });
+
+    // ---- The streak: a flame that grows at 3, 7, 14, 30, 50 and 100 days, a count-up when it grows, a nudge when today is not played yet, a banner when it grows
+    const STREAK_STEPS = [3, 7, 14, 30, 50, 100];
+    const streakLevel = n => STREAK_STEPS.filter(x => n >= x).length;                // 0 = under 3 days
+    const streakNext = n => STREAK_STEPS.find(x => x > n) || 0;
+    function streakSeen(set) { try { if (set != null) { sessionStorage.setItem('wv_streak_seen', String(set)); return set; } const v = sessionStorage.getItem('wv_streak_seen'); return v == null ? null : Number(v); } catch (e) { return null; } }
+    function streakAnimateAll() {
+      document.querySelectorAll('.wvb-streak b[data-to]').forEach(el => {
+        const to = Number(el.dataset.to), seen = streakSeen();
+        streakSeen(to);
+        if (seen == null || seen >= to || wvCalm()) { el.textContent = String(to); return; }
+        el.textContent = String(seen); el.parentElement.classList.add('is-bump');
+        const t0 = performance.now(), dur = 700;
+        const step = t => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(seen + (to - seen) * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      });
+    }
+    function streakCelebrate(n) {
+      if (!n) return;
+      const old = document.getElementById('stkBanner'); if (old) old.remove();
+      const lvl = streakLevel(n), hit = STREAK_STEPS.includes(n);
+      const msg = hit ? ({ 3: 'Three days. You are on a roll.', 7: 'A whole week. Nice.', 14: 'Two weeks. Serious film person.', 30: 'Thirty days. Legend.', 50: 'Fifty days. Unreal.', 100: 'One hundred days. Hall of fame.' })[n] : 'See you tomorrow to keep it going.';
+      const b = document.createElement('div'); b.id = 'stkBanner'; b.className = 'stk-banner lv' + lvl + (hit ? ' is-hit' : ''); b.setAttribute('role', 'status');
+      b.innerHTML = `<span class="stk-fl"><i class="fa-solid fa-fire" aria-hidden="true"></i></span><span class="stk-n" aria-hidden="true">${n}</span><span class="stk-t"><b>${n}-day streak</b><em>${esc(msg)}</em></span>`;
+      b.onclick = () => b.remove(); document.body.appendChild(b);
+      setTimeout(() => { b.classList.add('is-out'); setTimeout(() => b.remove(), 400); }, hit ? 4600 : 3200);
+    }
+
+    // ---- The taste reveal on the Profile page: the bar fills in, the headline rises, the numbers count up (once per visit; the same numbers are not replayed), and the card can be shared as a picture
+    function tasteReveal() {
+      const panel = document.querySelector('.pg-taste'); if (!panel || panel.classList.contains('is-seen') || wvCalm()) return;
+      panel.querySelectorAll('.pg-count').forEach((el, i) => {
+        const to = Number(el.dataset.n) || 0, t0 = performance.now() + 250 + i * 110, dur = 700;
+        el.textContent = '0';
+        const step = t => { if (t < t0) { requestAnimationFrame(step); return; } const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      });
+    }
+    async function tasteShare() {
+      const s = getProfileStats(); if (!s.dist.length) return;
+      try { await Promise.all([document.fonts.load('800 80px "Cabinet Grotesk"'), document.fonts.load('500 26px "IBM Plex Mono"'), document.fonts.load('600 30px "Switzer"')]); } catch (e) {}
+      const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+      const head = '"Cabinet Grotesk", "Switzer", sans-serif', mono = '"IBM Plex Mono", monospace';
+      x.fillStyle = '#0e0e0d'; x.fillRect(0, 0, W, H); x.strokeStyle = '#4a4a46'; x.lineWidth = 2; x.strokeRect(40, 40, W - 80, H - 80);
+      x.fillStyle = '#6c84ff'; x.font = `500 28px ${mono}`; x.textBaseline = 'alphabetic'; x.fillText('WATCHVIBE  ·  MY TASTE', 90, 125);
+      const who = currentUserSession ? (currentUserSession.name || '').split(' ')[0] : '';
+      x.fillStyle = '#f3f3ee'; x.font = `800 110px ${head}`; x.fillText(who ? who + "'s taste." : 'My taste.', 90, 290);
+      x.fillStyle = '#b4b4ac'; x.font = `500 28px ${mono}`; x.fillText('I TEND TO PICK', 90, 410);
+      x.fillStyle = '#6c84ff'; let fs = 170; x.font = `800 ${fs}px ${head}`; const persona = computeVibePersona(); while (x.measureText(persona).width > W - 180 && fs > 60) { fs -= 6; x.font = `800 ${fs}px ${head}`; } x.fillText(persona, 90, 410 + fs * 0.95);
+      let y = 760; x.font = `600 34px ${head}`;
+      s.dist.slice(0, 5).forEach(d => {
+        const col = VIBES[d.id] ? VIBES[d.id].color : '#94948c', lab = VIBES[d.id] ? VIBES[d.id].label : d.id;
+        x.fillStyle = '#f3f3ee'; x.font = `600 34px ${head}`; x.fillText(lab, 90, y); x.fillStyle = '#b4b4ac'; x.font = `500 28px ${mono}`; x.textAlign = 'right'; x.fillText(d.pct + '%', W - 90, y); x.textAlign = 'left';
+        x.fillStyle = '#222220'; x.fillRect(90, y + 20, W - 180, 22); x.fillStyle = col; x.fillRect(90, y + 20, Math.max(8, (W - 180) * d.pct / 100), 22); y += 118;
+      });
+      x.fillStyle = '#94948c'; x.font = `500 26px ${mono}`; x.fillText(`${s.movies} MOVIES  ·  ${s.series} SERIES  ·  ${location.host}`.toUpperCase(), 90, H - 90);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) { showToast('Could not make the picture. Please try again.'); return; }
+      const file = new File([blob], 'watchvibe-taste.png', { type: 'image/png' });
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'My taste on WatchVibe' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'watchvibe-taste.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast('Saved your taste picture.');
+    }
+
+    // ================= Nice touches =================
+    // ---- Mood colours: picking a mood tints the poster wall (a soft glow behind it, accent colours on the active parts)
+    const WALL_MOOD_COL = { cry: '#7FA6FF', mind: '#B58CFF', laugh: '#FFD166', comfort: '#FF9F7A', hype: '#FF6A55', gem: '#5EE0B1' };
+    function wallTint() {
+      const w = document.getElementById('wvWall'); if (!w) return;
+      const c = WALL.mood && WALL_MOOD_COL[WALL.mood];
+      if (c) w.style.setProperty('--mood', c); else w.style.removeProperty('--mood');
+      w.classList.toggle('has-mood', !!c);
+    }
+
+    // ---- Scroll rhythm: shelves, banners and the stars row below the first screen rise into place once as they arrive; their big outlined numbers count up
+    const RV = { io: null };
+    function revealNumbers(root) {
+      root.querySelectorAll('.wv-rank, .wvs-n').forEach((el, i) => {
+        const txt = el.textContent.trim(), to = parseInt(txt, 10); if (!to || to < 1) return;
+        const pad = txt.length > String(to).length, t0 = performance.now() + 120 + i * 60, dur = 560;
+        const show = n => { el.textContent = pad ? String(n).padStart(2, '0') : String(n); };
+        show(0);
+        const step = t => { if (t < t0) { requestAnimationFrame(step); return; } const k = Math.min(1, (t - t0) / dur); show(Math.max(1, Math.round(to * (1 - Math.pow(1 - k, 3))))); if (k < 1) requestAnimationFrame(step); else show(to); };
+        requestAnimationFrame(step);
+      });
+    }
+    function revealInit() {
+      if (wvCalm() || !('IntersectionObserver' in window)) return;
+      const root = document.getElementById('mainViewport'); if (!root || activeTab !== 'discover') return;
+      if (!RV.io) RV.io = new IntersectionObserver(es => es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const t = e.target; RV.io.unobserve(t); t.classList.add('rv-in'); revealNumbers(t);
+        setTimeout(() => t.classList.remove('rv', 'rv-in'), 900);
+      }), { rootMargin: '0px 0px -6% 0px' });
+      root.querySelectorAll('.wv-shelf:not(.rv-done), .wvb:not(.rv-done), #starsRow:not(.rv-done)').forEach(el => {
+        el.classList.add('rv-done');
+        if (el.getBoundingClientRect().top > innerHeight * 0.9) { el.classList.add('rv'); RV.io.observe(el); }   // only what is still below the first screen
+      });
+      setTimeout(() => document.querySelectorAll('.rv:not(.rv-in)').forEach(el => { if (el.getBoundingClientRect().top < innerHeight) el.classList.add('rv-in'); }), 9000);   // safety net
+    }
+
+    // ---- Watchlist: when a saved film starts streaming where it did not before, it gets a pulsing "Now streaming" tag (and a dot on Watchlist).
+    // Availability is remembered per film and country; the first look only records, so nothing is announced that we did not actually see change.
+    const WLN = { AV: 'wv_wl_avail_v1', NEW: 'wv_wl_new_v1', ran: false };
+    const wlnRead = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } };
+    const wlnWrite = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} };
+    function wlnCheck(list) {
+      const av = wlnRead(WLN.AV), nw = wlnRead(WLN.NEW), cc = selectedCountry, now = Date.now(); let changed = false;
+      Object.keys(nw).forEach(k => { if (!nw[k] || now - nw[k].t > 7 * 864e5) { delete nw[k]; changed = true; } });
+      (list || []).forEach(m => {
+        const a = wantAvail(m); if (!(a.state === 'stream' || a.state === 'rent' || a.state === 'none')) return;
+        const key = cc + ':' + m.id, prev = av[key], cur = a.state === 'stream' ? 's' : 'n';
+        if (prev !== cur) { av[key] = cur; changed = true; if (prev === 'n' && cur === 's') nw[m.id] = { name: String(a.name || '').slice(0, 40), t: now }; }
+      });
+      if (changed) { wlnWrite(WLN.AV, av); wlnWrite(WLN.NEW, nw); }
+      wlnDot();
+    }
+    function wlnNew(id) { const o = wlnRead(WLN.NEW)[id]; return o && Date.now() - o.t <= 7 * 864e5 ? o : null; }
+    function wlnDismiss(id) { const nw = wlnRead(WLN.NEW); if (nw[id]) { delete nw[id]; wlnWrite(WLN.NEW, nw); wlnDot(); } }
+    function wlnDot() {
+      const n = Object.keys(wlnRead(WLN.NEW)).filter(id => (userWatchlistIds || []).includes(id)).length;
+      document.querySelectorAll('#desk-tab-watchlist, #mob-tab-watchlist').forEach(b => b.toggleAttribute('data-new', n > 0));   // an attribute, so the nav's own class resets never wipe it
+    }
+    async function wlnBackground() {
+      if (WLN.ran || !(userWatchlistIds || []).length) return; WLN.ran = true;
+      const items = (userWatchlistIds || []).slice(0, 24).map(id => findLibItem(id)).filter(it => it && tmdbRef(it) && cachedWatchProviders(it) === undefined);
+      let i = 0; await Promise.all(Array.from({ length: Math.min(4, items.length) }, async () => { while (i < items.length) { const it = items[i++]; WANT.tried.add(it.id); await getWatchProviders(it); } }));
+      wlnCheck((userWatchlistIds || []).map(id => findLibItem(id)).filter(Boolean));
+    }
+
+    // ---- Rating delight: the best verdict ("Absolute Cinema") sends a little burst of stars from the button
+    function rateBurst(btn) {
+      if (!btn || wvCalm() || !btn.animate) return;
+      btn.style.position = 'relative';
+      const box = document.createElement('span'); box.className = 'rs-burst'; box.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < 9; i++) {
+        const s = document.createElement('i'); s.className = 'fa-solid fa-star'; box.appendChild(s);
+        const ang = (i / 9) * Math.PI * 2 + 0.3, d = 46 + (i % 3) * 14;
+        s.animate([{ transform: 'translate3d(0,0,0) scale(.3) rotate(0deg)', opacity: 1 }, { transform: `translate3d(${Math.cos(ang) * d}px,${Math.sin(ang) * d}px,0) scale(1) rotate(${(i % 2 ? 1 : -1) * 90}deg)`, opacity: 0 }], { duration: 650 + (i % 3) * 80, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards' });
+      }
+      btn.appendChild(box); setTimeout(() => box.remove(), 1000);
+    }
+
     function heroEls(i) { return HERO.el ? { slide: HERO.el.querySelector(`[data-slide="${i}"]`), seg: HERO.el.querySelectorAll('.hero-seg')[i] } : {}; }
     function heroSettleTitle(item, i) {
       const ex = EXTRAS.cache.get(extrasKeyOf(item));
@@ -5895,6 +6122,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
 
     async function openDetails(mediaId) {
+      try { wlnDismiss(mediaId); } catch (e) {}   // opening a film clears its "Now streaming" tag
       if (!mediaId) return;
 
       const modal = document.getElementById('detailModal');
@@ -7105,7 +7333,8 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       let badge = `<span class="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white"><span class="h-1.5 w-1.5 rounded-full" style="background:${legacy.color}"></span>${esc(legacy.label)}</span>`;
       let extra = '', actions;
       if (mode === 'want') {
-        badge = '';
+        const nn = wlnNew(m.id);
+        badge = nn ? `<span class="wl-new"><i aria-hidden="true"></i>Now on ${esc(nn.name || 'streaming')}</span>` : '';
         extra = wantInfoHtml(m);
         actions = `<button type="button" onclick="markSeen('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/70 ring-1 ring-white/15 transition hover:bg-white/10 hover:text-white">Seen it</button>
             <button type="button" onclick="toggleWatchlist('${esc(m.id)}')" class="rounded-full px-2.5 py-1 text-xs text-white/45 transition hover:text-white" aria-label="Remove from watchlist">Remove</button>`;
@@ -7218,7 +7447,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       rateSheetCount();
     }
     function rateSheetCount() { const c = document.getElementById('rsCount'); if (!c) return; const n = vsWords(RS.body); c.textContent = `${n} / 500 words`; c.className = 'text-xs ' + (n > 500 ? 'text-rose-300' : 'text-white/35'); }
-    function rateSheetTier(n) { RS.touched = true; RS.tier = RS.tier === n ? 0 : n; if (RS.tier) RS.pop = 't' + n; rateSheetOptions(); }   // one tap selects, tapping the same one again clears it
+    function rateSheetTier(n) { RS.touched = true; RS.tier = RS.tier === n ? 0 : n; if (RS.tier) RS.pop = 't' + n; rateSheetOptions(); if (RS.tier === 1) rateBurst(document.querySelector('#rsTiers button')); }   // one tap selects, tapping the same one again clears it
     function rateSheetFeeling(id) { RS.touched = true; RS.feeling = RS.feeling === id ? '' : id; if (RS.feeling) RS.pop = 'f' + id; rateSheetOptions(); }
     function rateSheetErr(msg) { const e = document.getElementById('rsErr'); if (!e) return; e.textContent = msg || ''; e.classList.toggle('hidden', !msg); }
     function rateSheetClose(instant) {
@@ -7553,6 +7782,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         if (wantList.length === 0) body = watchlistEmptyHtml();
         else {
           setTimeout(() => hydrateWant(wantList.filter(m => !m.__pending)), 0);
+          wlnCheck(wantList.filter(m => !m.__pending));
           let rows = wantList.map((m, idx) => ({ m, idx, a: wantAvail(m) }));
           if (WL.avail !== 'all') rows = rows.filter(x => x.a.state === WL.avail);
           if (WL.wsort === 'rating') { imdbEnsureThen(rows.map(x => x.m), 'want:' + rows.length, () => { if (currentWatchlistSubTab === 'want' && WL.wsort === 'rating' && document.getElementById('detailModal')?.classList.contains('hidden') !== false) renderWatchlist(); }); rows.sort((a, b) => imdbSortVal(b.m) - imdbSortVal(a.m) || b.idx - a.idx); }
@@ -7875,9 +8105,12 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const sub = sess ? sess.email : 'Not signed in';
       const avatar = `<div class="pg-avatar-wrap"><div class="pg-avatar flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-500/25 font-display text-3xl text-white ring-1 ring-white/15">${sess ? userAvatarHtml(sess, 'font-display text-3xl') : esc((name[0] || 'G').toUpperCase())}</div>${sess ? '<button type="button" class="pg-cam" onclick="profOpenEditor()" aria-label="Change profile picture"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>' : ''}</div>`;
       const stat = (n, l) => `<div><div class="font-display text-2xl text-white">${n}</div><div class="text-xs text-white/45">${l}</div></div>`;
+      const tkey = JSON.stringify(s.dist.map(d => [d.id, d.pct])), tasteSeen = window.__tasteSeen === tkey; window.__tasteSeen = tkey;   // the reveal plays once for the same numbers
       const bar = s.dist.length
-        ? `<div class="pg-bar flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${s.dist.map(d => `<div style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
-           <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">${s.dist.map(d => `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} ${d.pct}%</span>`).join('')}</div>`
+        ? `<div class="pg-persona"><span class="pg-persona-l">You tend to pick</span><b class="pg-persona-t"><span>${esc(computeVibePersona())}</span></b></div>
+           <div class="pg-bar flex w-full overflow-hidden bg-white/[0.06]">${s.dist.map((d, i) => `<div class="pg-seg" style="width:${d.pct}%;background:${VIBES[d.id] ? VIBES[d.id].color : '#64748b'};--i:${i}" title="${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)}"></div>`).join('')}</div>
+           <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-white/60">${s.dist.map(d => `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full" style="background:${VIBES[d.id] ? VIBES[d.id].color : '#94a3b8'}"></span>${esc(VIBES[d.id] ? VIBES[d.id].label : d.id)} <span class="pg-pct"><b class="pg-count" data-n="${d.pct}">${d.pct}</b>%</span></span>`).join('')}</div>
+           <button type="button" onclick="tasteShare()" class="pg-btn pg-btn-sm"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share my taste</button>`
         : `<p class="text-sm text-white/45">Vote on a few titles and your taste breakdown will appear here.</p>`;
       return `
         <div class="pg">
@@ -7894,7 +8127,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
             <div class="dcl-stats dcl-stats-sm" role="group" aria-label="Your numbers"><div><b>${s.movies}</b><span>Movies</span></div><div><b>${s.series}</b><span>Series</span></div><div><b>${s.wantCount}</b><span>Saved</span></div></div>
           </header>
           <div class="pg-split">
-            <section><h2 class="pg-h2">Your taste</h2><div class="pg-panel">${bar}</div></section>
+            <section><h2 class="pg-h2">Your taste</h2><div class="pg-panel pg-taste${tasteSeen ? ' is-seen' : ''}">${bar}</div></section>
             ${sess ? `<section><h2 class="pg-h2">Your icon</h2><div id="profileAvatarPicker" class="pg-panel">${avatarPickerHtml()}</div></section>` : ''}
           </div>
         </div>`;
@@ -7964,6 +8197,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       syncTopNav();
 
       if (activeTab === 'daily') dcAfterRender();
+      if (activeTab === 'profile') tasteReveal();
+      if (activeTab === 'discover') { setTimeout(streakAnimateAll, 200); setTimeout(revealInit, 60); setTimeout(wallTint, 0); }
+      wlnDot();
       // Update the mobile bottom bar
       const tabs = ['discover', 'explore', 'community', 'watchlist', 'profile'];
       tabs.forEach(t => {
