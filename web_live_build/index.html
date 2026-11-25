@@ -31,7 +31,7 @@
   <meta name="twitter:description" content="Mood-based movie and series picks with IMDb ratings and where to stream.">
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
-  <link rel="stylesheet" href="/tailwind.css?v=0588e0a908">
+  <link rel="stylesheet" href="/tailwind.css?v=5dda15c352">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
@@ -5643,7 +5643,8 @@ function posterCard(item, opts) {
       for (let i = 0; i < 9; i++) {
         const s = document.createElement('i'); s.className = 'fa-solid fa-star'; box.appendChild(s);
         const ang = (i / 9) * Math.PI * 2 + 0.3, d = 46 + (i % 3) * 14;
-        s.animate([{ transform: 'translate3d(0,0,0) scale(.3) rotate(0deg)', opacity: 1 }, { transform: `translate3d(${Math.cos(ang) * d}px,${Math.sin(ang) * d}px,0) scale(1) rotate(${(i % 2 ? 1 : -1) * 90}deg)`, opacity: 0 }], { duration: 650 + (i % 3) * 80, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards' });
+        s.animate([{ transform: 'translate3d(0,0,0) scale(.3) rotate(0deg)' }, { transform: `translate3d(${Math.cos(ang) * d}px,${Math.sin(ang) * d}px,0) scale(1) rotate(${(i % 2 ? 1 : -1) * 90}deg)` }], { duration: 700 + (i % 3) * 80, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards' });
+        s.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, delay: 330 + (i % 3) * 60, easing: 'ease-in', fill: 'both' });   // stays visible while it flies, fades at the end
       }
       btn.appendChild(box); setTimeout(() => box.remove(), 1000);
     }
