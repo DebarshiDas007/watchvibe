@@ -658,3 +658,9 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - Hover (mouse, after 90 ms) or touch on a poster starts that film's IMDb rating lookup early (imdbRush, front of the queue, once per film); openDetails also rushes it before drawing the window.
 - The rating slot in the film window shows a quiet shimmer (swiss.css v42) instead of an empty gap, and gives up after 9 s if IMDb has no number (data-done is set when a rating arrives).
 - Cache v152. Still open: trailer on press only, server-side watch-provider checks (52 TMDB calls on home), external catalogue file, shared daily picks cache.
+
+
+## v153 (26 Nov): streaming checks moved to the server
+- New unctions/api/providers.js: GET /api/providers?cc=IN&ids=m:1,t:2,... (max 40) returns where each title streams in that one country; TMDB lookups run at the edge (cached 6 h, shared by all visitors), response cached 1 h, rate limit 'prov' 30/min.
+- hydrateFreshRow (home 'Streaming now' row) now makes ONE call instead of up to 40 browser calls to TMDB; falls back to the old direct calls if the endpoint fails. One-country answers are stored in OTT.cache with a hidden _p marker; getWatchProviders refetches the full list when needed and cachedWatchProviders ignores a one-country answer for another country.
+- Cache v153.

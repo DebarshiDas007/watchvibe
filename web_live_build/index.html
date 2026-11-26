@@ -2401,7 +2401,7 @@
       const ref = tmdbRef(item);
       if (!ref) return {};
       const key = (ref.isTv ? 'tv:' : 'movie:') + ref.n;
-      if (OTT.cache.has(key)) return OTT.cache.get(key);
+      if (OTT.cache.has(key) && !OTT.cache.get(key)._p) return OTT.cache.get(key);   // a one-country answer from /api/providers is not the full list: fetch the whole thing
       if (OTT.inflight.has(key)) return OTT.inflight.get(key);
       const p = (async () => {
         try {
@@ -2420,7 +2420,8 @@
     }
     function cachedWatchProviders(item) {
       const ref = tmdbRef(item); if (!ref) return {};
-      return OTT.cache.has((ref.isTv ? 'tv:' : 'movie:') + ref.n) ? OTT.cache.get((ref.isTv ? 'tv:' : 'movie:') + ref.n) : undefined;
+      const c = OTT.cache.get((ref.isTv ? 'tv:' : 'movie:') + ref.n);
+      return c && c._p && c._p !== selectedCountry ? undefined : c;   // a one-country answer only counts for that country
     }
 
     // ---- IMDb ratings: the only rating the site shows. /api/imdb (OMDb, cached at the edge) is asked only for titles actually on screen ----
@@ -2900,9 +2901,28 @@
     }
     async function hydrateFreshRow(cands) {
       const token = ++OTT.freshToken; const cc = selectedCountry;
-      let i = 0;
-      const worker = async () => { while (i < cands.length) { const m = cands[i++]; await getWatchProviders(m); } };
-      await Promise.all(Array.from({ length: 4 }, worker));
+      // one request to our own /api/providers for the whole row (was one TMDB call per title from the browser)
+      const need = [];
+      cands.forEach(m => { const ref = tmdbRef(m); if (!ref) return; const key = (ref.isTv ? 'tv:' : 'movie:') + ref.n, c = OTT.cache.get(key); if (!c || (c._p && c._p !== cc)) need.push({ m, key, id: (ref.isTv ? 't:' : 'm:') + ref.n }); });
+      let batchOk = false;
+      if (need.length) {
+        try {
+          const r = await fetch('/api/providers?cc=' + encodeURIComponent(cc) + '&ids=' + need.map(x => x.id).join(','));
+          if (r.ok) {
+            const d = await r.json();
+            if (d && !d.error) {
+              const mk = a => (a || []).map(x => ({ id: x[0], name: x[1], logo: x[2] }));
+              need.forEach(x => { const v = d[x.id]; if (v === undefined) return; const out = {}; if (v.flatrate || v.rent || v.buy || v.ads || v.free || v.link) out[cc] = { link: v.link || null, flatrate: mk(v.flatrate), ads: mk(v.ads), free: mk(v.free), rent: mk(v.rent), buy: mk(v.buy) }; Object.defineProperty(out, '_p', { value: cc }); OTT.cache.set(x.key, out); });
+              batchOk = true;
+            }
+          }
+        } catch (e) {}
+        if (!batchOk) {   // the server could not answer: fall back to asking TMDB directly, as before
+          let i = 0;
+          const worker = async () => { while (i < need.length) { const x = need[i++]; await getWatchProviders(x.m); } };
+          await Promise.all(Array.from({ length: 4 }, worker));
+        }
+      }
       const holder = document.getElementById('freshRow');
       if (!holder || token !== OTT.freshToken || cc !== selectedCountry) return;
       holder.innerHTML = freshRowHtml(cands);
