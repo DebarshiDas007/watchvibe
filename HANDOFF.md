@@ -644,3 +644,11 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 
 ## v150 (26 Nov): two-tone headings
 - Every heading (h1-h3) in the app is now two-tone like the logo: the first half of the words keeps the text colour, the second half takes the accent colour (class .tt2, colour var(--accent), so it follows dark/light). Single words split at a sensible point (Watch|list., Up|coming, via a small override map plus a consonant-boundary rule). Done by a small inline script in the head of index.html (a MutationObserver, so new headings are split before the next paint, no flash). It only edits text nodes. Left alone: headings that already have child elements (e.g. the existing em in 'Tonight's poster wall.'), film titles and people's names (classes wvw-title, pk-title, gnl-name, pg-name-big, break-words, sr-only and ids ending in Title). To exclude a heading, give it one of those classes. Not applied: admin.html, /best and /film pages, privacy/terms. Cache v150.
+
+
+## v151 (26 Nov): quick wins from the UX audit
+- Search: one cached lowercase text per film (single includes per keystroke, filter about 13 ms cold / 2 ms warm); first render of live results shows 24 posters, final shows 48.
+- Mood chips: scored list per mood memoised (WALL._mc), pressed state shown at once (click about 12 ms, was 170 ms).
+- Phones: chips, See all, trailer/watchlist/arrow buttons at least 44 px under (pointer: coarse) in swiss.css (v41).
+- Home heading is now an h1 (same look).
+- Cache v151. Not done yet: film-window IMDb skeleton, hover prefetch, server-side provider checks, external catalogue file.

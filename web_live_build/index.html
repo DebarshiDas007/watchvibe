@@ -32,7 +32,7 @@
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
   <link rel="preconnect" href="https://image.tmdb.org">
-<link rel="stylesheet" href="/tailwind.css?v=5c6ac08c47">
+<link rel="stylesheet" href="/tailwind.css?v=f8e2763d7b">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-400.woff2">
@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=40">
+  <link rel="stylesheet" href="/swiss.css?v=41">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -755,7 +755,7 @@
     <!-- FULL SCREEN MAIN CONTENT VIEWPORT (RESPONSIVE) -->
     <main class="min-h-screen w-full min-w-0 max-w-full flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-9 md:pb-14">
       <div id="mainViewport" class="mx-auto w-full max-w-[2400px]"><!-- first paint: the same placeholder the app draws while today's picks load, written in plain HTML so it shows before the big script has downloaded; the app replaces it in place -->
-        <div class="space-y-14" id="bootSkel"><div class="wv-top space-y-5"><div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden" aria-hidden="true"><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 bg-white text-black ring-white">All</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Movies</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Series</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Stand-Up</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Upcoming</button></div><section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" aria-hidden="true"><button type="button" disabled tabindex="-1" class="wv-chip wvw-pickbtn"><i class="fa-solid fa-shuffle"></i> Pick for me tonight</button><button type="button" disabled tabindex="-1" class="wv-chip">Need a good cry</button><button type="button" disabled tabindex="-1" class="wv-chip">Blow my mind</button><button type="button" disabled tabindex="-1" class="wv-chip">Make me laugh</button><button type="button" disabled tabindex="-1" class="wv-chip">Cozy &amp; comforting</button><button type="button" disabled tabindex="-1" class="wv-chip">Pure adrenaline</button><button type="button" disabled tabindex="-1" class="wv-chip">Hidden gems</button><button type="button" disabled tabindex="-1" class="wv-chip">Under 2h</button></div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap"><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">01</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">02</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">03</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">04</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">05</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">06</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div></div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section><div id="wvFilterBar" class="wv-filters flex justify-end" style="min-height:38px"></div></div></div>
+        <div class="space-y-14" id="bootSkel"><div class="wv-top space-y-5"><div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden" aria-hidden="true"><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 bg-white text-black ring-white">All</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Movies</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Series</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Stand-Up</button><button type="button" disabled tabindex="-1" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 text-white/65 ring-white/15">Upcoming</button></div><section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h1 class="wvw-h">Tonight's <em>poster wall.</em></h1><div class="wvw-chips no-scrollbar" id="wvwChips" aria-hidden="true"><button type="button" disabled tabindex="-1" class="wv-chip wvw-pickbtn"><i class="fa-solid fa-shuffle"></i> Pick for me tonight</button><button type="button" disabled tabindex="-1" class="wv-chip">Need a good cry</button><button type="button" disabled tabindex="-1" class="wv-chip">Blow my mind</button><button type="button" disabled tabindex="-1" class="wv-chip">Make me laugh</button><button type="button" disabled tabindex="-1" class="wv-chip">Cozy &amp; comforting</button><button type="button" disabled tabindex="-1" class="wv-chip">Pure adrenaline</button><button type="button" disabled tabindex="-1" class="wv-chip">Hidden gems</button><button type="button" disabled tabindex="-1" class="wv-chip">Under 2h</button></div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap"><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">01</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">02</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">03</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">04</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">05</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div><div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">06</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div></div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section><div id="wvFilterBar" class="wv-filters flex justify-end" style="min-height:38px"></div></div></div>
         <script>(function () { if (location.hash) { var el = document.getElementById('bootSkel'); if (el) el.remove(); } })();</script></div>
     </main>
 
@@ -5396,19 +5396,23 @@ function posterCard(item, opts) {
       WALL.cands = mediaDatabase.filter(m => m.poster && langOk(m) && (m.totalVotes || 0) >= 300 && Number(m.rating) >= 6.5);
       WALL.list = wallList(); WALL.i = 0;
       setTimeout(() => { wallProg(); }, 60);
-      return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
+      return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h1 class="wvw-h">Tonight's <em>poster wall.</em></h1><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
     }
     function wallSkeleton() {
       WALL.base = []; WALL.cands = []; WALL.list = []; WALL.i = 0;
       const cards = Array.from({ length: 6 }, (_, i) => `<div class="wvw-pc" aria-hidden="true"><span class="wvw-nn">${wallPad(i + 1)}</span><span class="wvw-ph"></span><span class="wvw-t"></span><span class="wvw-s"></span></div>`).join('');
       const chips = wallChipsHtml().replace(/<button /g, '<button disabled tabindex="-1" ');
-      return `<section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h2 class="wvw-h">Tonight's <em>poster wall.</em></h2><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${chips}</div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section>`;
+      return `<section id="wvWall" class="wvw wvw-skel" aria-label="Loading tonight's picks" aria-busy="true"><div class="wvw-now" id="wvwNow"><span class="wvw-sk wvw-sk-mo"></span><span class="wvw-sk wvw-sk-t"></span><span class="wvw-sk wvw-sk-t wvw-sk-t2"></span><span class="wvw-sk wvw-sk-l"></span><span class="wvw-sk wvw-sk-l wvw-sk-l2"></span></div><div class="wvw-right"><div class="wvw-head"><h1 class="wvw-h">Tonight's <em>poster wall.</em></h1><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${chips}</div></div><div id="wvwBody"><div class="wvw-snap no-scrollbar" id="wvwSnap">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i></i></div><div class="wvw-arrows" aria-hidden="true"><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-left"></i></button><button type="button" disabled tabindex="-1"><i class="fa-solid fa-arrow-right"></i></button></div></div></div></div></section>`;
     }
     function wallList(limit) {
       let list;
       if (WALL.mood) {
         const mo = AI_MOODS.find(x => x.id === WALL.mood);
-        list = mo ? WALL.cands.map(m => { const g = genresFromNames(m.genres || []), v = m.totalVotes || 0, pop = clamp01(Math.log10(v + 10) / 6.5); return { m, s: aiMoodFit(mo, m, g, pop, v) * (0.6 + 0.4 * clamp01((Number(m.rating) - 5.5) / 3.5)) }; }).filter(x => x.s >= 0.12).sort((a, b) => b.s - a.s).map(x => x.m) : WALL.base.slice();
+        // the scored list for a mood is worked out once and reused (it only changes when the candidate list changes)
+        const mkey = mo ? mo.id + '|' + WALL.cands.length : '';
+        WALL._mc = WALL._mc || {};
+        if (mo && !WALL._mc[mkey]) WALL._mc[mkey] = WALL.cands.map(m => { const g = genresFromNames(m.genres || []), v = m.totalVotes || 0, pop = clamp01(Math.log10(v + 10) / 6.5); return { m, s: aiMoodFit(mo, m, g, pop, v) * (0.6 + 0.4 * clamp01((Number(m.rating) - 5.5) / 3.5)) }; }).filter(x => x.s >= 0.12).sort((a, b) => b.s - a.s).map(x => x.m);
+        list = mo ? WALL._mc[mkey].slice() : WALL.base.slice();
       } else list = WALL.base.slice();
       if (WALL.under) list = list.filter(m => { const r = parseRuntimeMinutes(m.duration); return r > 0 && r <= 120; });
       return list.slice(0, limit || 14);
@@ -5461,7 +5465,7 @@ function posterCard(item, opts) {
     }
     document.addEventListener('click', e => {
       const t = e.target.closest && e.target.closest('[data-wmood],[data-wunder],[data-wall],.wvw-pc'); if (!t || !document.getElementById('wvWall')) return;
-      if (t.dataset.wmood) { WALL.mood = WALL.mood === t.dataset.wmood ? '' : t.dataset.wmood; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
+      if (t.dataset.wmood) { t.setAttribute('aria-pressed', 'true'); t.classList.add('is-on'); WALL.mood =WALL.mood === t.dataset.wmood ? '' : t.dataset.wmood; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
       if (t.dataset.wunder) { WALL.under = !WALL.under; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
       if (t.classList.contains('wvw-pc')) { openDetails(t.dataset.id); return; }
       const m = WALL.list[WALL.i], a = t.dataset.wall;
@@ -7076,13 +7080,15 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       }
 
       let instantMovies = [];
+      // one lowercase text per film (title, other names, director, cast, region, genres), built once and reused, so each keystroke is a single includes()
+      const sb = (window.__SB = window.__SB || new WeakMap());
       const localMatches = mediaDatabase.filter(m => {
-        const titleMatch = (m.title && m.title.toLowerCase().includes(q)) || (m.alt && m.alt.some(t => t.toLowerCase().includes(q)));   // alt = other names (e.g. the Hindi title)
-        const dirMatch = m.director && m.director.toLowerCase().includes(q);
-        const castMatch = m.cast && m.cast.some(c => c.toLowerCase().includes(q));
-        const regionMatch = m.region && m.region.toLowerCase().includes(q);
-        const genreMatch = m.genres && m.genres.some(g => g.toLowerCase().includes(q));
-        return titleMatch || dirMatch || castMatch || regionMatch || genreMatch;
+        let s = sb.get(m);
+        if (s === undefined) {
+          s = [m.title, ...(m.alt || []), m.director, ...(m.cast || []), m.region, ...(m.genres || [])].filter(x => typeof x === 'string').join('\n').toLowerCase();
+          sb.set(m, s);
+        }
+        return s.includes(q);
       });
 
       for (const item of localMatches) {
@@ -7310,7 +7316,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
               ${isLiveSyncing ? '<span class="text-xs text-white/40">Searching more…</span>' : ''}
             </div>
             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 min-[2200px]:grid-cols-9">
-              ${matchedMovies.slice(0, 48).map(item => posterCard(item, { wide: true })).join('')}
+              ${matchedMovies.slice(0, isLiveSyncing ? 24 : 48).map(item => posterCard(item, { wide: true })).join('')}
             </div>
             ${matchedMovies.length > 48 ? `<p class="mt-5 text-center text-sm text-white/45">Showing the first 48 of ${matchedMovies.length}. Type a longer word to narrow it down.</p>` : ''}
           </section>`;

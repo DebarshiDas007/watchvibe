@@ -901,3 +901,10 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
 #rateSheet h3 { font: 500 12px var(--wv-mono) !important; text-transform: uppercase; letter-spacing: .05em; color: var(--text) !important; }
 #rateSheet h3 span { color: var(--text-2) !important; }
 #rateSheet #rsMore button { font: 500 12px var(--wv-mono); text-transform: uppercase; letter-spacing: .04em; color: var(--accent) !important; text-decoration-color: var(--accent); }
+
+/* v151: comfortable tap targets on touch screens (at least 44px) */
+@media (pointer: coarse) {
+  html .wvw-chips .wv-chip, html[data-wall="clean"] .wvw-chips .wv-chip { min-height: 44px; }
+  .wv-seeall, .wvw-acts .wv-btn, .wvw-arrows button, .wvw-all { min-height: 44px; }
+  .wv-seeall { display: inline-flex; align-items: center; }
+}
