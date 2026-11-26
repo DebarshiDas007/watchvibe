@@ -664,3 +664,9 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - New unctions/api/providers.js: GET /api/providers?cc=IN&ids=m:1,t:2,... (max 40) returns where each title streams in that one country; TMDB lookups run at the edge (cached 6 h, shared by all visitors), response cached 1 h, rate limit 'prov' 30/min.
 - hydrateFreshRow (home 'Streaming now' row) now makes ONE call instead of up to 40 browser calls to TMDB; falls back to the old direct calls if the endpoint fails. One-country answers are stored in OTT.cache with a hidden _p marker; getWatchProviders refetches the full list when needed and cachedWatchProviders ignores a one-country answer for another country.
 - Cache v153.
+
+
+## v154 (26 Nov): pick randomizer + credit line
+- 'Pick for me tonight' was the same draw for the whole day (fixed seed). Every press now uses a fresh random salt (PICK.salt), randomness weight 0.5, and films shown recently (PICK.recent, last 40) go to the back. 'Another one' still steps through the 30 ranked picks without repeats.
+- Removed 'Availability by JustWatch via TMDB.' from the film window (the 'See all options' link stays); the JustWatch credit now sits in the footer line next to the TMDB credit (TMDB terms ask for it) and in /terms.
+- Cache v154.

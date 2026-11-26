@@ -2842,7 +2842,7 @@
         const others = otherRegionsWithStreaming(all, cc);
         body += `<div class="mt-3 rounded-2xl bg-white/[0.03] p-4 text-sm text-white/60 ring-1 ring-white/[0.06]">Not available to stream, rent or buy in ${esc(cname)} right now.${others.length ? `<div class="mt-3 flex flex-wrap items-center gap-2 text-white/45">Available in: ${others.map(c => `<button type="button" onclick="setRegion('${c}', 'user')" class="rounded-full px-3 py-1 text-[13px] text-white/80 ring-1 ring-white/15 transition hover:bg-white/10">${esc(regionName(c))}</button>`).join('')}</div>` : ''}</div>`;
       }
-      sec.innerHTML = `<div class="dmx-wtw"><span class="dmx-wtw-l">Where to watch in</span>${regionSelectHtml()}${src ? `<span class="dmx-wtw-s">${src}</span>` : ''}<span class="dmx-wtw-c">Availability by JustWatch via TMDB.${av.link ? ` <a class="underline" target="_blank" rel="noopener noreferrer" href="${esc(av.link)}">See all options</a>` : ''}</span></div>${body}`;
+      sec.innerHTML = `<div class="dmx-wtw"><span class="dmx-wtw-l">Where to watch in</span>${regionSelectHtml()}${src ? `<span class="dmx-wtw-s">${src}</span>` : ''}${av.link ? `<span class="dmx-wtw-c"><a class="underline" target="_blank" rel="noopener noreferrer" href="${esc(av.link)}">See all options</a></span>` : ''}</div>${body}`;
       renderProviderTiles(item, cc, av);
 
       // primary action: the best way to watch in this region
@@ -5540,7 +5540,7 @@ function posterCard(item, opts) {
     const wvCalm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     // ---- Tonight's pick: one film for tonight from your mood, your taste, your watchlist and the day. Same pick all day (until you ask for another one).
-    const PICK = { order: [], i: 0, key: '', busy: false };
+    const PICK = { order: [], i: 0, key: '', busy: false, salt: '', recent: [] };
     const pickHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
     function pickPool() {
       const watched = new Set((userWatchedHistory || []).map(h => h.id));
@@ -5551,9 +5551,9 @@ function posterCard(item, opts) {
     function pickRank() {
       const want = new Set(userWatchlistIds || []), taste = {};
       getProfileStats().dist.forEach(d => { taste[d.id] = d.pct / 100; });
-      const seed = [featDay(), currentUserSession ? currentUserSession.id : 'guest', WALL.mood || '', WALL.under ? 'u' : ''].join('|');
+      const seed = [featDay(), currentUserSession ? currentUserSession.id : 'guest', WALL.mood || '', WALL.under ? 'u' : '', PICK.salt || ''].join('|');   // PICK.salt is new on every press, so every press is a fresh draw
       PICK.key = seed;
-      return pickPool().map(m => ({ m, s: 0.55 * clamp01((Number(m.rating) - 6) / 3) + 0.2 * (taste[m.dominantVibe] || 0) + (want.has(m.id) ? 0.35 : 0) + 0.15 * clamp01(Math.log10((m.totalVotes || 0) + 10) / 5.5) + 0.3 * pickHash(seed + '|' + m.id) }))
+      return pickPool().map(m => ({ m, s: 0.55 * clamp01((Number(m.rating) - 6) / 3) + 0.2 * (taste[m.dominantVibe] || 0) + (want.has(m.id) ? 0.35 : 0) + 0.15 * clamp01(Math.log10((m.totalVotes || 0) + 10) / 5.5) + 0.5 * pickHash(seed + '|' + m.id) + (PICK.recent.includes(m.id) ? -1 : 0) }))   // films shown recently go to the back
         .sort((a, b) => b.s - a.s).slice(0, 30).map(x => x.m);
     }
     function pickWhy(m) {
@@ -5566,9 +5566,10 @@ function posterCard(item, opts) {
     }
     function tonightPick(again) {
       if (PICK.busy) return;
-      if (!again || !PICK.order.length) { PICK.order = pickRank(); PICK.i = 0; }
+      if (!again || !PICK.order.length) { PICK.salt = Math.random().toString(36).slice(2); PICK.order = pickRank(); PICK.i = 0; }
       else PICK.i = (PICK.i + 1) % PICK.order.length;
       if (!PICK.order.length) { showToast('Nothing fits that tonight. Try clearing the mood.'); return; }
+      { const c = PICK.order[PICK.i]; if (c) { PICK.recent = PICK.recent.filter(x => x !== c.id); PICK.recent.push(c.id); if (PICK.recent.length > 40) PICK.recent.shift(); } }
       pickRender();
     }
     function pickClose() { const o = document.getElementById('pickOv'); PICK.busy = false; if (o) o.remove(); document.documentElement.style.overflow = ''; }
@@ -5962,7 +5963,7 @@ function posterCard(item, opts) {
     function homeFooter() {
       return `<footer class="border-t border-white/[0.06] pt-6 text-xs leading-relaxed text-white/35">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-1"><span>© WatchVibe</span><a href="/privacy" class="hover:text-white/70">Privacy</a><a href="/terms" class="hover:text-white/70">Terms</a><a href="/best/" class="hover:text-white/70">Best movies</a><a href="/best/series" class="hover:text-white/70">Series</a><a href="/best/hindi-movies" class="hover:text-white/70">Hindi</a><a href="/best/bengali-movies" class="hover:text-white/70">Bengali</a></div>
-        <p class="mt-2 max-w-2xl">Film and TV data and images are provided by TMDB. WatchVibe uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        <p class="mt-2 max-w-2xl">Film and TV data and images are provided by TMDB. WatchVibe uses the TMDB API but is not endorsed or certified by TMDB. Streaming availability is JustWatch data, via TMDB.</p>
       </footer>`;
     }
 
