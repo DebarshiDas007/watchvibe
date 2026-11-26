@@ -32,7 +32,7 @@
   <meta name="twitter:image" content="https://watchvibe-b92.pages.dev/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe-b92.pages.dev/#site","url":"https://watchvibe-b92.pages.dev/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe-b92.pages.dev/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
   <link rel="preconnect" href="https://image.tmdb.org">
-<link rel="stylesheet" href="/tailwind.css?v=f8e2763d7b">
+<link rel="stylesheet" href="/tailwind.css?v=afdf99aa57">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-400.woff2">
@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=43">
+  <link rel="stylesheet" href="/swiss.css?v=46">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -5483,13 +5483,16 @@ function posterCard(item, opts) {
       }).join('');
       return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
     }
+    function wallPhone() { return !!(window.matchMedia && matchMedia('(max-width: 640px)').matches); }
+    try { matchMedia('(max-width: 640px)').addEventListener('change', () => { if (document.getElementById('wvwNow') && WALL.list.length) wallRefresh(false); }); } catch (e) {}
     function wallNowHtml() {
       const m = WALL.list[WALL.i];
       if (!m) return '<span class="wvw-mo">Now showing</span><h2 class="wvw-title">Nothing yet</h2>';
       const mo = AI_MOODS.find(x => x.id === WALL.mood);
       const gens = (m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ');
       const on = wlHas(m.id);
-      return `<span class="wvw-mo">Now showing <b class="wvw-roll">${wallPad(WALL.i + 1)} / ${wallPad(WALL.list.length)}</b>${m.__badge ? ` · ${esc(m.__badge)}` : ''}</span>
+      const bd = wallPhone() && (m.backdrop || m.poster) ? `<div class="wvw-bd" aria-hidden="true"><img src="${esc(m.backdrop ? String(m.backdrop).replace('/w1280/', '/w780/') : ps(m.poster))}" alt="" decoding="async" fetchpriority="high"></div>` : '';   // phone layout: the backdrop is the screen
+      return `${bd}<span class="wvw-mo">Now showing <b class="wvw-roll">${wallPad(WALL.i + 1)} / ${wallPad(WALL.list.length)}</b>${m.__badge ? ` · ${esc(m.__badge)}` : ''}</span>
         <h2 class="wvw-title">${esc(m.title)}</h2>
         <p class="wvw-meta">${rtHtml(m, 'wvw-rt')}<span>${esc([m.year, gens, m.duration].filter(Boolean).join('  ·  '))}</span></p>
         ${m.synopsis ? `<p class="wvw-syn">${esc(m.synopsis)}</p>` : ''}
@@ -5521,7 +5524,10 @@ function posterCard(item, opts) {
       const t = e.target.closest && e.target.closest('[data-wmood],[data-wunder],[data-wall],.wvw-pc'); if (!t || !document.getElementById('wvWall')) return;
       if (t.dataset.wmood) { t.setAttribute('aria-pressed', 'true'); t.classList.add('is-on'); WALL.mood =WALL.mood === t.dataset.wmood ? '' : t.dataset.wmood; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
       if (t.dataset.wunder) { WALL.under = !WALL.under; WALL.list = wallList(); WALL.i = 0; wallRefresh(true); return; }
-      if (t.classList.contains('wvw-pc')) { openDetails(t.dataset.id); return; }
+      if (t.classList.contains('wvw-pc')) {
+        if (wallPhone() && +t.dataset.wi !== WALL.i) { wallShow(+t.dataset.wi); try { t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch (e) {} return; }   // phone: the first tap picks the film, a tap on the picked one opens it
+        openDetails(t.dataset.id); return;
+      }
       const m = WALL.list[WALL.i], a = t.dataset.wall;
       if (a === 'pick') tonightPick(false);
       else if (a === 'prev') wallStep(-1); else if (a === 'next') wallStep(1);
@@ -5530,7 +5536,7 @@ function posterCard(item, opts) {
       else if ((a === 'open' || a === 'trailer') && m) openDetails(m.id);   // the title window starts the trailer on its own
       else if (a === 'wl' && m) { toggleWatchlist(m.id); wallRefresh(false); }
     });
-    document.addEventListener('pointerover', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
+    document.addEventListener('pointerover', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c && !(wallPhone() && e.pointerType !== 'mouse')) wallShow(+c.dataset.wi); });
     // poster tilt: the picture leans a few degrees toward the pointer and catches a light (mouse only, off for reduced motion)
     (function () {
       const fine = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)'), calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)');
@@ -5554,6 +5560,7 @@ function posterCard(item, opts) {
     document.addEventListener('scroll', e => {
       const s = e.target; if (!s || s.id !== 'wvwSnap') return;
       wallProg();
+      if (wallPhone()) return;   // phone: scrolling the poster strip does not change the film, tapping does
       if (s._t) return; s._t = requestAnimationFrame(() => { s._t = 0; const cs = s.querySelectorAll('.wvw-pc'); let k = 0, best = 1e9; cs.forEach((c, n) => { const d = Math.abs(c.offsetLeft - s.offsetLeft - s.scrollLeft); if (d < best) { best = d; k = n; } }); wallShow(k); });
     }, true);
     // ================= Moments that bring people back: Tonight's pick, the streak, the taste reveal =================

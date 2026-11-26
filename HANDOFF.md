@@ -701,3 +701,8 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 - Poster tilt: pointer position applied once per frame (requestAnimationFrame). will-change removed from the film window scroll area.
 - Easing curves are now tokens in swiss.css (--ease-ui, --ease-pop, --ease-spring, --ease-out); values unchanged.
 - swiss.css?v=43, cache v158. Sweep clean at 375, 768 and 1440 px.
+## v159 - phone home screen "Cinematic"
+- On phones (max-width 640px) the home poster wall is now Cinematic: the film's backdrop (TMDB w780) fills the first screen with title, facts, two-line synopsis and Play trailer / Watchlist over it; a strip of 74 px posters under it picks the film; mood chips below. Chosen from three prototypes (Compact, Cinematic, Deck).
+- JS: wallPhone() (matchMedia 640px); wallNowHtml adds .wvw-bd (backdrop) only on phones; on phones the first tap on a poster picks the film and a tap on the picked one opens it; scrolling the strip does not change the film; touch pointerover no longer selects. Re-renders when the window crosses 640 px.
+- CSS: v159 block at the end of swiss.css (all rules under @media max-width 640px, prefixed html #wvWall; align-items stretch !important to beat the clean-wall rule). Tablet and desktop unchanged.
+- swiss.css?v=46, cache v159. Sweep clean at 375, 768 and 1440 px. The top tab "STAND-UP" still wraps to two lines on phones (not part of this change).
