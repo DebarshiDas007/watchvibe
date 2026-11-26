@@ -693,3 +693,11 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 - New scripts/add_index_lang.mjs bn: adds every poster-bearing Bengali film and series regardless of votes to catalog_index.json (+4,540; index 78,457 -> 82,997, Bengali 46 -> about 4,600). Reusable for hi, ta, te, ml, kn, mr, pa, gu, ur.
 - CAT.v 3 -> 4 (catalog_extra.json reload). Checked: no duplicate tmdb ids or title+year, no incomplete records.
 - Cache v157.
+## v158 - motion polish (from the animation audit, plans/001-008)
+- Poster-wall hover no longer replays the featured-film text entrance (class is-swap set in wallRefresh when not a full refresh); first load and mood change still rise in.
+- Chip, Pick-for-me and where-to-watch chip hover fills only on real mice (hover: hover and pointer: fine); no more stuck hover on phones.
+- Press feedback: scale .97 on :active for .wv-btn, .wv-chip, .pk-btn, .dmx-chip (160 ms). Not on poster cards (their entrance fill-mode would override it).
+- Streak banner exit: 250 ms ease-out instead of 350 ms ease-in. Star-card photo zoom 500 ms -> 250 ms.
+- Poster tilt: pointer position applied once per frame (requestAnimationFrame). will-change removed from the film window scroll area.
+- Easing curves are now tokens in swiss.css (--ease-ui, --ease-pop, --ease-spring, --ease-out); values unchanged.
+- swiss.css?v=43, cache v158. Sweep clean at 375, 768 and 1440 px.

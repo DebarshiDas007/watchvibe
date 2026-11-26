@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=42">
+  <link rel="stylesheet" href="/swiss.css?v=43">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -5498,6 +5498,7 @@ function posterCard(item, opts) {
     }
     function wallRefresh(full) {
       const now = document.getElementById('wvwNow'); if (!now) return;
+      now.classList.toggle('is-swap', !full);   // a hover swap changes the text without replaying the entrance
       now.innerHTML = wallNowHtml();
       if (full) { const ch = document.getElementById('wvwChips'), body = document.getElementById('wvwBody'); if (ch) ch.innerHTML = wallChipsHtml(); if (body) body.innerHTML = wallBodyHtml(); wallProg(); }
       wallTint();
@@ -5533,14 +5534,21 @@ function posterCard(item, opts) {
     // poster tilt: the picture leans a few degrees toward the pointer and catches a light (mouse only, off for reduced motion)
     (function () {
       const fine = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)'), calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)');
+      let last = null, raf = 0;   // the pointer position is applied once per frame
+      const apply = () => {
+        raf = 0; if (!last) return;
+        const ph = last.c.querySelector('.wvw-ph'); if (!ph) return;
+        const r = ph.getBoundingClientRect(), x = (last.cx - r.left) / r.width, y = (last.cy - r.top) / r.height;
+        ph.style.setProperty('--rx', ((0.5 - y) * 8).toFixed(2) + 'deg'); ph.style.setProperty('--ry', ((x - 0.5) * 10).toFixed(2) + 'deg');
+        ph.style.setProperty('--mx', (x * 100).toFixed(1) + '%'); ph.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+      };
       document.addEventListener('pointermove', e => {
         if (!fine || !fine.matches || (calm && calm.matches) || e.pointerType !== 'mouse') return;
         const c = e.target.closest && e.target.closest('.wvw-pc'); if (!c) return;
-        const ph = c.querySelector('.wvw-ph'), r = ph.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-        ph.style.setProperty('--rx', ((0.5 - y) * 8).toFixed(2) + 'deg'); ph.style.setProperty('--ry', ((x - 0.5) * 10).toFixed(2) + 'deg');
-        ph.style.setProperty('--mx', (x * 100).toFixed(1) + '%'); ph.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+        last = { c, cx: e.clientX, cy: e.clientY };
+        if (!raf) raf = requestAnimationFrame(apply);
       }, { passive: true });
-      document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (!c || c.contains(e.relatedTarget)) return; const ph = c.querySelector('.wvw-ph'); ['--rx', '--ry'].forEach(p => ph.style.removeProperty(p)); });
+      document.addEventListener('pointerout', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (!c || c.contains(e.relatedTarget)) return; last = null; const ph = c.querySelector('.wvw-ph'); ['--rx', '--ry'].forEach(p => ph.style.removeProperty(p)); });
     })();
     document.addEventListener('focusin', e => { const c = e.target.closest && e.target.closest('.wvw-pc'); if (c) wallShow(+c.dataset.wi); });
     document.addEventListener('scroll', e => {
