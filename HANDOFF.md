@@ -670,3 +670,12 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - 'Pick for me tonight' was the same draw for the whole day (fixed seed). Every press now uses a fresh random salt (PICK.salt), randomness weight 0.5, and films shown recently (PICK.recent, last 40) go to the back. 'Another one' still steps through the 30 ranked picks without repeats.
 - Removed 'Availability by JustWatch via TMDB.' from the film window (the 'See all options' link stays); the JustWatch credit now sits in the footer line next to the TMDB credit (TMDB terms ask for it) and in /terms.
 - Cache v154.
+
+
+## v155 (26 Nov): full TMDB search coverage
+- New scripts/build_index.mjs builds web_live_build/catalog_index.json: compact index of every TMDB film (25+ votes) and series (10+ votes) with a poster, 78,457 titles, about 5.7 MB raw / 2.7 MB brotli, most-voted first. Rebuild: 
+ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
+- Loaded ONLY when the search box gets focus (cidxLoad), never at page load. cidxSearch finds matches (3 ms) and they join the search results; opening one fetches full details live from TMDB (existing flow). Not in the service worker cache; _headers caches it 24 h.
+- Decision: the full-detail catalogue (catalog_extra.json, 6,100 films) was NOT enlarged: at about 1.3 KB per title, 30k titles would be about 39 MB and undo the speed work.
+- Known, not from this release: top menu is 31 px too wide at 1024 px.
+- Cache v155.

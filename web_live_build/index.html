@@ -6948,7 +6948,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           <header class="pg-explore-head"><div class="dcl-eyebrow">Explore</div><h1 class="dcl-h dcl-h-sm">Find a film.</h1></header>
           <div class="relative max-w-2xl wv-searchbox">
             <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-sm text-white/40"></i>
-            <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="queueUniversalSearch(this.value)" placeholder="Search films, series, people" autocomplete="off"
+            <input id="universalSearchInput" type="text" value="${esc(currentSearchQuery || '')}" oninput="queueUniversalSearch(this.value)" onfocus="cidxLoad()" placeholder="Search films, series, people" autocomplete="off"
               class="w-full rounded-full bg-white/[0.05] py-3.5 pl-12 pr-12 text-[15px] text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus:ring-white/30">
             ${currentSearchQuery ? `<button type="button" onclick="clearSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/45 transition hover:text-white" aria-label="Clear search"><i class="fa-solid fa-xmark"></i></button>` : ''}
           </div>
@@ -7048,6 +7048,28 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const text = shown.map((l, i) => `<text x="150" y="${startY + i * 34}" fill="#F4F4F5" font-family="Georgia, 'Times New Roman', serif" font-size="25" text-anchor="middle">${esc2(l)}</text>`).join('');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450"><rect width="300" height="450" fill="#14141A"/><rect x="0.5" y="0.5" width="299" height="449" fill="none" stroke="#ffffff" stroke-opacity="0.06"/><rect x="130" y="64" width="40" height="2" fill="#A855F7"/>${text}<text x="150" y="410" fill="#ffffff" fill-opacity="0.35" font-family="system-ui, sans-serif" font-size="11" letter-spacing="3" text-anchor="middle">POSTER UNAVAILABLE</text></svg>`;
       imgEl.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    // The full TMDB search index (catalog_index.json: every film and series with a poster and real votes, about 90,000 titles). Loaded only when someone starts to search.
+    const CIDX = { a: null, l: null, p: null };
+    function cidxLoad() {
+      if (CIDX.a) return Promise.resolve(true);
+      if (!CIDX.p) CIDX.p = fetch('/catalog_index.json').then(r => r.ok ? r.json() : null).then(j => {
+        if (!j || !Array.isArray(j.a)) { CIDX.p = null; return false; }
+        CIDX.a = j.a; CIDX.l = j.a.map(r => String(r[1]).toLowerCase()); return true;
+      }).catch(() => { CIDX.p = null; return false; });
+      return CIDX.p;
+    }
+    // the most-voted titles whose name contains q (the index is sorted most-voted first), as the same item shape the live TMDB results use
+    function cidxSearch(q, max) {
+      if (!CIDX.a || q.length < 2) return [];
+      const hits = [];
+      for (let i = 0; i < CIDX.l.length && hits.length < 400; i++) if (CIDX.l[i].includes(q)) hits.push(i);
+      hits.sort((a, b) => ((CIDX.l[b].startsWith(q) ? 1 : 0) - (CIDX.l[a].startsWith(q) ? 1 : 0)) || a - b);
+      return hits.slice(0, max || 30).map(i => {
+        const r = CIDX.a[i], tv = r[7] === 1;
+        return { id: `tmdb-${tv ? 'tv' : 'm'}-${r[0]}`, tmdbId: r[0], title: r[1], type: tv ? 'Series' : 'Movie', year: r[2] ? String(r[2]) : '', poster: 'https://image.tmdb.org/t/p/w500/' + r[3] + '.jpg', rating: r[4] / 10, dominantVibe: 'must_watch', isLiveTmdbResult: true, totalVotes: r[5] };
+      });
     }
 
     // Typing: the box itself always updates at once; the search runs after a short pause, so fast typing never queues up work
@@ -7287,6 +7309,12 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
                 }
               }
             }
+          } catch (e) {}
+
+          // D. The full TMDB index: every film and series with a poster (loads on the first search; waits at most 3 s for it)
+          try {
+            await Promise.race([cidxLoad(), new Promise(r => setTimeout(r, 3000))]);
+            for (const candidate of cidxSearch(q, 36)) { if (isUniqueAndValid(candidate)) instantMovies.push(candidate); }
           } catch (e) {}
 
           // Smart Relevance Sorting for Movies
