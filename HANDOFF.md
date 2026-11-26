@@ -687,3 +687,9 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 - Titles opened from the index/live path now carry tmdbId and language like catalogue titles, and no longer get invented director ("Director"/"Showrunner"), runtime (120 min), year (2024) or genres; unknown stays blank.
 - Where to watch, More like this, certification, IMDb rating verified working on an index-only title.
 - Cache v156.
+
+## v157 - more Bengali
+- scripts/add_regional.mjs takes optional args: node scripts/add_regional.mjs bn 700 0 (language, how many, min votes). Ran it twice for bn: +238 full-detail Bengali films (catalog_extra.json 8,264 -> 8,502; Bengali 327 -> 565). TMDB has no more Bengali films that pass the completeness rules (poster, backdrop, overview, director, 3+ cast, runtime).
+- New scripts/add_index_lang.mjs bn: adds every poster-bearing Bengali film and series regardless of votes to catalog_index.json (+4,540; index 78,457 -> 82,997, Bengali 46 -> about 4,600). Reusable for hi, ta, te, ml, kn, mr, pa, gu, ur.
+- CAT.v 3 -> 4 (catalog_extra.json reload). Checked: no duplicate tmdb ids or title+year, no incomplete records.
+- Cache v157.
