@@ -45,6 +45,18 @@
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
+  <style>.tt2{color:var(--accent)}</style>
+  <script>/* Two-tone headings, like the logo: the first half of a heading keeps the text colour and the second half takes the accent colour. It runs from a MutationObserver
+     (callbacks fire before the next paint, so nothing flashes) and only changes text nodes, never HTML. Film titles and people's names are left alone. */
+  (function(){var SKIP=/\b(wvw-title|pk-title|gnl-name|pg-name-big|break-words|sr-only)\b/,OV={'Watchlist.':['Watch','list.'],'Upcoming':['Up','coming']},V='aeiouAEIOU';
+  function cut(t){if(OV[t])return OV[t];var n=t.length,best=-1,bs=99;for(var i=3;i<=n-3;i++){var cc=V.indexOf(t[i-1])<0&&V.indexOf(t[i])<0,s=Math.abs(i-n/2)+(cc?0:1.5);if(s<bs){bs=s;best=i}}return best<0?null:[t.slice(0,best),t.slice(best)]}
+  function split(h){try{if(h.querySelector('.tt2'))return;if(h.children.length&&h.querySelector('em,span,b,i,svg,img,a,button,strong'))return;if(SKIP.test(h.className||'')||/Title$/.test(h.id||'')||(h.closest&&h.closest('.sr-only')))return;
+  var node=null,w=document.createTreeWalker(h,NodeFilter.SHOW_TEXT),n;while(n=w.nextNode()){if(n.nodeValue.trim())node=n}if(!node)return;
+  var full=node.nodeValue,t=full.trim();if(!t||t.length>60)return;var words=t.split(/\s+/),a,b,sp=' ';
+  if(words.length>=2){var k=Math.ceil(words.length/2);a=words.slice(0,k).join(' ');b=words.slice(k).join(' ')}else{var c=cut(t);if(!c)return;a=c[0];b=c[1];sp=''}
+  var s=document.createElement('span');s.className='tt2';s.textContent=b;node.nodeValue=full.match(/^\s*/)[0]+a+sp;node.parentNode.insertBefore(s,node.nextSibling)}catch(e){}}
+  function all(root){if(root.nodeType!==1)return;if(/^H[123]$/.test(root.tagName))split(root);if(root.querySelectorAll){var l=root.querySelectorAll('h1,h2,h3');for(var i=0;i<l.length;i++)split(l[i])}}
+  new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];if(/^H[123]$/.test(m.target.tagName||''))split(m.target);for(var j=0;j<m.addedNodes.length;j++)all(m.addedNodes[j])}}).observe(document.documentElement,{childList:true,subtree:true});})();</script>
   <link rel="stylesheet" href="/hover-card.css?v=1" media="(hover: hover) and (pointer: fine)">
   <script src="/vendor/supabase/supabase.js"></script>
   <link rel="stylesheet" href="/vendor/fa/css/all.min.css">
