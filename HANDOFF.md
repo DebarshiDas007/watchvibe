@@ -709,3 +709,14 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 ## v160 - phone tab row on one line
 - The phone tab row (All, Movies, Series, Stand-Up, Upcoming) wrapped "STAND-UP" onto two lines because theme.css gave the pills flex: 1 1 0%. swiss.css now sets flex: 0 0 auto, white-space: nowrap, padding 0 16px !important and min-width 64px on `.wv-top > div.no-scrollbar.md:hidden > button`; the row scrolls sideways (Upcoming sits past the edge). Hidden from md up, so desktop unchanged.
 - swiss.css?v=49, cache v160. Sweep clean at 375, 768 and 1440 px.
+## v161 - small motion details (Emil review, 9 items)
+1. Hover lift/slide on Daily Challenge cards and button arrows, Watchlist rows, game cards, tile arrows, stars row, Daily banner arrow, camera button and Upcoming posters now only for real mice (hover: hover and pointer: fine); keyboard focus on Upcoming still lifts.
+2. Press feedback (scale .97, 160 ms) on .dcl-btn, .wvb-cta, .vs-btn, .wll-act buttons and .pg-cam.
+3. Exit animations: film window (150 ms fade and 8 px drop, class dm-leave, timer window.__dmLeaveT, cancelled if a film is opened meanwhile) and Pick-for-me overlay (is-out, 160 ms). Instant with reduced motion.
+4. Phone hero backdrop: fades in on load, the old backdrop stays underneath until the new one is in (is-old), next two backdrops are preloaded.
+5. games.js review: its transitions are Tailwind colour fades plus a functional time bar and a 2% press shrink, so no change in games.js; instead a global reduced-motion rule drops the press shrink ([class*="active:scale-"] and the new :active rules).
+6. Scroll reveal shortened: .rv-in opacity .35 s, transform .45 s (was .55 / .65 s).
+7. Saved-to-watchlist: the check mark / bookmark pops once (wv-pop, .22 s) on the title just saved (window.__wlPop for 600 ms), on the home hero button and in the film window.
+8. Phone poster strip: 4 px invisible tap margin around each thumbnail.
+9. First-paint placeholder: already had the hero height (wvw-skel min-height from v159), no change needed.
+- swiss.css?v=50, cache v161. Sweep clean at 375, 768 and 1440 px.

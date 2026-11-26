@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=49">
+  <link rel="stylesheet" href="/swiss.css?v=50">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -3364,6 +3364,7 @@
         userWatchlistAdded[wlKey(mediaId)] = new Date().toISOString();
         { const it = findLibItem(mediaId); if (it) userWatchlistMeta[mediaId] = libMeta(it); }
         Track.event('watchlist_add', trackTitleInfo(mediaId));
+        window.__wlPop = mediaId; setTimeout(() => { window.__wlPop = null; }, 600);   // the check mark on this title's button pops once
         showToast('📌 Added to your Saved Watchlist!');
       }
       saveWatchlistStore();
@@ -5484,6 +5485,7 @@ function posterCard(item, opts) {
       return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
     }
     function wallPhone() { return !!(window.matchMedia && matchMedia('(max-width: 640px)').matches); }
+    function wallBdUrl(m) { return m.backdrop ? String(m.backdrop).replace('/w1280/', '/w780/') : ps(m.poster); }
     try { matchMedia('(max-width: 640px)').addEventListener('change', () => { if (document.getElementById('wvwNow') && WALL.list.length) wallRefresh(false); }); } catch (e) {}
     function wallNowHtml() {
       const m = WALL.list[WALL.i];
@@ -5491,18 +5493,21 @@ function posterCard(item, opts) {
       const mo = AI_MOODS.find(x => x.id === WALL.mood);
       const gens = (m.genres || []).filter(g => !/^(Trending|Cinema|Series|Movie|Stand-?Up)$/i.test(g)).slice(0, 3).join(' · ');
       const on = wlHas(m.id);
-      const bd = wallPhone() && (m.backdrop || m.poster) ? `<div class="wvw-bd" aria-hidden="true"><img src="${esc(m.backdrop ? String(m.backdrop).replace('/w1280/', '/w780/') : ps(m.poster))}" alt="" decoding="async" fetchpriority="high"></div>` : '';   // phone layout: the backdrop is the screen
+      const bd = wallPhone() && (m.backdrop || m.poster) ? `<div class="wvw-bd" aria-hidden="true"><img src="${esc(wallBdUrl(m))}" alt="" decoding="async" fetchpriority="high" onload="this.classList.add('is-in')"></div>` : '';   // phone layout: the backdrop is the screen
       return `${bd}<span class="wvw-mo">Now showing <b class="wvw-roll">${wallPad(WALL.i + 1)} / ${wallPad(WALL.list.length)}</b>${m.__badge ? ` · ${esc(m.__badge)}` : ''}</span>
         <h2 class="wvw-title">${esc(m.title)}</h2>
         <p class="wvw-meta">${rtHtml(m, 'wvw-rt')}<span>${esc([m.year, gens, m.duration].filter(Boolean).join('  ·  '))}</span></p>
         ${m.synopsis ? `<p class="wvw-syn">${esc(m.synopsis)}</p>` : ''}
-        <div class="wvw-acts"><button type="button" class="wv-btn wv-btn-p" data-wall="trailer"><i class="fa-solid fa-play" aria-hidden="true"></i><span>Play trailer</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="open"><span>Open film</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="wl" aria-pressed="${on}"><i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}" aria-hidden="true"></i><span>${on ? 'In watchlist' : 'Watchlist'}</span></button></div>
+        <div class="wvw-acts"><button type="button" class="wv-btn wv-btn-p" data-wall="trailer"><i class="fa-solid fa-play" aria-hidden="true"></i><span>Play trailer</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="open"><span>Open film</span></button><button type="button" class="wv-btn wv-btn-g" data-wall="wl" aria-pressed="${on}"><i class="fa-solid ${on ? 'fa-check' : 'fa-plus'}${on && window.__wlPop === m.id ? ' wv-pop' : ''}" aria-hidden="true"></i><span>${on ? 'In watchlist' : 'Watchlist'}</span></button></div>
         ${mo ? `<button type="button" class="wvw-all" data-wall="seeall">All ${esc(mo.label.toLowerCase())} films <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>` : ''}`;
     }
     function wallRefresh(full) {
       const now = document.getElementById('wvwNow'); if (!now) return;
       now.classList.toggle('is-swap', !full);   // a hover swap changes the text without replaying the entrance
+      const oldBd = wallPhone() && !full ? now.querySelector('.wvw-bd') : null;   // phone: the old backdrop stays underneath until the new one has faded in
       now.innerHTML = wallNowHtml();
+      if (oldBd) { oldBd.classList.add('is-old'); now.insertBefore(oldBd, now.firstChild); setTimeout(() => oldBd.remove(), 500); }
+      if (wallPhone()) [1, 2].forEach(k => { const x = WALL.list[WALL.i + k]; if (x && (x.backdrop || x.poster)) { const im = new Image(); im.decoding = 'async'; im.src = wallBdUrl(x); } });   // the next two backdrops are already there when you tap them
       if (full) { const ch = document.getElementById('wvwChips'), body = document.getElementById('wvwBody'); if (ch) ch.innerHTML = wallChipsHtml(); if (body) body.innerHTML = wallBodyHtml(); wallProg(); }
       wallTint();
     }
@@ -5600,11 +5605,17 @@ function posterCard(item, opts) {
       { const c = PICK.order[PICK.i]; if (c) { PICK.recent = PICK.recent.filter(x => x !== c.id); PICK.recent.push(c.id); if (PICK.recent.length > 40) PICK.recent.shift(); } }
       pickRender();
     }
-    function pickClose() { const o = document.getElementById('pickOv'); PICK.busy = false; if (o) o.remove(); document.documentElement.style.overflow = ''; }
+    function pickClose() {
+      const o = document.getElementById('pickOv'); PICK.busy = false; document.documentElement.style.overflow = '';
+      if (!o) return;
+      if (wvCalm()) { o.remove(); return; }
+      o.classList.add('is-out'); o.style.pointerEvents = 'none'; clearTimeout(o._t); o._t = setTimeout(() => o.remove(), 160);   // a short fade out
+    }
     function pickCur() { return PICK.order[PICK.i]; }
     function pickRender() {
       const m = pickCur(); if (!m) return;
       let ov = document.getElementById('pickOv');
+      if (ov && ov.classList.contains('is-out')) { clearTimeout(ov._t); ov.classList.remove('is-out'); ov.style.pointerEvents = ''; document.documentElement.style.overflow = 'hidden'; }   // reopened while fading out
       if (!ov) { ov = document.createElement('div'); ov.id = 'pickOv'; ov.className = 'pk-ov'; ov.onclick = e => { if (e.target === ov) pickClose(); }; document.body.appendChild(ov); document.documentElement.style.overflow = 'hidden'; }
       // the reel: filler posters, and the pick lands in the middle of the last stretch
       const L = 22, rng = pickHash, pool = pickPool().filter(x => x.id !== m.id);
@@ -6266,6 +6277,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const contentEl = document.getElementById('modalContent');
       if (!modal || !contentEl) return;
 
+      clearTimeout(window.__dmLeaveT); modal.classList.remove('dm-leave');   // opening while the exit is still playing cancels it
       const wasHidden = modal.classList.contains('hidden');
       modal.classList.remove('hidden');
       if (wasHidden) playDetailsEnter(modal);
@@ -6791,7 +6803,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       const saved = userWatchlistIds.includes(item.id);
       const seen = userWatchedHistory.some(h => h.id === item.id);
       const pill = 'dmx-btn inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 transition';
-      return `<button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill}${saved ? ' is-on' : ''}"><i class="fa-solid fa-bookmark text-xs"></i>${saved ? 'Saved' : 'Watchlist'}</button>
+      return `<button type="button" onclick="toggleWatchlist('${item.id}')" class="${pill}${saved ? ' is-on' : ''}"><i class="fa-solid fa-bookmark text-xs${saved && window.__wlPop === item.id ? ' wv-pop' : ''}"></i>${saved ? 'Saved' : 'Watchlist'}</button>
             <button type="button" onclick="markSeen('${item.id}')" class="${pill}${seen ? ' is-on' : ''}"><i class="fa-solid fa-eye text-xs"></i>${seen ? 'Watched' : 'Mark as seen'}</button>`;
     }
     // one large tile per service right under the trailer (layout F); the full list with the region picker stays further down
@@ -6963,7 +6975,13 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       stopTrailerPreview();
       heroSetPause('modal', false);
       const m = document.getElementById('detailModal');
-      if (m) m.classList.add('hidden');
+      if (m) {
+        clearTimeout(window.__dmLeaveT);
+        if (!m.classList.contains('hidden') && !wvCalm()) {   // a short exit, quicker than the entrance
+          m.classList.remove('dm-enter'); m.classList.add('dm-leave');
+          window.__dmLeaveT = setTimeout(() => { m.classList.add('hidden'); m.classList.remove('dm-leave'); }, 150);
+        } else m.classList.add('hidden');
+      }
       const c = document.getElementById('modalContent');
       if (c) { delete c.dataset.itemId; }
     }
