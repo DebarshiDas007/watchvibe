@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=41">
+  <link rel="stylesheet" href="/swiss.css?v=42">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -2495,7 +2495,7 @@
       IMDB.saveT = setTimeout(() => { try { const o = {}; IMDB.map.forEach((v, k) => { o[k] = v; }); localStorage.setItem(IMDB.KEY, JSON.stringify(o)); } catch (e) {} }, 800);
     }
     function imdbApply(k) {
-      document.querySelectorAll('[data-rt="' + k + '"]').forEach(el => { const s = imdbText(k, el.dataset.sp); if (el.textContent !== s) el.textContent = s; });
+      document.querySelectorAll('[data-rt="' + k + '"]').forEach(el => { const s = imdbText(k, el.dataset.sp); if (el.textContent !== s) el.textContent = s; el.dataset.done = '1'; });
       // placeholders that were waiting for a TMDB match (data-rtl): fill them in once this title's IMDb number is known, so a poster never stays blank while the hover card shows it
       document.querySelectorAll('[data-rtl]').forEach(el => { const s = el.dataset.rtl || '', i = s.lastIndexOf('|'); if (i < 0) return; if (TMAP.m.get(s.slice(0, i).toLowerCase().trim() + '|' + s.slice(i + 1)) !== k) return; el.setAttribute('data-rt', k); el.removeAttribute('data-rtl'); el.textContent = imdbText(k, el.dataset.sp); });
       const row = document.getElementById('imdbRow'), v = IMDB.map.get(k);
@@ -2523,6 +2523,26 @@
       if (IMDB.map.has(k)) imdbApply(k); else imdbWant(k);
     }
     function imdbWant(k) { if (!k || IMDB.map.has(k) || IMDB.queued.has(k)) return; IMDB.queued.add(k); IMDB.q.push(k); imdbPump(); }
+    // front of the queue: used when a film is about to open (hover, touch or click), so its rating is on the way before the window is drawn
+    function imdbRush(item) {
+      try {
+        const k = item && imdbKey(item); if (!k || IMDB.map.has(k)) return;
+        if (!IMDB.queued.has(k)) { IMDB.queued.add(k); IMDB.q.unshift(k); } else { const i = IMDB.q.indexOf(k); if (i > 0) { IMDB.q.splice(i, 1); IMDB.q.unshift(k); } }
+        imdbPump();
+      } catch (e) {}
+    }
+    // hovering or touching a poster starts that film's rating early (one lookup per film, after a short pause so a mouse sweeping past does nothing)
+    (function () {
+      const seen = new Set(); let t = 0, last = '';
+      const idOf = el => { if (!el) return ''; if (el.dataset && el.dataset.id) return el.dataset.id; const m = /openDetails\('([^']+)'\)/.exec(el.getAttribute('onclick') || ''); return m ? m[1] : ''; };
+      const go = e => {
+        const el = e.target && e.target.closest && e.target.closest('.wvw-pc[data-id], [onclick*="openDetails("]'); const id = idOf(el);
+        if (!id || id === last) return; last = id; clearTimeout(t);
+        t = setTimeout(() => { if (seen.has(id)) return; seen.add(id); const item = (typeof findItemById === 'function' && findItemById(id)) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]); if (item) imdbRush(item); }, e.type === 'touchstart' ? 0 : 90);
+      };
+      document.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') go(e); }, { passive: true });
+      document.addEventListener('touchstart', go, { passive: true });
+    })();
     function imdbScan() {
       document.querySelectorAll('[data-rtl]:not([data-rto])').forEach(el => { el.dataset.rto = '1'; if (IMDB.io) IMDB.io.observe(el); else imdbLink(el); });
       document.querySelectorAll('[data-rt]:not([data-rto])').forEach(el => {
@@ -6205,6 +6225,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
       // 1. Check local mediaDatabase
       let item = mediaDatabase.find(m => m.id === mediaId || (m.title && m.title.toLowerCase() === mediaId.toLowerCase()));
+      imdbRush(item || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[mediaId]));   // the IMDb rating starts loading now, not after the window is drawn
 
       // 2. Check dynamic media cache
       if (!item && window.DYNAMIC_MEDIA[mediaId]) {

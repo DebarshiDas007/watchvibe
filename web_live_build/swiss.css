@@ -908,3 +908,9 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
   .wv-seeall, .wvw-acts .wv-btn, .wvw-arrows button, .wvw-all { min-height: 44px; }
   .wv-seeall { display: inline-flex; align-items: center; }
 }
+
+/* v152: the IMDb rating in the film window holds its place with a quiet shimmer until the number arrives (gives up after 9 s if IMDb has none) */
+#detailMeta [data-rt]:empty:not([data-done]), #detailMeta [data-rtl]:empty { display: inline-block; width: 3.4em; height: 1em; vertical-align: -.12em; margin-left: .75rem; border-radius: 2px; background: var(--line-strong, rgba(128,128,128,.35)); animation: wvRtSk 1.2s ease-in-out infinite, wvRtGone .01s 9s forwards; }
+@keyframes wvRtSk { 0%, 100% { opacity: .25; } 50% { opacity: .6; } }
+@keyframes wvRtGone { to { opacity: 0; width: 0; margin: 0; } }
+@media (prefers-reduced-motion: reduce) { #detailMeta [data-rt]:empty:not([data-done]), #detailMeta [data-rtl]:empty { animation: wvRtGone .01s 9s forwards; opacity: .35; } }

@@ -652,3 +652,9 @@ Fix: Edit profile could not save for an account with no row in profiles (1 of 10
 - Phones: chips, See all, trailer/watchlist/arrow buttons at least 44 px under (pointer: coarse) in swiss.css (v41).
 - Home heading is now an h1 (same look).
 - Cache v151. Not done yet: film-window IMDb skeleton, hover prefetch, server-side provider checks, external catalogue file.
+
+
+## v152 (26 Nov): film window feels faster
+- Hover (mouse, after 90 ms) or touch on a poster starts that film's IMDb rating lookup early (imdbRush, front of the queue, once per film); openDetails also rushes it before drawing the window.
+- The rating slot in the film window shows a quiet shimmer (swiss.css v42) instead of an empty gap, and gives up after 9 s if IMDb has no number (data-done is set when a rating arrives).
+- Cache v152. Still open: trailer on press only, server-side watch-provider checks (52 TMDB calls on home), external catalogue file, shared daily picks cache.
