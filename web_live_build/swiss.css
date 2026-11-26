@@ -967,3 +967,7 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
   html #wvWall .wvw-pc::before { content: ""; position: absolute; inset: -4px; }
 }
 @media (max-width: 640px) and (prefers-reduced-motion: reduce) { html #wvWall .wvw-bd img { transition: none; } }
+/* v162: the "Now showing" column keeps one height whatever the title length, so the placeholder, the real wall and every film swap sit in the same box (no shift when the real page replaces the placeholder) */
+@media (min-width: 901px) {
+  html #wvWall .wvw-now, html #wvWall.wvw-skel .wvw-now { min-height: 270px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+}

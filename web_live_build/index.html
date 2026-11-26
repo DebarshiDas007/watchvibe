@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=50">
+  <link rel="stylesheet" href="/swiss.css?v=51">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -2034,12 +2034,28 @@
     function refreshViewsBg(opts) {
       if (opts && opts.feat) BG.feat = true;
       clearTimeout(BG.t);
-      BG.t = setTimeout(bgFlush, 250);
+      BG.t = setTimeout(bgFlush, document.getElementById('bootSkel') ? 20 : 250);   // the page is still on its placeholder: draw as soon as the pieces are here
+    }
+    // First open: the placeholder written in the page stays until today's picks (and, for up to ~0.9 s, the big catalogue) have arrived,
+    // so the home page is built ONCE. It used to be drawn as a second placeholder, then as the real page, then rebuilt again when the
+    // catalogue landed: three visible swaps in the first second. true = keep waiting (a timer comes back to draw it at the latest at ~0.9 s).
+    function homeBootHold() {
+      if (!document.getElementById('bootSkel')) return false;
+      const t = performance.now();
+      let hold = false;
+      if (typeof homeFeaturedAllowed === 'function' && homeFeaturedAllowed()) { ensureFeatured(); if (FEAT.state === 'loading') hold = true; }
+      if (CAT.state === 'idle') loadExtraCatalog();
+      if ((CAT.state === 'idle' || CAT.state === 'loading' || FRESH.state === 'loading') && t < 900) hold = true;   // the big catalogue and today's refresh file both change what the page shows
+      clearTimeout(window.__bootT);
+      if (hold) window.__bootT = setTimeout(() => { if (document.getElementById('bootSkel')) refreshViewsBg(); }, Math.max(60, 920 - t));
+      return hold;
     }
     function bgFlush() {
       const onHome = activeTab === 'discover' || activeTab === 'explore';
-      const waiting = onHome && (CAT.state === 'idle' || CAT.state === 'loading' || FEAT.state === 'loading') && performance.now() < 4500;
+      const boot = !!document.getElementById('bootSkel');   // still on the placeholder: homeBootHold decides when the first real build happens
+      const waiting = !boot && onHome && (CAT.state === 'idle' || CAT.state === 'loading' || FEAT.state === 'loading') && performance.now() < 4500;
       if (waiting) { BG.t = setTimeout(bgFlush, 250); return; }
+      if (boot && activeTab === 'discover' && homeBootHold()) return;
       const feat = BG.feat; BG.feat = false;
       const ae = document.activeElement, typing = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
       if (typing) return;
@@ -5450,7 +5466,7 @@ function posterCard(item, opts) {
       WALL.cands = mediaDatabase.filter(m => m.poster && langOk(m) && (m.totalVotes || 0) >= 300 && Number(m.rating) >= 6.5);
       WALL.list = wallList(); WALL.i = 0;
       setTimeout(() => { wallProg(); }, 60);
-      return `<section id="wvWall" class="wvw" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h1 class="wvw-h">Tonight's <em>poster wall.</em></h1><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
+      return `<section id="wvWall" class="wvw" data-sig="${esc(wallSig())}" aria-label="Tonight's poster wall"><div class="wvw-now" id="wvwNow" aria-live="polite">${wallNowHtml()}</div><div class="wvw-right"><div class="wvw-head"><h1 class="wvw-h">Tonight's <em>poster wall.</em></h1><div class="wvw-chips no-scrollbar" id="wvwChips" role="group" aria-label="Mood">${wallChipsHtml()}</div></div><div id="wvwBody">${wallBodyHtml()}</div></div></section>`;
     }
     function wallSkeleton() {
       WALL.base = []; WALL.cands = []; WALL.list = []; WALL.i = 0;
@@ -5485,6 +5501,8 @@ function posterCard(item, opts) {
       return `<div class="wvw-snap no-scrollbar overflow-x-auto" id="wvwSnap" tabindex="0" role="group" aria-label="Poster wall, swipe sideways">${cards}</div><div class="wvw-foot"><div class="wvw-prog" aria-hidden="true"><i id="wvwProg"></i></div><div class="wvw-arrows"><button type="button" data-wall="prev" aria-label="Previous posters"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button><button type="button" data-wall="next" aria-label="Next posters"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div></div>`;
     }
     function wallPhone() { return !!(window.matchMedia && matchMedia('(max-width: 640px)').matches); }
+    // which films the wall shows: a redraw that would show the same wall keeps the wall that is already on screen (see homeKeepWall)
+    function wallSig() { return WALL.list.map(m => { const r = tmdbRef(m); return r ? (r.isTv ? 't' : 'm') + r.n : m.id; }).join(',') + '|' + (WALL.mood || '') + '|' + (WALL.under ? 1 : 0) + '|' + (wallPhone() ? 'p' : 'd'); }
     function wallBdUrl(m) { return m.backdrop ? String(m.backdrop).replace('/w1280/', '/w780/') : ps(m.poster); }
     try { matchMedia('(max-width: 640px)').addEventListener('change', () => { if (document.getElementById('wvwNow') && WALL.list.length) wallRefresh(false); }); } catch (e) {}
     function wallNowHtml() {
@@ -8381,11 +8399,15 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       viewport.classList.toggle('max-w-[2400px]', activeTab === 'discover'); viewport.classList.toggle('max-w-[1440px]', activeTab !== 'discover');
       const reuse = activeTab === 'discover' && HOME.reuse && HOME.node && Date.now() - HOME.t < 5 * 60 * 1000 && HOME.key === homeKey() && homeCacheable();
       HOME.reuse = false;
-      if (reuse) {
+      const hold = activeTab === 'discover' && !reuse && homeBootHold();   // the page's own placeholder stays until the first real build can be the only one
+      if (hold) {
+        // nothing to draw yet: the placeholder written in the page is still showing
+      } else if (reuse) {
         viewport.replaceChildren(HOME.node);
         const pool = HOME.pool; setTimeout(() => heroMount(pool), 0); setTimeout(initLazyShelves, 0);
       } else {
         let content = '';
+        const oldWall = activeTab === 'discover' ? document.getElementById('wvWall') : null, oldI = WALL.i;   // a redraw that would show the same wall keeps this one
         if (activeTab === 'discover') content = renderDiscover();
         else if (activeTab === 'explore') content = renderExplore();
         else if (activeTab === 'community') content = renderCommunity();
@@ -8394,6 +8416,10 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         else if (activeTab === 'daily') content = renderDaily();
         else if (activeTab === 'upcoming') content = renderUpcoming();
         viewport.innerHTML = content;
+        if (oldWall && !oldWall.classList.contains('wvw-skel')) {
+          const nw = document.getElementById('wvWall');
+          if (nw && !nw.classList.contains('wvw-skel') && nw !== oldWall && nw.dataset.sig && nw.dataset.sig === oldWall.dataset.sig) { nw.replaceWith(oldWall); WALL.i = oldI; }   // same films: the wall on screen stays exactly as it is (no new posters, no replayed entrance)
+        }
         // The catalog renders ~900 posters at once; lazy-load them so the page (and its `load` event) isn't blocked.
         viewport.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; });
       }
@@ -8402,7 +8428,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
       if (activeTab === 'daily') dcAfterRender();
       if (activeTab === 'profile') tasteReveal();
-      if (activeTab === 'discover') { setTimeout(streakAnimateAll, 200); setTimeout(revealInit, 60); setTimeout(wallTint, 0); }
+      if (activeTab === 'discover' && !hold) { try { revealInit(); } catch (e) {} setTimeout(streakAnimateAll, 200); setTimeout(revealInit, 60); setTimeout(wallTint, 0); }   // revealInit also runs now, before the first paint, so shelves below the screen never show for a moment and then hide
       wlnDot();
       // Update the mobile bottom bar
       const tabs = ['discover', 'explore', 'community', 'watchlist', 'profile'];

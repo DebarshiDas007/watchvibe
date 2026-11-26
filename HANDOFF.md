@@ -720,3 +720,15 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 8. Phone poster strip: 4 px invisible tap margin around each thumbnail.
 9. First-paint placeholder: already had the hero height (wvw-skel min-height from v159), no change needed.
 - swiss.css?v=50, cache v161. Sweep clean at 375, 768 and 1440 px.
+## v162 - first-open jitter fixed (the home page is now built once)
+Measured with a frame-by-frame recorder (rects of the wall, title, poster row, chips, first shelf, node identity) on a cold and a warm first open:
+- Cold first visit: static placeholder -> a SECOND placeholder drawn by JS (new element, pulse restarts, real shelves visible under it) -> real page ~400 ms after the data had already arrived (BG debounce 250 ms + polling) -> shelves visible for ~40 ms before revealInit hid them. Skeleton vs real "now showing" box differed by 4 px / 10 px.
+- Returning visitor: real page at ~180 ms with the 2k built-in films, then a SECOND full rebuild at ~670 ms when catalog_extra.json + catalog_fresh.json landed (new wall node, posters re-created, shelves flash visible then hidden again).
+Fixes:
+1. homeBootHold(): while the placeholder written in the page (#bootSkel) is showing, refreshViews draws nothing until today's picks, the big catalogue and the daily refresh file are in (at most ~0.9 s; fallback timer), so the page is built ONCE. Later fallback paths still work (featured failed/slow: renders the fallback wall).
+2. refreshViewsBg flushes after 20 ms while on the placeholder (was 250 ms); bgFlush no longer waits 4.5 s for the catalogue while on the placeholder.
+3. wallSig() (tmdb ids + mood + under-2h + phone) is stored on the wall as data-sig; a later redraw that would show the same wall keeps the wall node already on screen (WALL.i restored): no new posters, no replayed entrance, no flicker. Works when the catalogue changes a film's id from tmdb-m-N to its catalogue slug (sig uses the TMDB id).
+4. revealInit() also runs synchronously right after the page is drawn (shelves below the screen are hidden before the first paint).
+5. Desktop (min-width 901px): .wvw-now has min-height 270px and centres its content, for skeleton and real wall alike, so nothing shifts when the real wall replaces the placeholder or when titles of different length are shown.
+- Result (recorded): cold desktop: placeholder 69 ms -> real wall 340 ms, once, same box (282/270), no shelf flash; warm: placeholder -> real at ~360 ms, once; phone and tablet: same geometry, single swap. Sweep clean at 375, 768 and 1440 px.
+- swiss.css?v=51, cache v162.
