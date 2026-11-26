@@ -2396,6 +2396,19 @@
       return n ? { n: String(n), isTv: !!isTv } : null;
     }
 
+    // One film, one record. A title can arrive under a TMDB id (search index, live search, mood pages, actor pages) while the built-in
+    // catalogue holds it under its own id: this maps the TMDB id to the catalogue record, so both open the same window with the same
+    // library entry, verdicts, where-to-watch and More-like-this.
+    const TMX = { n: -1, m: new Map() };
+    function catByTmdb(id) {
+      const x = /^tmdb-(m|tv)-(\d+)$/.exec(String(id || '')); if (!x) return null;
+      if (TMX.n !== mediaDatabase.length) {
+        TMX.n = mediaDatabase.length; TMX.m = new Map();
+        for (const m of mediaDatabase) { if (/^tmdb-(m|tv)-/.test(String(m.id))) continue; const k = tmdbRef(m); if (k) TMX.m.set((k.isTv ? 'tv' : 'm') + k.n, m); }
+      }
+      return TMX.m.get(x[1] + x[2]) || null;
+    }
+
     // Returns { CC: {link, flatrate:[{id,name,logo}], ads, free, rent, buy} } or null on failure. Cached for the session.
     async function getWatchProviders(item) {
       const ref = tmdbRef(item);
@@ -2939,7 +2952,7 @@
     function genresFromIds(ids) { const out = []; (ids || []).forEach(i => (TMDB_GENRE_IDS[i] || []).forEach(g => { if (!out.includes(g)) out.push(g); })); return out; }
     const simBucket = it => (it && it.type === 'Stand-Up') ? 'standup' : (it && it.type === 'Series') ? 'tv' : 'movie';
     const castList = it => Array.isArray(it && it.cast) ? it.cast : [];
-    const findItemById = id => (mediaDatabase || []).find(m => m.id === id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]) || null;
+    const findItemById = id => (mediaDatabase || []).find(m => m.id === id) || catByTmdb(id) || (window.DYNAMIC_MEDIA && window.DYNAMIC_MEDIA[id]) || null;
 
     // Story similarity: compare plot descriptions (TF-IDF cosine) so shared themes count, not just genre labels
     const SYN_STOP = new Set('about after again against also another because before being between both brings but came come could during each even every film find finds first from have having here himself into just later life like make makes many more most must only other over same several should since some still such than that their them then there these they this those through under until very want wants well were what when where which while who whom will with without would years year their young story'.split(' '));
@@ -6230,8 +6243,9 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     }
 
     async function openDetails(mediaId) {
-      try { wlnDismiss(mediaId); } catch (e) {}   // opening a film clears its "Now streaming" tag
       if (!mediaId) return;
+      { const c = catByTmdb(mediaId); if (c) mediaId = c.id; }   // a TMDB id for a film the catalogue already holds opens the catalogue record
+      try { wlnDismiss(mediaId); } catch (e) {}   // opening a film clears its "Now streaming" tag
 
       const modal = document.getElementById('detailModal');
       const contentEl = document.getElementById('modalContent');
@@ -6324,11 +6338,11 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
           if (tmdbData) {
             const isTvShow = !!tmdbData._isTv;
             const title = tmdbData.title || tmdbData.name || displayTitle;
-            const year = (tmdbData.release_date || tmdbData.first_air_date || '2024').split('-')[0];
-            const runtime = tmdbData.runtime || (tmdbData.episode_run_time && tmdbData.episode_run_time[0]) || 120;
-            const duration = isTvShow ? `${tmdbData.number_of_seasons || 1} Season${(tmdbData.number_of_seasons || 1) > 1 ? 's' : ''}` : `${Math.floor(runtime / 60)}h ${runtime % 60}m`;
+            const year = (tmdbData.release_date || tmdbData.first_air_date || '').split('-')[0];   // unknown stays blank, never a made-up value
+            const runtime = tmdbData.runtime || (tmdbData.episode_run_time && tmdbData.episode_run_time[0]) || 0;
+            const duration = isTvShow ? (tmdbData.number_of_seasons ? `${tmdbData.number_of_seasons} Season${tmdbData.number_of_seasons > 1 ? 's' : ''}` : '') : (runtime ? `${Math.floor(runtime / 60)}h ${runtime % 60}m` : '');
             const genres = (tmdbData.genres || []).map(g => g.name);
-            const director = isTvShow ? ((tmdbData.created_by && tmdbData.created_by[0]?.name) || 'Showrunner') : ((tmdbData.credits?.crew || []).find(c => c.job === 'Director')?.name || 'Director');
+            const director = isTvShow ? ((tmdbData.created_by && tmdbData.created_by[0]?.name) || '') : ((tmdbData.credits?.crew || []).find(c => c.job === 'Director')?.name || '');
             const cast = (tmdbData.credits?.cast || []).slice(0, 6).map(c => c.name);
             const poster = tmdbData.poster_path ? `${TMDB_IMG_URL}${tmdbData.poster_path}` : (filmographyHint?.poster || 'https://image.tmdb.org/t/p/w500/rstcAnBeCkxNQjNp3YXrF6IP1tW.jpg');
             const backdrop = tmdbData.backdrop_path ? `${TMDB_BACKDROP_URL}${tmdbData.backdrop_path}` : (tmdbData.poster_path ? `${TMDB_BACKDROP_URL}${tmdbData.poster_path}` : poster);
@@ -6364,10 +6378,12 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
 
             item = {
               id: mediaId,
+              tmdbId: String(tmdbData.id || rawId),
+              language: tmdbData.original_language || '',
               title: title,
               type: isTvShow ? 'Series' : 'Movie',
               year: year,
-              genres: genres.length > 0 ? genres : ['Drama', 'Cinema'],
+              genres: genres,
               duration: duration,
               director: director,
               cast: cast,
@@ -7068,6 +7084,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
       hits.sort((a, b) => ((CIDX.l[b].startsWith(q) ? 1 : 0) - (CIDX.l[a].startsWith(q) ? 1 : 0)) || a - b);
       return hits.slice(0, max || 30).map(i => {
         const r = CIDX.a[i], tv = r[7] === 1;
+        const own = catByTmdb(`tmdb-${tv ? 'tv' : 'm'}-${r[0]}`); if (own) return own;   // already in the catalogue: show that record
         return { id: `tmdb-${tv ? 'tv' : 'm'}-${r[0]}`, tmdbId: r[0], title: r[1], type: tv ? 'Series' : 'Movie', year: r[2] ? String(r[2]) : '', poster: 'https://image.tmdb.org/t/p/w500/' + r[3] + '.jpg', rating: r[4] / 10, dominantVibe: 'must_watch', isLiveTmdbResult: true, totalVotes: r[5] };
       });
     }
@@ -7119,11 +7136,14 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
         if (!item.poster || item.poster.includes('null') || item.poster.includes('undefined')) return false;
         const strId = String(item.id || item.tmdbId || '');
         if (strId && seenIds.has(strId)) return false;
-        const normTitle = item.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const rf = tmdbRef(item), tk = rf ? (rf.isTv ? 'tv' : 'm') + rf.n : '';   // the same TMDB title under a catalogue id and a TMDB id is one title
+        if (tk && seenIds.has(tk)) return false;
+        const normTitle = item.title.toLowerCase().replace(/[^a-z0-9]/g, '') + '|' + (item.year || '') + '|' + (item.type || '');   // a remake with the same name is a different film
         if (seenNormTitles.has(normTitle)) return false;
         if (item.poster && seenPosters.has(item.poster)) return false;
 
         if (strId) seenIds.add(strId);
+        if (tk) seenIds.add(tk);
         seenNormTitles.add(normTitle);
         if (item.poster) seenPosters.add(item.poster);
         return true;

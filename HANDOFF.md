@@ -679,3 +679,11 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 - Decision: the full-detail catalogue (catalog_extra.json, 6,100 films) was NOT enlarged: at about 1.3 KB per title, 30k titles would be about 39 MB and undo the speed work.
 - Known, not from this release: top menu is 31 px too wide at 1024 px.
 - Cache v155.
+
+## v156 - one film, one record
+- Duplicate check: catalogue (10,395 incl. catalog_extra) has no duplicate TMDB ids and no duplicate title+year; search index has none. 7,692 index titles overlap the catalogue.
+- New catByTmdb(): a TMDB id (search index, live search, mood and actor pages) for a film the catalogue holds now opens the catalogue record (same library entry, verdicts, where-to-watch, More like this). Used in openDetails, findItemById, cidxSearch.
+- Search dedupe now also by TMDB id, and by title+year+type instead of title only (remakes like The Batman 2004 series no longer hidden).
+- Titles opened from the index/live path now carry tmdbId and language like catalogue titles, and no longer get invented director ("Director"/"Showrunner"), runtime (120 min), year (2024) or genres; unknown stays blank.
+- Where to watch, More like this, certification, IMDb rating verified working on an index-only title.
+- Cache v156.
