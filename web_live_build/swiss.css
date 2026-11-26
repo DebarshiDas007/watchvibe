@@ -942,3 +942,5 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
   html #wvWall .wvw-chips { order: 4; margin: 0; padding: 8px 16px 0; }
   html #wvWall.wvw-skel .wvw-now { min-height: min(62svh, 520px); }
 }
+/* v160: the phone tab row (All, Movies, Series, Stand-Up, Upcoming) keeps each label on one line and scrolls sideways, instead of squeezing five equal boxes (theme.css gave them flex: 1 1 0%, which wrapped "STAND-UP") */
+.wv-top > div.no-scrollbar.md\:hidden > button { flex: 0 0 auto; white-space: nowrap; padding: 0 16px !important; min-width: 64px; }

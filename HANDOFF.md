@@ -706,3 +706,6 @@ ode scripts/build_index.mjs (about 6 min, needs internet; data owner only).
 - JS: wallPhone() (matchMedia 640px); wallNowHtml adds .wvw-bd (backdrop) only on phones; on phones the first tap on a poster picks the film and a tap on the picked one opens it; scrolling the strip does not change the film; touch pointerover no longer selects. Re-renders when the window crosses 640 px.
 - CSS: v159 block at the end of swiss.css (all rules under @media max-width 640px, prefixed html #wvWall; align-items stretch !important to beat the clean-wall rule). Tablet and desktop unchanged.
 - swiss.css?v=46, cache v159. Sweep clean at 375, 768 and 1440 px. The top tab "STAND-UP" still wraps to two lines on phones (not part of this change).
+## v160 - phone tab row on one line
+- The phone tab row (All, Movies, Series, Stand-Up, Upcoming) wrapped "STAND-UP" onto two lines because theme.css gave the pills flex: 1 1 0%. swiss.css now sets flex: 0 0 auto, white-space: nowrap, padding 0 16px !important and min-width 64px on `.wv-top > div.no-scrollbar.md:hidden > button`; the row scrolls sideways (Upcoming sits past the edge). Hidden from md up, so desktop unchanged.
+- swiss.css?v=49, cache v160. Sweep clean at 375, 768 and 1440 px.
