@@ -4,6 +4,7 @@
 // Run: node scripts/add_more_films.mjs   (needs internet; a few minutes). Then bump CAT.v in index.html and the sw.js cache version.
 import fs from 'node:fs';
 import path from 'node:path';
+import { readCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const HTML = path.join(ROOT, 'web_live_build', 'index.html');
@@ -23,8 +24,7 @@ const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z
 const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 
 const src = fs.readFileSync(HTML, 'utf8');
-const a = src.indexOf('let mediaDatabase = ['), b = src.indexOf('];', a);
-const base = JSON.parse(src.slice(a + 'let mediaDatabase = '.length, b + 1));
+const base = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const extra = JSON.parse(fs.readFileSync(OUT, 'utf8'));
 const haveId = new Set(), haveKey = new Set(), haveSlug = new Set();
 for (const m of base.concat(extra)) {

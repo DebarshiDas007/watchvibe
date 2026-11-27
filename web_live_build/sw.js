@@ -1,9 +1,9 @@
-const CACHE_NAME = 'watchvibe-cache-v163';
+const CACHE_NAME = 'watchvibe-cache-v164';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './tailwind.css?v=afdf99aa57',
+  './tailwind.css?v=7f3e10936f',
   './theme.css?v=25',
   './swiss.css?v=40',
   './hover-card.css?v=1',

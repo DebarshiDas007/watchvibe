@@ -3,15 +3,14 @@
 // Run: node scripts/add_alt_titles.mjs
 import fs from 'node:fs';
 import path from 'node:path';
+import { readCore, writeCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const HTML = path.join(ROOT, 'web_live_build', 'index.html');
 const OUT = path.join(ROOT, 'web_live_build', 'catalog_extra.json');
 const src = fs.readFileSync(HTML, 'utf8');
 const KEY = (src.match(/DEFAULT_TMDB_KEY = '([0-9a-f]+)'/) || [])[1];
-const START = 'let mediaDatabase = ';
-const a = src.indexOf(START), b = src.indexOf('];', a);
-const base = JSON.parse(src.slice(a + START.length, b + 1));
+const base = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const extra = JSON.parse(fs.readFileSync(OUT, 'utf8'));
 const API = 'https://api.themoviedb.org/3';
 const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
@@ -39,5 +38,5 @@ console.log(`\nfilms with other names: ${withAlt} of ${todo.length}`);
 extra.forEach(m => { if (Array.isArray(m.alt) && !m.alt.length) delete m.alt; });
 base.forEach(m => { if (Array.isArray(m.alt) && !m.alt.length) delete m.alt; });
 fs.writeFileSync(OUT, JSON.stringify(extra));
-fs.writeFileSync(HTML, src.slice(0, a + START.length) + JSON.stringify(base) + src.slice(b + 1));
+writeCore(ROOT, base);   // also raises catalog_core.js?v=N in index.html
 console.log('written');

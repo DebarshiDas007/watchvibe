@@ -1,11 +1,12 @@
 // Daily catalogue refresh. Writes web_live_build/catalog_fresh.json, which the app loads after the first screen:
 //   r     the current TMDB rating of every film and series in the catalogue (only where it differs from the built-in value)
 //   news  films released in the last 60 days (Hindi, Bengali, English) that are not in the catalogue yet
-// It never touches index.html or catalog_extra.json, so the big files stay cached for a year. Run: node scripts/refresh_daily.mjs
+// It never touches index.html, catalog_core.js or catalog_extra.json, so the big files stay cached for a year. Run: node scripts/refresh_daily.mjs
 // (needs internet, about 5 minutes). The GitHub workflow .github/workflows/daily-refresh.yml runs it every day and deploys.
 // Never invents data: a film with a missing poster, backdrop, synopsis, director, three cast names or runtime is skipped (and tried again tomorrow).
 import fs from 'node:fs';
 import path from 'node:path';
+import { readCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const HTML = path.join(ROOT, 'web_live_build', 'index.html');
@@ -39,9 +40,7 @@ async function pool(items, n, fn) {
   return out;
 }
 
-const src = fs.readFileSync(HTML, 'utf8');
-const a = src.indexOf('let mediaDatabase = ['), b = src.indexOf('];', a);
-const base = JSON.parse(src.slice(a + 'let mediaDatabase = '.length, b + 1));
+const base = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const extra = JSON.parse(fs.readFileSync(EXTRA, 'utf8'));
 const all = base.concat(extra);
 let prev = { r: {}, news: [] };

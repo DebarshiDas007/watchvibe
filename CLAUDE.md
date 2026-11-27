@@ -1,9 +1,10 @@
-﻿# WatchVibe project notes (read this first)
+# WatchVibe project notes (read this first)
 
 WatchVibe is a movie and series discovery web app (installable PWA). Live: https://watchvibe-b92.pages.dev/
 
 ## Layout
-- `web_live_build/index.html`: the whole app (JavaScript inline, built-in catalogue of ~2,060 titles inside). ~2.6 MB. Only ONE agent edits it at a time.
+- `web_live_build/index.html`: the whole app (JavaScript inline). ~0.65 MB. Only ONE agent edits it at a time.
+- `web_live_build/catalog_core.js`: the built-in catalogue (~2,060 titles) as `window.__CORE_CATALOG=[...]`, loaded by `<script src="catalog_core.js?v=N">` before the main script and cached for a year. Read and write it only through `scripts/_core.mjs` (`readCore`, `writeCore`; writeCore raises N in index.html).
 - `web_live_build/games.js`: Game night (Draw the Movie, Movie Fibber, Who's the Impostor?), loaded with `?v=N` (bump N when it changes).
 - `web_live_build/catalog_extra.json`: ~6,100 extra films, loaded after the first screen (`CAT.v` in index.html is its version, bump when rebuilt).
 - `web_live_build/sw.js`: service worker. Bump `CACHE_NAME` (`watchvibe-cache-vNN`) on EVERY deploy.
@@ -42,7 +43,7 @@ The user gives commands ONLY to the lead (the main session). The lead decides wh
 | designer | Opus, high effort | `design/` only | new looks, UI critique, mockups, build specs |
 | tester | Sonnet | nothing (reports only) | sweeps, game-room tests, regression checks |
 | reviewer | Sonnet (Opus for security) | nothing (reports only) | review of a change before it ships |
-| data-owner | Haiku (Sonnet if script logic changes) | scripts/, catalog_extra.json, the catalogue array in index.html via the scripts | film data jobs |
+| data-owner | Haiku (Sonnet if script logic changes) | scripts/, catalog_extra.json, catalog_core.js via the scripts | film data jobs |
 | deployer | Opus, high effort | sw.js version, version numbers, HANDOFF.md | release, only when the lead says "ship" |
 
 ### Routing: which teammates for which job

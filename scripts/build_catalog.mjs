@@ -3,6 +3,7 @@
 // Run: node scripts/build_catalog.mjs   (needs internet; takes a few minutes)
 import fs from 'node:fs';
 import path from 'node:path';
+import { readCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const HTML = path.join(ROOT, 'web_live_build', 'index.html');
@@ -18,8 +19,7 @@ const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/
 
 // ---- what the site already has
 const src = fs.readFileSync(HTML, 'utf8');
-const a = src.indexOf('let mediaDatabase = ['), b = src.indexOf('];', a);
-const existing = JSON.parse(src.slice(a + 'let mediaDatabase = '.length, b + 1));
+const existing = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const haveId = new Set(), haveKey = new Set();
 let haveHw = 0, haveIn = 0;
 for (const m of existing) {

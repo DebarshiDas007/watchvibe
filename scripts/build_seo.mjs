@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { readCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const WEB = path.join(ROOT, 'web_live_build');
@@ -15,9 +16,7 @@ const CFG = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts', 'seo.config.js
 const SITE = CFG.siteUrl.replace(/\/+$/, ''), NAME = CFG.siteName;
 
 // ---------- data ----------
-const src = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
-const a = src.indexOf('let mediaDatabase = ['), b = src.indexOf('];', a);
-const base = JSON.parse(src.slice(a + 'let mediaDatabase = '.length, b + 1));
+const base = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const extra = JSON.parse(fs.readFileSync(path.join(WEB, 'catalog_extra.json'), 'utf8'));
 let fresh = { r: {}, news: [] };
 try { fresh = JSON.parse(fs.readFileSync(path.join(WEB, 'catalog_fresh.json'), 'utf8')); } catch (e) {}

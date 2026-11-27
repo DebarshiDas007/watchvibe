@@ -2,14 +2,13 @@
 // directors / creators where a placeholder was stored. Data comes from TMDB. Run: node scripts/fix_runtimes.mjs
 import fs from 'node:fs';
 import path from 'node:path';
+import { readCore, writeCore } from './_core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const HTML = path.join(ROOT, 'web_live_build', 'index.html');
 const src = fs.readFileSync(HTML, 'utf8');
 const KEY = (src.match(/DEFAULT_TMDB_KEY = '([0-9a-f]+)'/) || [])[1];
-const START = 'let mediaDatabase = ';
-const a = src.indexOf(START), b = src.indexOf('];', a);
-const db = JSON.parse(src.slice(a + START.length, b + 1));
+const db = readCore(ROOT);   // the built-in catalogue (web_live_build/catalog_core.js)
 const API = 'https://api.themoviedb.org/3';
 
 async function get(url, tries = 4) {
@@ -38,5 +37,5 @@ await pool(todo, 12, async m => {
   }
 });
 console.log(`\nruntimes fixed: ${fixedRt}, directors fixed: ${fixedDir}`);
-fs.writeFileSync(HTML, src.slice(0, a + START.length) + JSON.stringify(db) + src.slice(b + 1));
-console.log('index.html updated');
+writeCore(ROOT, db);   // also raises catalog_core.js?v=N in index.html
+console.log('catalog_core.js updated');
