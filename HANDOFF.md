@@ -785,3 +785,6 @@ Fixes:
 ## v175 - Hoichoi: 203 more titles
 - add_hoichoi.mjs now takes titles with 0-1 votes (rating stored as 0; the site shows only IMDb ratings) and uses the poster as backdrop when TMDB has none. 129 films + 74 series added (192 Bengali); catalog_extra.json 8,873 titles, CAT.v 7, sw cache v175.
 - The Streaming on hoichoi shelf no longer needs 2 votes.
+
+## v176 - More regional films
+- add_regional.mjs now also takes hi and ta. Added 802 films (Tamil 450, Malayalam 250, Kannada 47, Punjabi 31, Marathi 23, Hindi 1; Hindi is saturated at 8+ votes). Search index extended for ta, ml, kn, mr, pa (98,172 titles). catalog_extra.json 9,675 titles, CAT.v 8, sw cache v176.

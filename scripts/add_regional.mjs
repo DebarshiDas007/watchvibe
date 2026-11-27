@@ -11,7 +11,7 @@ const OUT = path.join(ROOT, 'web_live_build', 'catalog_extra.json');
 const src = fs.readFileSync(HTML, 'utf8');
 const KEY = (src.match(/DEFAULT_TMDB_KEY = '([0-9a-f]+)'/) || [])[1];
 const API = 'https://api.themoviedb.org/3';
-const LANGS = { te: 'Indian (Tollywood)', kn: 'Indian (Sandalwood)', mr: 'Indian (Marathi)', pa: 'Indian (Punjabi)', bn: 'Indian (Bengali)', ml: 'Indian (Mollywood)', gu: 'Indian (Gujarati)', ur: 'Pakistani (Urdu)' };
+const LANGS = { hi: 'Indian (Bollywood)', ta: 'Indian (Kollywood)', te: 'Indian (Tollywood)', kn: 'Indian (Sandalwood)', mr: 'Indian (Marathi)', pa: 'Indian (Punjabi)', bn: 'Indian (Bengali)', ml: 'Indian (Mollywood)', gu: 'Indian (Gujarati)', ur: 'Pakistani (Urdu)' };
 let MIN_VOTES = 4, PER_LANG = { te: 450, kn: 250, mr: 200, pa: 150, bn: 250, ml: 150 };
 // Optional: node scripts/add_regional.mjs <lang> <howMany> [minVotes]   e.g.  node scripts/add_regional.mjs bn 700 2   (one language only)
 if (process.argv[2] && LANGS[process.argv[2]]) { PER_LANG = { [process.argv[2]]: Number(process.argv[3]) || 250 }; if (process.argv[4]) MIN_VOTES = Number(process.argv[4]); }
