@@ -139,6 +139,22 @@ for (const L of LANGS) {
 news.sort((x, y) => String(y.rel || '').localeCompare(String(x.rel || '')));
 news.length = Math.min(news.length, NEWS_CAP);
 
-fs.writeFileSync(OUT, JSON.stringify({ day: today, r, news }));
+// Which TMDB titles stream on Hoichoi in India today (provider 315, plus its Amazon channel 2176): the site uses it for the "Streaming on hoichoi" shelf.
+// If TMDB does not answer, yesterday's list stays (never an empty list from a failed call).
+const hoi = { m: [], t: [] };
+let hoiOk = true;
+for (const [kind, key] of [['movie', 'm'], ['tv', 't']]) {
+  const url = p => `${API}/discover/${kind}?api_key=${KEY}&watch_region=IN&with_watch_providers=${encodeURIComponent('315|2176')}&with_watch_monetization_types=flatrate&sort_by=popularity.desc&page=${p}`;
+  const first = await get(url(1));
+  if (!first || !first.results) { hoiOk = false; break; }
+  const all = [...first.results];
+  const rest = await pool(Array.from({ length: Math.min(first.total_pages || 1, 40) - 1 }, (_, i) => i + 2), 6, p => get(url(p)));
+  rest.forEach(x => x && x.results && all.push(...x.results));
+  hoi[key] = [...new Set(all.map(x => x.id))];
+}
+const hoiOut = hoiOk && (hoi.m.length + hoi.t.length) >= 50 ? hoi : (prev.hoi || { m: [], t: [] });
+console.log(`hoichoi titles: ${hoiOut.m.length} films, ${hoiOut.t.length} series${hoiOut === hoi ? '' : ' (kept yesterday\'s list)'}`);
+
+fs.writeFileSync(OUT, JSON.stringify({ day: today, r, news, hoi: hoiOut }));
 console.log(`rated changes: ${Object.keys(r).length}, new releases kept: ${news.length} (+${added} today), failed lookups: ${failed}`);
 console.log('catalog_fresh.json is', (fs.statSync(OUT).size / 1024).toFixed(0), 'KB');
