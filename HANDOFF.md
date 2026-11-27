@@ -761,3 +761,6 @@ Fixes:
 ## v168 - watchvibe.app is the main address
 - watchvibe.app attached to the Pages project (Cloudflare, 2026-11-28). Done by the lead in the user's signed-in Chrome: Supabase Site URL = https://watchvibe.app, Redirect URLs + watchvibe.app and watchvibe.app/**; Google consent screen links + authorised domain watchvibe.app; Search Console domain property watchvibe.app (DNS TXT google-site-verification in Cloudflare DNS - keep it), sitemap submitted, home page indexing requested. User tested Google sign-in on the new address.
 - functions/_middleware.js: requests to watchvibe-b92.pages.dev (not /api, not preview hosts) get a 301 to the same path on https://watchvibe.app; _routes.json now also runs the function for page routes (/, /film/*, /best/*, /privacy, /terms, /admin). Cache v168.
+
+## v169 - www redirect
+- www.watchvibe.app attached to the Pages project (CNAME www created by Cloudflare); functions/_middleware.js sends it to https://watchvibe.app (301, same path). Checked live. Cache v169.
