@@ -753,3 +753,7 @@ Fixes:
 - Cause: openGames() locks page scrolling (html overflow hidden). When the page underneath was scrolled down (for example Home after browsing), the sticky top bar stayed scrolled away (measured: header top -600 px at scrollY 600), and the 68 px gap above Game night (#gnRoot top: 68px, below the top bar) showed the page underneath ("Tonight's poster wall").
 - Fix (games.js): openGames() remembers window.scrollY in GN.scrollY and scrolls to the top before locking; closeGames() scrolls back to that spot. Tested at 1440 and 375 px: top bar stays at 0, overlay starts below it (68 px desktop, 56 px phone), scroll restored (900 -> 900, 700 -> 700); Games from Daily; clicking Movies while Games is open lands at the top of Movies.
 - games.js?v=8, cache v166.
+
+## v167 - domain watchvibe.app
+- Bought watchvibe.app (Cloudflare Registrar, 2026-11-28, auto-renew on, expires 2027-11-27, renews 14.20 USD). Site address switched in seo.config.json, index.html (canonical, og, twitter, JSON-LD), robots.txt, README, deploy.py; SEO pages and sitemaps rebuilt (6,595 pages, check_seo clean); canonical added to /privacy and /terms. Old address watchvibe-b92.pages.dev still serves the site.
+- Still to do: attach watchvibe.app to the Pages project (Cloudflare), then Supabase Site URL/Redirect URLs, Google OAuth origins, Search Console property + sitemap; only after sign-in works on the new address add the old-to-new redirect. Cache v167.

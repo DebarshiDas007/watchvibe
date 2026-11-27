@@ -2,7 +2,7 @@
 > **"Don't just rate it. Tell us the vibe."**  
 > Social entertainment discovery for **Android, iOS, macOS, Windows, and Web** built with Flutter.
 
-🌐 **Live Production Web App:** [https://watchvibe-b92.pages.dev/](https://watchvibe-b92.pages.dev/)  
+🌐 **Live Production Web App:** [https://watchvibe.app/](https://watchvibe.app/)  
 ⚡ **Local Dev Server:** `cd web_live_build && python -m http.server 8080`
 
 > The production app is the single-file PWA in `web_live_build/`. The Flutter code in `lib/` is an experimental, not-yet-buildable port (see `HANDOFF.md`).

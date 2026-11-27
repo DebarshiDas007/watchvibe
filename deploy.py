@@ -99,7 +99,7 @@ def deploy():
 
     if proc.returncode == 0:
         print("\n✨ Deployment completed successfully!")
-        print("Live Production URL: https://watchvibe-b92.pages.dev/")
+        print("Live Production URL: https://watchvibe.app/")
     else:
         print(f"\n❌ Deployment exited with code {proc.returncode}")
         sys.exit(proc.returncode)
