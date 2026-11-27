@@ -223,7 +223,7 @@
       if (typeof refreshViews === 'function') refreshViews();
     };
 
-    const DB_VERSION = 'v9_alt_titles'; // bump to flush saved catalogues: v8 replaced the made-up "2h 10m" runtimes with real ones
+    const DB_VERSION = 'v10_filled'; // bump to flush saved catalogues whenever catalog_core.js entries change (returning visitors keep a saved copy): v8 replaced the made-up "2h 10m" runtimes with real ones; v10 filled missing cast and directors
     try {
       if (localStorage.getItem('watchvibe_db_version') !== DB_VERSION) {
         localStorage.removeItem('watchvibe_cached_media_v3');

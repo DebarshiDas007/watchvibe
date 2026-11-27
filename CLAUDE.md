@@ -29,6 +29,7 @@ WatchVibe is a movie and series discovery web app (installable PWA). Live: https
 5. Daily Challenge questions must be identical for all players: they wait for `catalog_extra.json` (`dcReady`).
 6. Keep every page free of sideways scrolling at 375, 768 and 1440 px.
 7. Do not enter credentials or sign in for the user; they do that themselves.
+8. After any script run that changes entries in catalog_core.js, bump DB_VERSION in index.html (returning visitors keep a saved catalogue copy that hides core edits until it changes).
 
 ## Definition of done for any change
 syntax check passes, `npm run build:css`, `await runProductSweep()` shows `problems: []` at 375/768/1440, `sw.js` cache version bumped, deployed, checked live, HANDOFF.md entry, committed and pushed.
