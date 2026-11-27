@@ -764,3 +764,6 @@ Fixes:
 
 ## v169 - www redirect
 - www.watchvibe.app attached to the Pages project (CNAME www created by Cloudflare); functions/_middleware.js sends it to https://watchvibe.app (301, same path). Checked live. Cache v169.
+
+## v170 - top menu fits at 900-1400 px
+- The wide search field (288 px) now appears from 1400 px (was 1100 px); between 769 and 1400 px the search is the round icon and the menu pills are slimmer (swiss.css v55, max-width 1280 rule). Measured: the whole menu fits with no inner scroll at 820, 1024, 1200, 1366 and 1440 px (before, Games slid 7 px under search at 1024 and Watchlist/Games were cut off at 1100-1300). Sweep clean at 375/768/1440. Cache v170.

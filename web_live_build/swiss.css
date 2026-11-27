@@ -977,3 +977,8 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
 @media (min-width: 641px) {
   html[data-wall="clean"] .wv-filters select { height: 32px; padding-inline: 12px 28px; font-size: 11px; }
 }
+
+/* v170: the top menu is 7-30 px too wide between about 900 and 1140 px: slimmer pills there so Games never slides under the search button */
+@media (min-width: 769px) and (max-width: 1280px) {
+  .top-nav-pill { padding-left: 6px !important; padding-right: 6px !important; gap: 6px !important; }
+}

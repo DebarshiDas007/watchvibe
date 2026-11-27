@@ -32,7 +32,7 @@
   <meta name="twitter:image" content="https://watchvibe.app/og-image.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://watchvibe.app/#site","url":"https://watchvibe.app/","name":"WatchVibe","description":"Find what to watch by vibe: movies and series with IMDb ratings, where to stream and community verdicts.","inLanguage":"en"},{"@type":"WebApplication","name":"WatchVibe","url":"https://watchvibe.app/","applicationCategory":"EntertainmentApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Discover movies and series by mood, see where to stream them in your country, keep a watchlist and share honest verdicts."}]}</script>
   <link rel="preconnect" href="https://image.tmdb.org">
-<link rel="stylesheet" href="/tailwind.css?v=7f3e10936f">
+<link rel="stylesheet" href="/tailwind.css?v=a702195286">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-500.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/cabinet-grotesk-800.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/switzer-400.woff2">
@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=54">
+  <link rel="stylesheet" href="/swiss.css?v=55">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -751,8 +751,8 @@
     </nav>
 
     <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-      <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden h-10 items-center justify-center gap-2.5 rounded-full bg-white/[0.05] text-sm text-white/55 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white md:flex md:w-10 min-[1100px]:w-72 min-[1100px]:justify-start min-[1100px]:px-4" aria-label="Search" title="Search (press /)">
-        <i class="fa-solid fa-magnifying-glass text-[13px]"></i><span class="hidden text-white/45 min-[1100px]:inline">Search titles, moods, people</span><kbd class="wv-kbd ml-auto hidden min-[1100px]:inline" aria-hidden="true">/</kbd>
+      <button id="headerSearchBtn" type="button" onclick="goSearch()" class="hidden h-10 items-center justify-center gap-2.5 rounded-full bg-white/[0.05] text-sm text-white/55 ring-1 ring-white/10 transition hover:bg-white/[0.08] hover:text-white md:flex md:w-10 min-[1400px]:w-72 min-[1400px]:justify-start min-[1400px]:px-4" aria-label="Search" title="Search (press /)">
+        <i class="fa-solid fa-magnifying-glass text-[13px]"></i><span class="hidden text-white/45 min-[1400px]:inline">Search titles, moods, people</span><kbd class="wv-kbd ml-auto hidden min-[1400px]:inline" aria-hidden="true">/</kbd>
       </button>
       <button id="themeToggle" type="button" onclick="toggleTheme()" class="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 transition hover:bg-white/10" aria-label="Switch to light mode" title="Light or dark"><i class="fa-solid fa-sun" aria-hidden="true"></i></button>
       <button id="headerGamesBtn" type="button" onclick="openGames()" class="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white ring-1 ring-white/10 transition hover:bg-white/10 md:hidden" title="Game night" aria-label="Game night"><i class="fa-solid fa-gamepad text-[15px]"></i></button>
