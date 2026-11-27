@@ -788,3 +788,6 @@ Fixes:
 
 ## v176 - More regional films
 - add_regional.mjs now also takes hi and ta. Added 802 films (Tamil 450, Malayalam 250, Kannada 47, Punjabi 31, Marathi 23, Hindi 1; Hindi is saturated at 8+ votes). Search index extended for ta, ml, kn, mr, pa (98,172 titles). catalog_extra.json 9,675 titles, CAT.v 8, sw cache v176.
+
+## v177 - Telugu films and Bengali series
+- Telugu: 131 films added (te 888; TMDB has few more with a director and 3 cast), 3,446 titles added to the search index (101,618). New scripts/add_series_lang.mjs (any Indian/Urdu language, series only): 220 Bengali series added (317 in all). catalog_extra.json 10,026 titles, CAT.v 9, sw cache v177.

@@ -1990,7 +1990,7 @@
 
     // ---- The extra catalogue: thousands more Hollywood and Indian films live in catalog_extra.json (same fields as the built-in films),
     // loaded right after the first screen. A film already present (same TMDB id, or same title and year) is never added twice.
-    const CAT = { state: 'idle', added: 0, v: 8 };
+    const CAT = { state: 'idle', added: 0, v: 9 };
     const catNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
     function catMerge(list) {
       const ids = new Set(), keys = new Set();
