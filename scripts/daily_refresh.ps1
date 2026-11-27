@@ -1,4 +1,4 @@
-# Daily refresh runner, started by the Windows scheduled task "WatchVibe daily refresh" (daily 09:00 and at every sign-in; it catches up
+# Daily refresh runner, started by the Windows scheduled task "WatchVibe daily refresh" (daily 13:00 and at every sign-in; it catches up
 # after the PC was off). It refreshes catalog_fresh.json, deploys the site with the existing local Cloudflare login, and commits the data.
 # Safe by design:
 #   - runs at most once a day (last_deployed_day.txt), and never at the same time as another run (lock file)

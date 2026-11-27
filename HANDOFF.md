@@ -732,3 +732,5 @@ Fixes:
 5. Desktop (min-width 901px): .wvw-now has min-height 270px and centres its content, for skeleton and real wall alike, so nothing shifts when the real wall replaces the placeholder or when titles of different length are shown.
 - Result (recorded): cold desktop: placeholder 69 ms -> real wall 340 ms, once, same box (282/270), no shelf flash; warm: placeholder -> real at ~360 ms, once; phone and tablet: same geometry, single swap. Sweep clean at 375, 768 and 1440 px.
 - swiss.css?v=51, cache v162.
+## Daily refresh time
+- The Windows scheduled task "WatchVibe daily refresh" now runs daily at 13:00 (was 09:00), plus at every sign-in as before. Changed with Set-ScheduledTask; next run 28 Nov 13:00.
