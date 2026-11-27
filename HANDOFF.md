@@ -781,3 +781,7 @@ Fixes:
 
 ## v174 - hoichoi shelf puts Bengali first
 - The 'Streaming on hoichoi' shelf scores Bengali titles +3 so English titles on Hoichoi no longer lead it. Cache v174.
+
+## v175 - Hoichoi: 203 more titles
+- add_hoichoi.mjs now takes titles with 0-1 votes (rating stored as 0; the site shows only IMDb ratings) and uses the poster as backdrop when TMDB has none. 129 films + 74 series added (192 Bengali); catalog_extra.json 8,873 titles, CAT.v 7, sw cache v175.
+- The Streaming on hoichoi shelf no longer needs 2 votes.

@@ -14,7 +14,7 @@ const KEY = (fs.readFileSync(path.join(ROOT, 'web_live_build', 'index.html'), 'u
 const API = 'https://api.themoviedb.org/3';
 const DRY = process.argv.includes('--dry');
 const PROV = '315|2176';
-const MIN_VOTES = 2;
+const MIN_VOTES = 0;
 const REGION = { bn: 'Indian (Bengali)', hi: 'Indian (Bollywood)', ta: 'Indian (Kollywood)', te: 'Indian (Tollywood)', ml: 'Indian (Mollywood)', kn: 'Indian (Sandalwood)', mr: 'Indian (Marathi)', pa: 'Indian (Punjabi)', gu: 'Indian (Gujarati)', ur: 'Pakistani (Urdu)', en: 'Hollywood / Western' };
 const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
 const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
@@ -55,18 +55,20 @@ function build(d, isTv) {
   const title = isTv ? d.name : d.title;
   const year = ((isTv ? d.first_air_date : d.release_date) || '').slice(0, 4);
   const votes = d.vote_count || 0;
-  if (!d.poster_path || !d.backdrop_path || !d.overview || d.overview.length < 40 || !/^\d{4}$/.test(year) || votes < MIN_VOTES || cast.length < 2) return null;
+  if (!d.poster_path || !d.overview || d.overview.length < 40 || !/^\d{4}$/.test(year) || votes < MIN_VOTES || cast.length < 2) return null;
+  const backdrop = d.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path : 'https://image.tmdb.org/t/p/w780' + d.poster_path;   // no backdrop on TMDB: the poster stands in
   const genres = (d.genres || []).map(g => GENRE[g.name] || g.name).slice(0, 3); if (!genres.length) return null;
   let duration;
   if (isTv) { const s = d.number_of_seasons || 0; if (!s) return null; duration = s + (s === 1 ? ' Season' : ' Seasons'); }
   else { const rt = d.runtime || 0; if (!rt) return null; duration = `${Math.floor(rt / 60)}h ${String(rt % 60).padStart(2, '0')}m`.replace(/^0h /, ''); }
-  const rating = Math.round(((votes * (d.vote_average || 0) + 100 * 6.3) / (votes + 100)) * 10) / 10;
+  // under 2 votes there is no real rating: 0 (the site shows only IMDb ratings anyway; the blend would be a made-up 6.3)
+  const rating = votes < 2 ? 0 : Math.round(((votes * (d.vote_average || 0) + 100 * 6.3) / (votes + 100)) * 10) / 10;
   const dom = vibeFor(genres, rating, votes), quality = rating >= 8 ? 'an exceptional' : rating >= 7 ? 'a well-loved' : rating >= 6 ? 'an enjoyable' : 'a divisive';
   const alts = (((d.alternative_titles || {}).titles || (d.alternative_titles || {}).results) || []).map(t => t.title).concat([isTv ? d.original_name : d.original_title]).filter(t => t && /[a-z]/i.test(t) && norm(t) !== norm(title) && t.length <= 60);
   const item = {
     id: slug(title) + '-' + d.id, tmdbId: d.id, title, type: isTv ? 'Series' : 'Movie', year, language: lang, region: REGION[lang],
     genres, duration, director, cast,
-    poster: 'https://image.tmdb.org/t/p/w500' + d.poster_path, backdrop: 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path, synopsis: d.overview, rating,
+    poster: 'https://image.tmdb.org/t/p/w500' + d.poster_path, backdrop, synopsis: d.overview, rating,
     vibeReality: `Audiences describe ${title} as ${quality} ${genres[0]} experience${rating >= 7 ? ' with verified cinematic quality' : ''}.`,
     totalVotes: votes, dominantVibe: dom, vibeVotes: { [dom]: Math.round(votes * 0.55), [SECOND[dom]]: Math.round(votes * 0.30), [THIRD[dom]]: Math.round(votes * 0.15) }
   };
