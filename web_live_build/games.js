@@ -261,6 +261,9 @@ function openGames(code) {
   if (!r) {
     r = document.createElement('div'); r.id = 'gnRoot'; r.className = 'fixed inset-0 z-[85] flex flex-col bg-[#0B0B0F] text-white';
     r.addEventListener('click', gnClick); document.body.appendChild(r);
+    // opened from a page that was scrolled down: with scrolling locked the top bar would stay scrolled away and the page underneath would show above Game night.
+    // So go to the top while it is open and come back to the same spot when it closes.
+    GN.scrollY = window.scrollY; window.scrollTo(0, 0);
   }
   document.documentElement.style.overflow = 'hidden';
   if (code) GN.joinCode = String(code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
@@ -274,6 +277,7 @@ function closeGames() {
   try { syncTopNav(); } catch (e) {}
   document.documentElement.style.overflow = '';
   GN.wrap = null; GN.canvas = null; GN.ctx = null;
+  if (GN.scrollY != null) { const y = GN.scrollY; GN.scrollY = null; window.scrollTo(0, y); }   // back to where the page was
   if (new URLSearchParams(location.search).get('game')) history.replaceState(null, '', location.pathname);
 }
 // "Leave" inside a room goes back to the Game night page (name, Create a room / Join, the games), not out to the home page; the X there still closes everything

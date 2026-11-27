@@ -749,3 +749,7 @@ Fixes:
 ## v165 - top bar lights Games while Game night is open
 - Cause: Game night is an overlay (#gnRoot) drawn over whatever page was open, and syncTopNav() had no entry for the Games button (top-games), so the blue underline stayed on the page underneath (Daily, Home...). Fix: syncTopNav() lights only top-games while #gnRoot exists and un-lights every other tab; openGames() and closeGames() (games.js) call syncTopNav(). Tested: Games from Home, Daily and Watchlist, closing Games, clicking Movies while Games is open (Games closes, Movies lights), logo to Home.
 - games.js?v=7, cache v165. Sweep clean at 1440 px.
+## v166 - Game night opened from a scrolled page
+- Cause: openGames() locks page scrolling (html overflow hidden). When the page underneath was scrolled down (for example Home after browsing), the sticky top bar stayed scrolled away (measured: header top -600 px at scrollY 600), and the 68 px gap above Game night (#gnRoot top: 68px, below the top bar) showed the page underneath ("Tonight's poster wall").
+- Fix (games.js): openGames() remembers window.scrollY in GN.scrollY and scrolls to the top before locking; closeGames() scrolls back to that spot. Tested at 1440 and 375 px: top bar stays at 0, overlay starts below it (68 px desktop, 56 px phone), scroll restored (900 -> 900, 700 -> 700); Games from Daily; clicking Movies while Games is open lands at the top of Movies.
+- games.js?v=8, cache v166.
