@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=55">
+  <link rel="stylesheet" href="/swiss.css?v=56">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -987,7 +987,7 @@
     </div>
   </div>
 
-  <script src="catalog_core.js?v=1"></script>
+  <script src="catalog_core.js?v=2"></script>
   <script>
     // --- VIBES PALETTE ---
     const VIBES = {
@@ -1990,7 +1990,7 @@
 
     // ---- The extra catalogue: thousands more Hollywood and Indian films live in catalog_extra.json (same fields as the built-in films),
     // loaded right after the first screen. A film already present (same TMDB id, or same title and year) is never added twice.
-    const CAT = { state: 'idle', added: 0, v: 4 };
+    const CAT = { state: 'idle', added: 0, v: 5 };
     const catNorm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '');
     function catMerge(list) {
       const ids = new Set(), keys = new Set();
@@ -4526,8 +4526,39 @@
     // ================= Trending stars: real, this week's popular actors (TMDB), only those who have films here =================
     // Nothing is made up: names and photos come from TMDB's trending and popular lists, and each card opens a profile built from the films in our catalogue.
     // Until the lists arrive (or if they cannot), the row shows the actors who lead the most recent, best-voted films in the catalogue.
-    const STARS = { list: null, busy: false };
-    const STARS_KEY = 'watchvibe_stars_v2';
+    const STARS = { list: null, busy: false, mode: 'trend', indian: null, busyIn: false };
+    const STARS_KEY = 'watchvibe_stars_v2', STARS_IN_KEY = 'watchvibe_stars_in_v1';
+    // Indian cinema stars: the actors who lead the most-voted, most recent Indian films in the catalogue (nothing invented); photos come from TMDB people search.
+    function starsIndianNames() {
+      const idx = new Map(), yr = new Date().getFullYear();
+      (mediaDatabase || []).forEach(m => {
+        if (!(m.type === 'Movie' && m.region && String(m.region).startsWith('Indian'))) return;
+        (m.cast || []).slice(0, 2).forEach((c, i) => {
+          const k = personNorm(c); if (!k) return;
+          let o = idx.get(k); if (!o) { o = { name: c, n: 0, score: 0 }; idx.set(k, o); }
+          o.n++; o.score += Math.log10((m.totalVotes || 0) + 10) * (Number(m.year) >= yr - 8 ? 1.5 : 1) * (i === 0 ? 1 : 0.6);
+        });
+      });
+      return [...idx.values()].filter(o => o.n >= 3).sort((a, b) => b.score - a.score).slice(0, 14).map(o => ({ name: o.name, known: o.n + ' films here' }));
+    }
+    async function hydrateStarsIndian() {
+      if (STARS.indian || STARS.busyIn) return;
+      try { const s = JSON.parse(localStorage.getItem(STARS_IN_KEY) || 'null'); if (s && s.day === featDay() && Array.isArray(s.list) && s.list.length >= 6) { STARS.indian = s.list; return; } } catch (e) {}
+      STARS.busyIn = true;
+      try {
+        const key = getActiveTmdbKey(), base = starsIndianNames();
+        const out = await Promise.all(base.map(a => fetch(`${TMDB_BASE_URL}/search/person?api_key=${key}&query=${encodeURIComponent(a.name)}`).then(r => r.ok ? r.json() : null).catch(() => null)
+          .then(j => { const p = ((j && j.results) || []).find(x => x && x.profile_path && x.known_for_department === 'Acting' && personNorm(x.name) === personNorm(a.name)); return p ? { name: a.name, img: 'https://image.tmdb.org/t/p/w185' + p.profile_path, known: a.known } : null; })));
+        const list = out.filter(Boolean).slice(0, 12);
+        if (list.length >= 6) { STARS.indian = list; try { localStorage.setItem(STARS_IN_KEY, JSON.stringify({ day: featDay(), list })); } catch (e) {} }
+      } catch (e) {}
+      STARS.busyIn = false;
+    }
+    async function setStarsMode(mode) {
+      STARS.mode = mode === 'in' ? 'in' : 'trend';
+      if (STARS.mode === 'in' && !STARS.indian) { await hydrateStarsIndian(); if (!STARS.indian) STARS.mode = 'trend'; }
+      document.querySelectorAll('#starsRow').forEach(el => { el.innerHTML = starsInner(); });
+    }
     function starsCatalogue() {
       const idx = new Map(), yr = new Date().getFullYear();
       (mediaDatabase || []).forEach(m => (m.cast || []).slice(0, 3).forEach((c, i) => {
@@ -4551,9 +4582,14 @@
         </button>`).join('');
     }
     function starsInner() {
-      const list = STARS.list || starsFallback();
-      if (list.length < 4) return '';
-      return `<div class="wvs-h"><div><div class="wvs-eyebrow">Popular this week</div><h2>Trending stars</h2></div><p>Tap one for their films</p></div>
+      const trend = STARS.list || starsFallback();
+      if (trend.length < 4) return '';
+      const inMode = STARS.mode === 'in' && STARS.indian;
+      const list = inMode ? STARS.indian : trend;
+      const tabs = `<div class="wvs-tabs" role="group" aria-label="Which stars">
+          <button type="button" class="wv-chip${inMode ? '' : ' is-on'}" aria-pressed="${inMode ? 'false' : 'true'}" onclick="setStarsMode('trend')">Trending</button>
+          <button type="button" class="wv-chip${inMode ? ' is-on' : ''}" aria-pressed="${inMode ? 'true' : 'false'}" onclick="setStarsMode('in')">Indian cinema</button></div>`;
+      return `<div class="wvs-h"><div><div class="wvs-eyebrow">${inMode ? 'Most films here' : 'Popular this week'}</div><h2>${inMode ? 'Indian cinema stars' : 'Trending stars'}</h2></div>${tabs}</div>
         <div class="wvs-row no-scrollbar">${starsCards(list)}</div>`;
     }
     async function hydrateStars() {
@@ -4579,6 +4615,7 @@
         STARS.busy = false;
       }
       if (list) { STARS.list = list; const el = document.getElementById('starsRow'); if (el) el.innerHTML = starsInner(); }
+      hydrateStarsIndian();   // warms the Indian-cinema list in the background so the switch is instant
     }
 
 function ps(u, w) { return typeof u === 'string' ? u.replace('/t/p/w500/', '/t/p/w' + (w || 342) + '/') : u; }
@@ -4810,7 +4847,7 @@ function posterCard(item, opts) {
 
       const mobileTabs = '<div class="no-scrollbar -mt-1 flex gap-2 overflow-x-auto md:hidden">' + [['all', 'All'], ['Movie', 'Movies'], ['Series', 'Series'], ['Stand-Up', 'Stand-Up']].map(([v, l]) => `<button type="button" onclick="setTopCategory('${v}')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition ${selectedTopCategory === v ? 'bg-white text-black ring-white' : 'text-white/65 ring-white/15'}">${l}</button>`).join('') + `<button type="button" onclick="switchTab('upcoming')" class="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium text-white/65 ring-1 ring-white/15 transition">Upcoming</button></div>`;   // Games is the gamepad button in the header (one option, always visible)
       const selectCls = 'rounded-full bg-white/[0.05] px-3.5 py-2 text-sm text-white/80 ring-1 ring-white/10 outline-none transition hover:bg-white/[0.08] focus:ring-white/30';
-      const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
+      const langOptions = [['', 'All languages'], ['en', 'English'], ['hi', 'Hindi'], ['te', 'Telugu'], ['ta', 'Tamil'], ['ml', 'Malayalam'], ['kn', 'Kannada'], ['bn', 'Bengali'], ['mr', 'Marathi'], ['pa', 'Punjabi'], ['gu', 'Gujarati'], ['ur', 'Urdu'], ['ko', 'Korean'], ['ja', 'Japanese'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['zh', 'Chinese'], ['ar', 'Arabic'], ['tr', 'Turkish']];
       const toolbar = `
         <div class="wv-toolbar flex flex-wrap items-center justify-end gap-2">
           <select onchange="setFilterGenre(this.value)" class="${selectCls}" aria-label="Genre"><option value="" class="bg-[#14141A]">All genres</option>${GENRE_OPTS.map(g => `<option value="${g[0]}" class="bg-[#14141A]" ${FLT.genre === g[0] ? 'selected' : ''}>${g[1]}</option>`).join('')}</select>
@@ -4986,8 +5023,8 @@ function posterCard(item, opts) {
     };
     const DC_TYPES = ['scene', 'cast', 'plot', 'scene', 'director', 'zoom', 'lead', 'scene', 'year', 'cast', 'plot', 'zoom', 'scene', 'lead', 'director', 'cast', 'year', 'zoom', 'plot', 'scene'];
     const DC_KIND = { scene: 'Name that scene', zoom: 'Zoom in', cast: 'Guess by the cast', plot: 'Guess by the story', director: 'Who directed it?', lead: 'Who played the lead?', year: 'Which came first?' };
-    const DC_LANG = { en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', ko: 'Korean', ja: 'Japanese', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian', zh: 'Chinese', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi', tr: 'Turkish', ar: 'Arabic', pt: 'Portuguese' };
-    const DC_IN_LANGS = new Set(['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa']);
+    const DC_LANG = { en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', ko: 'Korean', ja: 'Japanese', fr: 'French', es: 'Spanish', de: 'German', it: 'Italian', zh: 'Chinese', bn: 'Bengali', mr: 'Marathi', pa: 'Punjabi', gu: 'Gujarati', ur: 'Urdu', tr: 'Turkish', ar: 'Arabic', pt: 'Portuguese' };
+    const DC_IN_LANGS = new Set(['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa', 'gu']);
     const DC = { level: null, boards: {}, boardStates: {}, boardLevel: 'medium', tick: 0, auto: 0, qTick: 0, _cache: {} };
     const dcLS = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? def : v; } catch (e) { return def; } };
     const dcSave = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };

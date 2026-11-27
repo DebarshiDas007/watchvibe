@@ -767,3 +767,8 @@ Fixes:
 
 ## v170 - top menu fits at 900-1400 px
 - The wide search field (288 px) now appears from 1400 px (was 1100 px); between 769 and 1400 px the search is the round icon and the menu pills are slimmer (swiss.css v55, max-width 1280 rule). Measured: the whole menu fits with no inner scroll at 820, 1024, 1200, 1366 and 1440 px (before, Games slid 7 px under search at 1024 and Watchlist/Games were cut off at 1100-1300). Sweep clean at 375/768/1440. Cache v170.
+
+## v171 - incomplete films filled, Gujarati and Urdu, Indian cinema stars
+- Incomplete films: of the 133 flagged, 77 are stand-up specials (cast is just the comedian, correct as is). New scripts/fill_incomplete.mjs filled blanks only (never overwrites) from TMDB for series (cast from aggregate credits, director = most episodes, else creator), films and synopsis: 40 entries filled; 16 stay blank because TMDB has no more (small documentaries, TV soaps). catalog_core.js v2.
+- Gujarati and Urdu: were 0. add_regional.mjs now knows gu (Indian (Gujarati)) and ur (Pakistani (Urdu)); added 37 Gujarati + 87 Urdu films (2+ votes; a pass with 0 votes was dropped because it would show a prior rating nobody gave). Search index +367 Gujarati and +1,258 Urdu titles (84,622 total). Language filter and Daily Challenge language names list both; Gujarati counts as Indian in the Daily Challenge. CAT.v 5, catalog_extra.json 8,626 films, catalogue total 10,751.
+- Trending stars row: new switch Trending / Indian cinema (setStarsMode). Indian list = actors who lead the most Indian films in the catalogue, photos from TMDB people search, cached per day (watchvibe_stars_in_v1). swiss.css v56. SEO pages rebuilt (6,554 films). Sweep clean at 375/768/1440. Cache v171.
