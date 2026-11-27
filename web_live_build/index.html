@@ -41,7 +41,7 @@
   <link rel="preload" as="font" type="font/ttf" crossorigin href="/vendor/fonts/plex-mono-500.ttf">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fa/webfonts/fa-solid-900.woff2">
   <link rel="stylesheet" href="/theme.css?v=25">
-  <link rel="stylesheet" href="/swiss.css?v=51">
+  <link rel="stylesheet" href="/swiss.css?v=54">
   <script>try{var _t=localStorage.getItem('wv_theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t;if(_t==='light'){var _m=document.querySelector('meta[name=theme-color]');if(_m)_m.content='#f4f4f0'}}catch(e){}</script>
   <script>/* images that load late fade in instead of popping in */document.documentElement.classList.add('wv-fx');['load','error'].forEach(function(n){document.addEventListener(n,function(e){var t=e.target;if(t&&t.tagName==='IMG')t.classList.add('wv-ld')},true)});[1500,4000,9000].forEach(function(ms){setTimeout(function(){document.querySelectorAll('img[loading=lazy]:not(.wv-ld)').forEach(function(i){if(i.complete)i.classList.add('wv-ld')})},ms)})</script>
   <style>html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:0}html.wv-fx img.wv-ld[loading=lazy]{animation:wvImgIn .35s ease-out}@keyframes wvImgIn{from{opacity:0}}@media (prefers-reduced-motion:reduce){html.wv-fx img[loading=lazy]:not(.wv-ld){opacity:1}html.wv-fx img.wv-ld[loading=lazy]{animation:none}}</style>
@@ -304,7 +304,7 @@
         const personaEl = document.getElementById('profileVibePersona');
         if (personaEl) personaEl.innerText = computeVibePersona();
 
-        // Superadmin Entry Point Visibility Gate (dasdebarshi1234@gmail.com)
+        // Admin entry point visibility gate (the server decides who is an admin: see adminCheck)
         const adminBtn = document.getElementById('adminStudioEntryPoint');
         if (adminBtn) {
           if (isSuperAdmin()) adminBtn.classList.remove('hidden');
@@ -610,11 +610,26 @@
 
     // --- ADMIN ENTRY ---
     // The admin dashboard lives at /admin. This is only a UI shortcut: the data is protected by Supabase (see supabase/admin_analytics.sql).
-    const SUPER_ADMIN_EMAIL = 'dasdebarshi1234@gmail.com';
-
+    // Who is an admin is decided by the server: the is_admin() function answers for the signed-in user (list kept in the `admins` table).
+    // No email address is written in this page. A remembered "yes" (the user id) only decides whether the shortcut shows right away on the next visit.
+    const ADMIN = { id: '', ok: false };
+    const ADMIN_HINT = 'wv_admin_hint';
     function isSuperAdmin() {
       const s = currentUserSession;
-      return !!(s && s.verified && s.email && s.email.trim().toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
+      if (!s || !s.verified) return false;
+      if (ADMIN.id === s.id) return ADMIN.ok;
+      try { return localStorage.getItem(ADMIN_HINT) === s.id; } catch (e) { return false; }
+    }
+    async function adminCheck() {
+      const s = currentUserSession;
+      if (!s || !s.verified || !window.supabaseClient || ADMIN.id === s.id) return;
+      try {
+        const { data, error } = await window.supabaseClient.rpc('is_admin');
+        if (error) return;   // not answered: keep whatever was known, ask again next time
+        ADMIN.id = s.id; ADMIN.ok = data === true;
+        try { if (ADMIN.ok) localStorage.setItem(ADMIN_HINT, s.id); else localStorage.removeItem(ADMIN_HINT); } catch (e) {}
+      } catch (e) {}
+      if (currentUserSession && currentUserSession.id === s.id) updateProfileUiState();
     }
 
     function openAdminStudio() {
@@ -1529,10 +1544,12 @@
       }
       updateProfileUiState();
       updateGoogleSignInUi();
+      adminCheck();   // asks the server whether this account is an admin (decides whether the Admin shortcut shows)
     }
 
     function setLoggedOutUser() {
       const hadSession = !!currentUserSession;
+      ADMIN.id = ''; ADMIN.ok = false;
       if (hadSession) profForget(currentUserSession.id);   // a shared device keeps nothing of the last person's name or picture
       libReset();
       currentAuthUser = null;
@@ -2918,6 +2935,11 @@
       }
       return list;
     }
+    // the films for "Streaming now": the top of the list, without the ones the Top 10 row right above already shows
+    function freshCands(ottAll) {
+      let top = null; try { const r = buildHomeRows().byKey.top10; top = r && r.items ? new Set(r.items.map(m => m.id)) : null; } catch (e) {}
+      return (top ? ottAll.filter(m => !top.has(m.id)) : ottAll).slice(0, 40);
+    }
     function freshRowHtml(cands) {
       const pending = cands.some(m => cachedWatchProviders(m) === undefined);
       if (pending) {
@@ -2955,6 +2977,21 @@
       const holder = document.getElementById('freshRow');
       if (!holder || token !== OTT.freshToken || cc !== selectedCountry) return;
       holder.innerHTML = freshRowHtml(cands);
+      try { homeDedupe(); } catch (e) {}
+    }
+    // once "Streaming now" knows which films it really shows, the shelves further down drop those films (only shelves that are off screen, only if enough remain)
+    function homeDedupe() {
+      const ids = new Set((window.__freshVerified || []).map(m => m.id)); if (!ids.size) return;
+      window.__freshIds = ids;   // shelves drawn later (lazy) use the same list through homeTrim
+      document.querySelectorAll('#mainViewport .wv-shelf').forEach(sec => {
+        if (sec.closest('#freshRow')) return;
+        const btn = sec.querySelector('.wv-seeall'), k = btn && /setHomeRow\('([^']+)'\)/.exec(btn.getAttribute('onclick') || '');
+        if (!k || k[1] === 'top10' || k[1] === 'fresh') return;
+        const r = sec.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) return;   // never change what the viewer is looking at
+        const cards = [...sec.querySelectorAll('.row-scroll > *')];
+        const dup = cards.filter(c => { const b = c.matches('[onclick^="openDetails("]') ? c : c.querySelector('[onclick^="openDetails("]'); const m = b && /openDetails\('([^']+)'\)/.exec(b.getAttribute('onclick') || ''); return m && ids.has(m[1]); });
+        if (dup.length && cards.length - dup.length >= 12) dup.forEach(c => c.remove());
+      });
     }
 
     // 2. "More like this" engine: franchise parts + genre-aware ranking (TMDB recommendations, TMDB similar, our catalogue)
@@ -4616,7 +4653,8 @@ function posterCard(item, opts) {
         if (d.taste) { list = list.filter(m => !mine.has(m.id)); list.sort((a, b) => { const ta = x => { const g = gOf(x); return g.length ? g.reduce((s, y) => s + (taste[y] || 0), 0) / g.length : 0; }; return (ta(b) * 3 + bayesQ(b) / 10) - (ta(a) * 3 + bayesQ(a) / 10); }); }
         else list.sort((a, b) => d.sc(b) - d.sc(a));
         const max = d.max || 40, shown = [];
-        for (const m of list) { if (shown.length >= max) break; if ((used.get(m.id) || 0) >= 2) continue; shown.push(m); }
+        for (const m of list) { if (shown.length >= max) break; if (used.has(m.id)) continue; shown.push(m); }   // first try: a film appears in ONE row only
+        if (shown.length < Math.min(max, 12)) { shown.length = 0; for (const m of list) { if (shown.length >= max) break; if ((used.get(m.id) || 0) >= 2) continue; shown.push(m); } }   // a thin row may repeat a film once
         if (shown.length < Math.min(max, 12)) return;
         shown.forEach(m => used.set(m.id, (used.get(m.id) || 0) + 1));
         const row = { ...d, items: shown, all: list.slice(0, 400) };
@@ -4642,8 +4680,15 @@ function posterCard(item, opts) {
     }
     // the first screens are drawn at once, the rest as they come near the viewport
     const SHELF_LAZY = { obs: null, thunks: {} };
+    // a shelf without the films already shown in "Streaming now" (kept as it was when that would leave it too thin)
+    function homeTrim(r) {
+      const f = window.__freshIds; if (!f || !f.size || r.k === 'top10' || r.k === 'fresh') return r.items;
+      const k = r.items.filter(m => !f.has(m.id));
+      return k.length >= Math.min(12, r.items.length) ? k : r.items;
+    }
     function homeShelvesHtml(ottAll) {
       const H = buildHomeRows(), parts = [];
+      window.__freshIds = new Set(freshCands(ottAll).map(m => m.id));   // films the "Streaming now" row may show: the rows below do not repeat them
       let n = 0;
       const put = (key, html, lazyFn) => {
         if (!html && !lazyFn) return;
@@ -4652,11 +4697,11 @@ function posterCard(item, opts) {
         n++;
       };
       const rowOf = k => H.byKey[k];
-      const shelf = r => () => homeRowSection(r.t, r.s, r.items, `setHomeRow('${r.k}')`, r.fmt);
+      const shelf = r => () => homeRowSection(r.t, r.s, homeTrim(r), `setHomeRow('${r.k}')`, r.fmt);
       const seq = k => { const r = rowOf(k); if (r) put(k, '', shelf(r)); };
       const lazyOf = (key, fn) => { if (n >= 4) { parts.push(`<div class="wv-lazy" data-lazy="${key}" style="min-height:330px" aria-hidden="true"></div>`); } else parts.push(fn()); n++; };
       seq('top10');
-      put('fresh', `<div id="freshRow">${freshRowHtml(ottAll.slice(0, 40))}</div>`);
+      put('fresh', `<div id="freshRow">${freshRowHtml(freshCands(ottAll))}</div>`);
       put('watch', watchRowHtml());
       seq('foryou'); seq('new'); seq('bolly'); seq('south');
       lazyOf('genres', () => genreTilesHtml(H.tiles));
@@ -4672,7 +4717,7 @@ function posterCard(item, opts) {
       const els = [...document.querySelectorAll('.wv-lazy')];
       const fill = el => {
         const k = el.dataset.lazy, H = buildHomeRows(), r = H.byKey[k];
-        const html = k === 'genres' ? genreTilesHtml(H.tiles) : k === 'daily' ? dailyCardHtml() : k === 'games' ? gamesCardHtml() : (r && r.items ? homeRowSection(r.t, r.s, r.items, `setHomeRow('${r.k}')`, r.fmt) : '');
+        const html = k === 'genres' ? genreTilesHtml(H.tiles) : k === 'daily' ? dailyCardHtml() : k === 'games' ? gamesCardHtml() : (r && r.items ? homeRowSection(r.t, r.s, homeTrim(r), `setHomeRow('${r.k}')`, r.fmt) : '');
         const wrap = document.createElement('div'); wrap.innerHTML = html; const node = wrap.firstElementChild;
         if (node) { el.replaceWith(node); node.querySelectorAll('img:not([loading])').forEach(img => { img.loading = 'lazy'; img.decoding = 'async'; }); node.querySelectorAll('.row-scroll').forEach(shelfArrows); setTimeout(streakAnimateAll, 150); setTimeout(revealInit, 80); } else el.remove();
       };
@@ -4802,7 +4847,7 @@ function posterCard(item, opts) {
       const starsHtml = `<section id="starsRow" aria-label="Trending stars">${starsInner()}</section>`;
       setTimeout(hydrateStars, 0);
 
-      setTimeout(() => hydrateFreshRow(ottAll.slice(0, 40)), 700);   // after the first screen is up
+      setTimeout(() => hydrateFreshRow(freshCands(ottAll)), 700);   // after the first screen is up
       return `
         <div class="space-y-14">
           <div class="wv-top space-y-5">${mobileTabs}${wallSection}<div id="wvFilterBar" class="wv-filters flex justify-end">${toolbar}</div></div>

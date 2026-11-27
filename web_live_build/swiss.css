@@ -971,3 +971,9 @@ button.vs-feel:hover { box-shadow: inset 0 0 0 1px var(--text) !important; backg
 @media (min-width: 901px) {
   html #wvWall .wvw-now, html #wvWall.wvw-skel .wvw-now { min-height: 270px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
 }
+/* v163: design leftovers: rank numerals readable on bright posters, one heading style in the film window, filters sit with the chips */
+.wv-rank { -webkit-text-stroke: 2.5px #fff; text-shadow: none; filter: drop-shadow(0 0 3px rgba(0,0,0,.85)) drop-shadow(0 3px 14px rgba(0,0,0,.6)); }
+.dmx-title [data-t] { font-family: var(--wv-head) !important; font-style: normal !important; text-transform: none !important; letter-spacing: -.045em !important; font-weight: 800 !important; font-size: inherit !important; }
+@media (min-width: 641px) {
+  html[data-wall="clean"] .wv-filters select { height: 32px; padding-inline: 12px 28px; font-size: 11px; }
+}

@@ -734,3 +734,10 @@ Fixes:
 - swiss.css?v=51, cache v162.
 ## Daily refresh time
 - The Windows scheduled task "WatchVibe daily refresh" now runs daily at 13:00 (was 09:00), plus at every sign-in as before. Changed with Set-ScheduledTask; next run 28 Nov 13:00.
+
+## v163 - admin check on the server, design leftovers
+- Admin: the page no longer contains the admin email. isSuperAdmin() now follows the server's is_admin() answer (adminCheck() calls rpc('is_admin') after sign-in; ADMIN {id, ok}; a remembered hint wv_admin_hint = user id only decides whether the shortcut shows straight away next visit; /admin itself still checks is_admin on the server). The admins table in Supabase is the one list (add or remove admins there). The legal pages still show the contact email (intended).
+- Rank numerals (Top 10): thicker white outline plus a dark halo (drop-shadow), readable on bright posters.
+- Repeated posters: shelves now show a film in ONE row first (second pass allows one repeat for thin rows); "Streaming now" no longer repeats the Top 10 (freshCands); once "Streaming now" has its verified list, off-screen shelves drop those films (homeDedupe, only when at least 12 remain; homeTrim for lazily drawn shelves).
+- Film window title: one heading style (Cabinet Grotesk 800, mixed case) for titles without a logo; the genre glow stays. Filters under the wall: 32 px high like the chips (desktop and tablet). Not changed: filters stay right-aligned under the poster row (the layout grid puts them in the right column).
+- swiss.css?v=54, cache v163. Sweep clean at 375, 768 and 1440 px.
