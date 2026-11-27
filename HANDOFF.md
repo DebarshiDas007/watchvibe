@@ -778,3 +778,6 @@ Fixes:
 
 ## v173 - hoichoi as a source
 - Where-to-watch already showed Hoichoi (TMDB provider 315, 'Hoichoi Amazon Channel' 2176 is merged into it by tidyProvider) for every title TMDB knows. New: (1) scripts/add_hoichoi.mjs added the films and series TMDB lists on Hoichoi in India that we lacked: 4 films + 40 series (rules: poster, backdrop, synopsis, 2+ votes, 2+ cast; 158 titles skipped for under 2 votes and 101 for no backdrop, so the shelf holds only what TMDB describes well); catalog_extra.json 8,670, CAT.v 6. (2) refresh_daily.mjs now also writes hoi {m:[ids], t:[ids]} (378 films, 147 series) inside catalog_fresh.json; the app reads it into HOI (isHoi) after the daily file loads. (3) New home shelf 'Streaming on hoichoi' (after South Indian cinema; India only; 225 of the catalogue's titles, 40 shown, see-all 208). (4) 'hoichoi' added to Watch together subscription picker (WT_SERVICES). Not done: a direct hoichoi.tv link (its search page ignores the query, so the JustWatch/TMDB link stays). Cache v173.
+
+## v174 - hoichoi shelf puts Bengali first
+- The 'Streaming on hoichoi' shelf scores Bengali titles +3 so English titles on Hoichoi no longer lead it. Cache v174.
