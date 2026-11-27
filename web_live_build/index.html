@@ -3484,17 +3484,20 @@
     window.homeRow = null; // 'fresh' | 'desi' | 'series' | 'standup' | 'all' | null (null = curated home)
 
     function syncTopNav() {
-      const onDiscover = (typeof activeTab === 'undefined' || activeTab === 'discover');
+      // Game night is a page of its own drawn over the others (#gnRoot): while it is open, only Games is lit, whatever page is underneath
+      const games = !!document.getElementById('gnRoot');
+      const onDiscover = !games && (typeof activeTab === 'undefined' || activeTab === 'discover');
       const lit = {
         'top-cat-all': onDiscover && selectedTopCategory === 'all',
         'top-cat-movie': onDiscover && selectedTopCategory === 'Movie',
         'top-cat-series': onDiscover && selectedTopCategory === 'Series',
         'top-cat-standup': onDiscover && selectedTopCategory === 'Stand-Up',
-        'desk-tab-community': activeTab === 'community',
-        'desk-tab-watchlist': activeTab === 'watchlist',
-        'desk-tab-profile': activeTab === 'profile',
-        'top-daily': activeTab === 'daily',
-        'top-upcoming': activeTab === 'upcoming'
+        'desk-tab-community': !games && activeTab === 'community',
+        'desk-tab-watchlist': !games && activeTab === 'watchlist',
+        'desk-tab-profile': !games && activeTab === 'profile',
+        'top-daily': !games && activeTab === 'daily',
+        'top-upcoming': !games && activeTab === 'upcoming',
+        'top-games': games
       };
       // keep each button's own screen-size rules (e.g. "only on big screens"): replacing them made Daily show on tablets and push "More" off the bar
       Object.entries(lit).forEach(([id, on]) => { const b = document.getElementById(id); if (!b) return; if (b.dataset.vis == null) b.dataset.vis = (b.className.match(/(^|\s)(hidden|(sm|md|lg|xl):(hidden|inline-flex))(?=\s|$)/g) || []).map(s => s.trim()).join(' '); b.className = (on ? NAV_ON : NAV_OFF) + (b.dataset.vis ? ' ' + b.dataset.vis : ''); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -8570,7 +8573,7 @@ window.DYNAMIC_ACTORS = window.DYNAMIC_ACTORS || {};
     try { openFilmFromHash(); } catch (e) {}
     (window.requestIdleCallback || (f => setTimeout(f, 800)))(loadExtraCatalog, { timeout: 2500 });
   </script>
-  <script src="games.js?v=6" defer></script>
+  <script src="games.js?v=7" defer></script>
   <script src="hover-card.js?v=3" defer></script>
 </body>
 </html>

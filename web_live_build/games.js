@@ -265,11 +265,13 @@ function openGames(code) {
   document.documentElement.style.overflow = 'hidden';
   if (code) GN.joinCode = String(code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
   gnRender(true);
+  try { syncTopNav(); } catch (e) {}   // the top bar lights Games while Game night is open
   if (GN.joinCode && !GN.code && gnSavedName()) gnJoin(GN.joinCode, false);
 }
 function closeGames() {
   gnLeave(true);
   const r = document.getElementById('gnRoot'); if (r) r.remove();
+  try { syncTopNav(); } catch (e) {}
   document.documentElement.style.overflow = '';
   GN.wrap = null; GN.canvas = null; GN.ctx = null;
   if (new URLSearchParams(location.search).get('game')) history.replaceState(null, '', location.pathname);
